@@ -26,7 +26,7 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // with GROQ_MODEL_FALLBACK below — kept as constants so it's easy to
 // find and change later if Groq renames/replaces either model.
 const GROQ_MODEL_PRIMARY = "openai/gpt-oss-120b";
-const GROQ_MODEL_FALLBACK = "llama-3.3-70b-versatile";
+const GROQ_MODEL_FALLBACK = "openai/gpt-oss-120b";
 
 // How long we'll wait for Groq before giving up and returning a
 // friendly timeout error instead of leaving the user's request hanging.
