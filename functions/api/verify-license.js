@@ -1,37 +1,36 @@
 /**
  * =============================================================
- * TagPulse AI — Lemon Squeezy License Verification
+ * TagPulse AI — License Verification
  * Cloudflare Pages Function
+ *
  * POST /api/verify-license
- * =============================================================
  *
- * Request body:
- * {
- *   "code": "<Lemon Squeezy license key>",
- *   "user_id": "<browser-generated stable user id>"
- * }
- *
- * Success:
- * {
- *   "valid": true,
- *   "message": "Pro unlocked! 500 generations available.",
- *   "credits_remaining": 500
- * }
- *
- * Invalid:
- * {
- *   "valid": false,
- *   "message": "..."
- * }
+ * Purpose:
+ * - Verify a Lemon Squeezy license key
+ * - Verify TagPulse product + variant
+ * - Bind license to browser user_id
+ * - Store ONLY SHA-256 license hash in D1
+ * - Give 500 Pro credits on first activation
+ * - Prevent the same license from being used by another user
  *
  * D1 binding:
- * DB
+ *   DB
  *
  * Lemon Squeezy:
- * Test Mode
+ *   Test Mode
  *
- * Product ID: 1296090
- * Variant ID: 2027791
+ * Product:
+ *   1296090
+ *
+ * Variant:
+ *   2027791
+ * =============================================================
+ */
+
+
+/**
+ * =============================================================
+ * CONFIGURATION
  * =============================================================
  */
 
@@ -41,122 +40,189 @@ const LEMON_ACTIVATE_URL =
 const LEMON_VALIDATE_URL =
   "https://api.lemonsqueezy.com/v1/licenses/validate";
 
-const LEMON_PRODUCT_ID = "1296090";
-const LEMON_VARIANT_ID = "2027791";
+const LEMON_PRODUCT_ID =
+  "1296090";
 
-const PAID_CREDITS = 500;
+const LEMON_VARIANT_ID =
+  "2027791";
+
+const PAID_CREDITS =
+  500;
+
 
 /**
- * Handles POST /api/verify-license
+ * =============================================================
+ * POST /api/verify-license
+ * =============================================================
  */
+
 export async function onRequestPost(context) {
+
   const { request, env } = context;
-  const corsHeaders = buildCorsHeaders();
+
+  const corsHeaders =
+    buildCorsHeaders();
+
 
   try {
+
     // ---------------------------------------------------------
-    // 1. D1 must exist
+    // 1. Check D1
     // ---------------------------------------------------------
+
     if (!env.DB) {
-      console.error("D1 binding DB is missing.");
+
+      console.error(
+        "verify-license: D1 binding DB is missing."
+      );
 
       return jsonResponse(
         {
-          error: "Server database is not configured."
+          error:
+            "Server database is not configured."
         },
         500,
         corsHeaders
       );
     }
 
+
     // ---------------------------------------------------------
-    // 2. Parse request
+    // 2. Parse JSON
     // ---------------------------------------------------------
+
     let body;
 
     try {
-      body = await request.json();
+
+      body =
+        await request.json();
+
     } catch (_) {
+
       return jsonResponse(
         {
-          error: "Request body must be valid JSON."
+          error:
+            "Request body must be valid JSON."
         },
         400,
         corsHeaders
       );
     }
 
+
+    // ---------------------------------------------------------
+    // 3. Read inputs
+    // ---------------------------------------------------------
+
     const code =
-      body && typeof body.code === "string"
+      body &&
+      typeof body.code === "string"
         ? body.code.trim()
         : "";
 
+
     const userId =
-      body && typeof body.user_id === "string"
+      body &&
+      typeof body.user_id === "string"
         ? body.user_id.trim()
         : "";
 
+
     // ---------------------------------------------------------
-    // 3. Validate input
+    // 4. Validate license key
     // ---------------------------------------------------------
-    if (!code) {
+
+    if (
+      !code ||
+      code.length > 512
+    ) {
+
       return jsonResponse(
         {
-          error: "A non-empty license key is required."
+          error:
+            "A valid license key is required."
         },
         400,
         corsHeaders
       );
     }
 
-    if (!userId || userId.length > 128) {
+
+    // ---------------------------------------------------------
+    // 5. Validate user ID
+    // ---------------------------------------------------------
+
+    if (
+      !userId ||
+      userId.length > 128
+    ) {
+
       return jsonResponse(
         {
-          error: "A valid user_id is required."
+          error:
+            "A valid user_id is required."
         },
         400,
         corsHeaders
       );
     }
 
-    // ---------------------------------------------------------
-    // 4. Never store the real license key
-    // ---------------------------------------------------------
-    const licenseHash = await sha256(code);
 
     // ---------------------------------------------------------
-    // 5. Check whether this license is already registered
+    // 6. Hash license key
+    //
+    // IMPORTANT:
+    // Plaintext license is NEVER stored in D1.
     // ---------------------------------------------------------
-    const existing = await env.DB.prepare(
-      `SELECT
-         id,
-         user_id,
-         instance_id,
-         status,
-         credits_remaining
-       FROM licenses
-       WHERE license_key_hash = ?1
-       LIMIT 1`
-    )
-      .bind(licenseHash)
-      .first();
+
+    const licenseHash =
+      await sha256(code);
+
+
+    // =========================================================
+    // 7. CHECK D1 FOR EXISTING LICENSE
+    // =========================================================
+
+    const existing =
+      await env.DB.prepare(
+        `SELECT
+           id,
+           license_key_hash,
+           status,
+           credits_remaining,
+           initial_credits,
+           user_id,
+           instance_id
+         FROM licenses
+         WHERE license_key_hash = ?1
+         LIMIT 1`
+      )
+        .bind(
+          licenseHash
+        )
+        .first();
+
 
     // =========================================================
     // EXISTING LICENSE
     // =========================================================
+
     if (existing) {
 
       // -------------------------------------------------------
-      // Prevent the same license from being attached to
-      // another browser/user_id.
+      // Prevent another browser/user from using this license.
       // -------------------------------------------------------
+
       if (
         existing.user_id &&
         existing.user_id !== userId
       ) {
+
         return jsonResponse(
           {
             valid: false,
+            is_pro: false,
             message:
               "This license is already activated on another TagPulse session."
           },
@@ -165,22 +231,53 @@ export async function onRequestPost(context) {
         );
       }
 
-      // -------------------------------------------------------
-      // Validate the existing Lemon Squeezy license.
-      // If we have an instance_id, validate that exact instance.
-      // -------------------------------------------------------
-      const validation = await validateLicense(
-        code,
-        existing.instance_id || null
-      );
 
       // -------------------------------------------------------
-      // Verify that the license belongs to OUR product.
+      // Validate the license with Lemon Squeezy.
       // -------------------------------------------------------
-      if (!matchesOurProduct(validation)) {
+
+      let validation;
+
+      try {
+
+        validation =
+          await validateLicense(
+            code,
+            existing.instance_id
+          );
+
+      } catch (err) {
+
+        console.error(
+          "verify-license: Lemon validation failed:",
+          err
+        );
+
+        return jsonResponse(
+          {
+            error:
+              "Could not verify the license with Lemon Squeezy. Please try again."
+          },
+          502,
+          corsHeaders
+        );
+      }
+
+
+      // -------------------------------------------------------
+      // Verify product + variant.
+      // -------------------------------------------------------
+
+      if (
+        !matchesOurProduct(
+          validation
+        )
+      ) {
+
         return jsonResponse(
           {
             valid: false,
+            is_pro: false,
             message:
               "This license key does not belong to the TagPulse AI Pro product."
           },
@@ -189,12 +286,22 @@ export async function onRequestPost(context) {
         );
       }
 
-      if (!validation.valid) {
+
+      // -------------------------------------------------------
+      // Lemon says license is no longer valid.
+      // -------------------------------------------------------
+
+      if (
+        !validation.valid
+      ) {
+
         const lemonStatus =
+          validation &&
           validation.license_key &&
           validation.license_key.status
             ? validation.license_key.status
             : "inactive";
+
 
         await env.DB.prepare(
           `UPDATE licenses
@@ -202,12 +309,17 @@ export async function onRequestPost(context) {
                updated_at = CURRENT_TIMESTAMP
            WHERE id = ?2`
         )
-          .bind(lemonStatus, existing.id)
+          .bind(
+            lemonStatus,
+            existing.id
+          )
           .run();
+
 
         return jsonResponse(
           {
             valid: false,
+            is_pro: false,
             message:
               "This license key is no longer valid."
           },
@@ -216,71 +328,179 @@ export async function onRequestPost(context) {
         );
       }
 
+
       // -------------------------------------------------------
-      // Make sure the user_id is attached.
+      // Make sure the license is active.
       // -------------------------------------------------------
-      if (!existing.user_id) {
+
+      const lemonLicenseStatus =
+        validation &&
+        validation.license_key &&
+        validation.license_key.status
+          ? validation.license_key.status
+          : "";
+
+
+      if (
+        lemonLicenseStatus !== "active"
+      ) {
+
+        await env.DB.prepare(
+          `UPDATE licenses
+           SET status = ?1,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?2`
+        )
+          .bind(
+            lemonLicenseStatus || "inactive",
+            existing.id
+          )
+          .run();
+
+
+        return jsonResponse(
+          {
+            valid: false,
+            is_pro: false,
+            message:
+              "This license key is not active."
+          },
+          403,
+          corsHeaders
+        );
+      }
+
+
+      // -------------------------------------------------------
+      // Attach user_id if this license has no owner yet.
+      // -------------------------------------------------------
+
+      if (
+        !existing.user_id
+      ) {
+
         await env.DB.prepare(
           `UPDATE licenses
            SET user_id = ?1,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = ?2`
         )
-          .bind(userId, existing.id)
+          .bind(
+            userId,
+            existing.id
+          )
           .run();
       }
 
+
+      // -------------------------------------------------------
+      // Return current credit balance.
+      // -------------------------------------------------------
+
       const remaining =
-        Number(existing.credits_remaining);
+        Math.max(
+          0,
+          Number(
+            existing.credits_remaining || 0
+          )
+        );
+
 
       return jsonResponse(
         {
           valid: true,
+          is_pro: true,
           message:
             "Pro unlocked! " +
             remaining +
             " generations remaining.",
-          credits_remaining: remaining
+          credits_remaining:
+            remaining
         },
         200,
         corsHeaders
       );
     }
+
 
     // =========================================================
     // NEW LICENSE
     // =========================================================
 
-    // ---------------------------------------------------------
-    // Activate the Lemon Squeezy license.
-    // ---------------------------------------------------------
-    const activation = await activateLicense(
-      code,
-      userId
-    );
+    let activation;
 
-    if (!activation.activated) {
+    try {
+
+      activation =
+        await activateLicense(
+          code,
+          userId
+        );
+
+    } catch (err) {
+
+      console.error(
+        "verify-license: Lemon activation failed:",
+        err
+      );
+
+      return jsonResponse(
+        {
+          error:
+            "Could not contact Lemon Squeezy. Please try again."
+        },
+        502,
+        corsHeaders
+      );
+    }
+
+
+    // ---------------------------------------------------------
+    // Lemon rejected activation.
+    // ---------------------------------------------------------
+
+    if (
+      !activation ||
+      !activation.activated
+    ) {
+
       return jsonResponse(
         {
           valid: false,
+          is_pro: false,
           message:
-            activation.error ||
-            "This license key could not be activated."
+            activation &&
+            activation.error
+              ? activation.error
+              : "This license key could not be activated."
         },
         200,
         corsHeaders
       );
     }
 
+
     // ---------------------------------------------------------
-    // SECURITY CHECK:
-    // Make sure the license belongs to our exact
-    // TagPulse AI product + variant.
+    // Security:
+    // Verify exact TagPulse product + variant.
     // ---------------------------------------------------------
-    if (!matchesOurProduct(activation)) {
+
+    if (
+      !matchesOurProduct(
+        activation
+      )
+    ) {
+
+      console.error(
+        "verify-license: wrong product or variant.",
+        activation.meta
+      );
+
+
       return jsonResponse(
         {
           valid: false,
+          is_pro: false,
           message:
             "This license key does not belong to the TagPulse AI Pro product."
         },
@@ -289,16 +509,20 @@ export async function onRequestPost(context) {
       );
     }
 
+
     // ---------------------------------------------------------
-    // Make sure Lemon says the license is active.
+    // Verify active status.
     // ---------------------------------------------------------
+
     if (
       !activation.license_key ||
       activation.license_key.status !== "active"
     ) {
+
       return jsonResponse(
         {
           valid: false,
+          is_pro: false,
           message:
             "This license key is not active."
         },
@@ -307,19 +531,26 @@ export async function onRequestPost(context) {
       );
     }
 
+
     // ---------------------------------------------------------
-    // Get Lemon Squeezy instance ID.
+    // Get Lemon instance ID.
     // ---------------------------------------------------------
+
     const instanceId =
       activation.instance &&
       activation.instance.id
-        ? activation.instance.id
-        : null;
+        ? String(
+            activation.instance.id
+          )
+        : "";
+
 
     if (!instanceId) {
+
       console.error(
-        "Lemon Squeezy activation succeeded but no instance ID was returned."
+        "verify-license: Lemon activation returned no instance ID."
       );
+
 
       return jsonResponse(
         {
@@ -331,11 +562,13 @@ export async function onRequestPost(context) {
       );
     }
 
-    // ---------------------------------------------------------
-    // Save ONLY the SHA-256 hash of the license key.
-    // Never save the plaintext license key.
-    // ---------------------------------------------------------
+
+    // =========================================================
+    // SAVE LICENSE
+    // =========================================================
+
     try {
+
       await env.DB.prepare(
         `INSERT INTO licenses
          (
@@ -370,73 +603,131 @@ export async function onRequestPost(context) {
         )
         .run();
 
+
     } catch (dbError) {
 
       console.error(
-        "Failed to save license in D1:",
+        "verify-license: failed to insert license:",
         dbError
       );
 
-      // A race condition may mean another request saved it
-      // immediately before this INSERT.
-      const raceCheck = await env.DB.prepare(
-        `SELECT
-           id,
-           user_id,
-           credits_remaining
-         FROM licenses
-         WHERE license_key_hash = ?1
-         LIMIT 1`
-      )
-        .bind(licenseHash)
-        .first();
+
+      // -------------------------------------------------------
+      // Race-condition check.
+      // Another request may have inserted it first.
+      // -------------------------------------------------------
+
+      const raceCheck =
+        await env.DB.prepare(
+          `SELECT
+             id,
+             status,
+             credits_remaining,
+             user_id
+           FROM licenses
+           WHERE license_key_hash = ?1
+           LIMIT 1`
+        )
+          .bind(
+            licenseHash
+          )
+          .first();
+
 
       if (
-        raceCheck &&
-        (!raceCheck.user_id ||
-          raceCheck.user_id === userId)
+        raceCheck
       ) {
+
+        // Another user owns it.
+        if (
+          raceCheck.user_id &&
+          raceCheck.user_id !== userId
+        ) {
+
+          return jsonResponse(
+            {
+              valid: false,
+              is_pro: false,
+              message:
+                "This license is already activated on another TagPulse session."
+            },
+            403,
+            corsHeaders
+          );
+        }
+
+
+        const remaining =
+          Math.max(
+            0,
+            Number(
+              raceCheck.credits_remaining || 0
+            )
+          );
+
+
         return jsonResponse(
           {
             valid: true,
+            is_pro: true,
             message:
               "Pro unlocked! " +
-              Number(raceCheck.credits_remaining) +
+              remaining +
               " generations remaining.",
             credits_remaining:
-              Number(raceCheck.credits_remaining)
+              remaining
           },
           200,
           corsHeaders
         );
       }
 
+
       return jsonResponse(
         {
           error:
-            "The license was activated but could not be saved. Please contact support."
+            "The license was activated but could not be saved. Please try again."
         },
         500,
         corsHeaders
       );
     }
 
+
+    // =========================================================
+    // SUCCESS
+    // =========================================================
+
+    console.log(
+      "verify-license: new Pro license activated.",
+      {
+        userId,
+        instanceId
+      }
+    );
+
+
     return jsonResponse(
       {
         valid: true,
+        is_pro: true,
         message:
           "Pro unlocked! 500 generations available.",
-        credits_remaining: PAID_CREDITS
+        credits_remaining:
+          PAID_CREDITS
       },
       200,
       corsHeaders
     );
 
+
   } catch (err) {
+
     console.error(
       "Unhandled /api/verify-license error:",
       err
     );
+
 
     return jsonResponse(
       {
@@ -449,161 +740,239 @@ export async function onRequestPost(context) {
   }
 }
 
+
 /**
  * =============================================================
- * Lemon Squeezy — Activate
+ * LEMON SQUEEZY — ACTIVATE LICENSE
  * =============================================================
  */
+
 async function activateLicense(
   licenseKey,
   userId
 ) {
-  const params = new URLSearchParams();
+
+  const params =
+    new URLSearchParams();
+
 
   params.append(
     "license_key",
     licenseKey
   );
 
+
   params.append(
     "instance_name",
-    "TagPulse-" + userId.slice(0, 40)
+    "TagPulse-" +
+      userId.slice(0, 40)
   );
+
 
   let response;
 
   try {
-    response = await fetch(
-      LEMON_ACTIVATE_URL,
-      {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type":
-            "application/x-www-form-urlencoded"
-        },
-        body: params.toString()
-      }
-    );
+
+    response =
+      await fetch(
+        LEMON_ACTIVATE_URL,
+        {
+          method: "POST",
+
+          headers: {
+            "Accept":
+              "application/json",
+
+            "Content-Type":
+              "application/x-www-form-urlencoded"
+          },
+
+          body:
+            params.toString()
+        }
+      );
+
   } catch (err) {
+
     console.error(
-      "Lemon Squeezy activation request failed:",
+      "Lemon activation network error:",
       err
     );
 
     throw new Error(
-      "Couldn't reach the license service. Please try again."
+      "LEMON_NETWORK_ERROR"
     );
   }
 
-  let data = {};
+
+  let data;
 
   try {
-    data = await response.json();
+
+    data =
+      await response.json();
+
   } catch (_) {
+
     throw new Error(
-      "Lemon Squeezy returned an invalid response."
+      "LEMON_INVALID_RESPONSE"
     );
   }
 
-  if (!response.ok) {
+
+  if (
+    !response.ok
+  ) {
+
     return {
       activated: false,
+
       error:
-        data.error ||
-        "License activation failed."
+        data &&
+        data.error
+          ? data.error
+          : "License activation failed."
     };
   }
+
 
   return data;
 }
 
+
 /**
  * =============================================================
- * Lemon Squeezy — Validate
+ * LEMON SQUEEZY — VALIDATE LICENSE
  * =============================================================
  */
+
 async function validateLicense(
   licenseKey,
   instanceId
 ) {
-  const params = new URLSearchParams();
+
+  const params =
+    new URLSearchParams();
+
 
   params.append(
     "license_key",
     licenseKey
   );
 
-  if (instanceId) {
+
+  if (
+    instanceId
+  ) {
+
     params.append(
       "instance_id",
       instanceId
     );
   }
 
+
   let response;
 
   try {
-    response = await fetch(
-      LEMON_VALIDATE_URL,
-      {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type":
-            "application/x-www-form-urlencoded"
-        },
-        body: params.toString()
-      }
-    );
+
+    response =
+      await fetch(
+        LEMON_VALIDATE_URL,
+        {
+          method: "POST",
+
+          headers: {
+            "Accept":
+              "application/json",
+
+            "Content-Type":
+              "application/x-www-form-urlencoded"
+          },
+
+          body:
+            params.toString()
+        }
+      );
+
   } catch (err) {
+
     console.error(
-      "Lemon Squeezy validation request failed:",
+      "Lemon validation network error:",
       err
     );
 
     throw new Error(
-      "Couldn't reach the license service. Please try again."
+      "LEMON_NETWORK_ERROR"
     );
   }
 
-  let data = {};
+
+  let data;
 
   try {
-    data = await response.json();
+
+    data =
+      await response.json();
+
   } catch (_) {
+
     throw new Error(
-      "Lemon Squeezy returned an invalid response."
+      "LEMON_INVALID_RESPONSE"
     );
   }
 
-  if (!response.ok) {
+
+  if (
+    !response.ok
+  ) {
+
     return {
       valid: false,
+
       error:
-        data.error ||
-        "License validation failed."
+        data &&
+        data.error
+          ? data.error
+          : "License validation failed."
     };
   }
+
 
   return data;
 }
 
+
 /**
  * =============================================================
- * Product / Variant security check
+ * PRODUCT + VARIANT SECURITY CHECK
  * =============================================================
  */
-function matchesOurProduct(data) {
-  if (!data || !data.meta) {
+
+function matchesOurProduct(
+  data
+) {
+
+  if (
+    !data ||
+    !data.meta
+  ) {
+
     return false;
   }
 
+
   const productId =
-    String(data.meta.product_id || "");
+    String(
+      data.meta.product_id || ""
+    );
+
 
   const variantId =
-    String(data.meta.variant_id || "");
+    String(
+      data.meta.variant_id || ""
+    );
+
 
   return (
     productId === LEMON_PRODUCT_ID &&
@@ -611,14 +980,23 @@ function matchesOurProduct(data) {
   );
 }
 
+
 /**
  * =============================================================
  * SHA-256
  * =============================================================
  */
-async function sha256(value) {
+
+async function sha256(
+  value
+) {
+
   const data =
-    new TextEncoder().encode(value);
+    new TextEncoder()
+      .encode(
+        value
+      );
+
 
   const digest =
     await crypto.subtle.digest(
@@ -626,66 +1004,94 @@ async function sha256(value) {
       data
     );
 
+
   return Array.from(
-    new Uint8Array(digest)
+    new Uint8Array(
+      digest
+    )
   )
     .map(
-      b => b.toString(16).padStart(2, "0")
+      byte =>
+        byte
+          .toString(16)
+          .padStart(
+            2,
+            "0"
+          )
     )
     .join("");
 }
 
+
 /**
  * =============================================================
- * JSON response helper
+ * JSON RESPONSE
  * =============================================================
  */
+
 function jsonResponse(
   data,
   status,
   corsHeaders
 ) {
+
   return new Response(
-    JSON.stringify(data),
+    JSON.stringify(
+      data
+    ),
     {
       status,
-      headers: Object.assign(
-        {
-          "Content-Type":
-            "application/json"
-        },
-        corsHeaders
-      )
+
+      headers:
+        Object.assign(
+          {
+            "Content-Type":
+              "application/json"
+          },
+          corsHeaders
+        )
     }
   );
 }
+
 
 /**
  * =============================================================
  * CORS
  * =============================================================
  */
+
 function buildCorsHeaders() {
+
   return {
-    "Access-Control-Allow-Origin": "*",
+
+    "Access-Control-Allow-Origin":
+      "*",
+
     "Access-Control-Allow-Methods":
       "POST, OPTIONS",
+
     "Access-Control-Allow-Headers":
       "Content-Type"
   };
 }
 
+
 /**
  * =============================================================
- * OPTIONS / CORS preflight
+ * OPTIONS / CORS PREFLIGHT
  * =============================================================
  */
+
 export async function onRequestOptions() {
+
   return new Response(
     null,
     {
       status: 204,
-      headers: buildCorsHeaders()
+
+      headers:
+        buildCorsHeaders()
     }
   );
 }
