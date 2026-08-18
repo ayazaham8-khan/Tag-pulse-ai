@@ -4,11 +4,51 @@
  * POST /api/generate
  *
  * D1-backed credit enforcement:
- * - Free users: 5 generations total
- * - Paid users: 500 generations total
- * - Credits are enforced SERVER-SIDE
- * - Frontend credit count is never trusted
- * - Failed AI requests refund the reserved credit
+ *
+ * FREE USERS
+ * - 5 generations total
+ *
+ * PAID USERS
+ * - 500 generations total
+ *
+ * IMPORTANT:
+ * The server NEVER trusts the frontend credit count.
+ *
+ * Pro users can now be identified in TWO ways:
+ *
+ * 1. Existing/manual license-key flow:
+ *    request.license_key
+ *
+ * 2. Automatic Lemon Squeezy checkout flow:
+ *    request.user_id
+ *
+ * This allows a user who has just purchased through Lemon
+ * Squeezy to use Pro automatically without copying a license key.
+ *
+ * Flow:
+ *
+ * Lemon Squeezy
+ *       ↓
+ * license_key_created webhook
+ *       ↓
+ * D1 licenses table
+ *       ↓
+ * user_id linked to license
+ *       ↓
+ * /api/generate receives user_id
+ *       ↓
+ * server finds active Pro license
+ *       ↓
+ * 500-credit system
+ *
+ * Failed AI requests refund the reserved credit.
+ * =============================================================
+ */
+
+
+/**
+ * =============================================================
+ * CONFIGURATION
  * =============================================================
  */
 
@@ -24,12 +64,18 @@ const GROQ_MODEL_FALLBACK =
 const GROQ_TIMEOUT_MS = 30000;
 
 const FREE_CREDITS = 5;
+
 const PAID_CREDITS = 500;
 
+
 /**
+ * =============================================================
  * POST /api/generate
+ * =============================================================
  */
+
 export async function onRequestPost(context) {
+
   const { request, env } = context;
 
   const corsHeaders =
@@ -38,9 +84,11 @@ export async function onRequestPost(context) {
   try {
 
     // ---------------------------------------------------------
-    // 1. D1 binding
+    // 1. Check D1 binding
     // ---------------------------------------------------------
+
     if (!env.DB) {
+
       console.error(
         "D1 binding DB is missing."
       );
@@ -55,14 +103,20 @@ export async function onRequestPost(context) {
       );
     }
 
+
     // ---------------------------------------------------------
-    // 2. Parse request
+    // 2. Parse request body
     // ---------------------------------------------------------
+
     let body;
 
     try {
-      body = await request.json();
+
+      body =
+        await request.json();
+
     } catch (_) {
+
       return jsonResponse(
         {
           error:
@@ -73,6 +127,11 @@ export async function onRequestPost(context) {
       );
     }
 
+
+    // ---------------------------------------------------------
+    // 3. Read request values
+    // ---------------------------------------------------------
+
     const prompt =
       body && body.prompt;
 
@@ -82,14 +141,17 @@ export async function onRequestPost(context) {
     const licenseKey =
       body && body.license_key;
 
+
     // ---------------------------------------------------------
-    // 3. Validate prompt
+    // 4. Validate prompt
     // ---------------------------------------------------------
+
     if (
       !prompt ||
       typeof prompt !== "string" ||
       !prompt.trim()
     ) {
+
       return jsonResponse(
         {
           error:
@@ -100,14 +162,18 @@ export async function onRequestPost(context) {
       );
     }
 
+
     // ---------------------------------------------------------
-    // 4. Validate user ID
+    // 5. Validate user ID
     // ---------------------------------------------------------
+
     if (
       !userId ||
       typeof userId !== "string" ||
+      !userId.trim() ||
       userId.length > 128
     ) {
+
       return jsonResponse(
         {
           error:
@@ -118,10 +184,17 @@ export async function onRequestPost(context) {
       );
     }
 
+
+    const normalizedUserId =
+      userId.trim();
+
+
     // ---------------------------------------------------------
-    // 5. Groq key
+    // 6. Make sure Groq API key exists
     // ---------------------------------------------------------
+
     if (!env.GROQ_API_KEY) {
+
       console.error(
         "GROQ_API_KEY is not set."
       );
@@ -136,14 +209,39 @@ export async function onRequestPost(context) {
       );
     }
 
+
+    // =========================================================
+    // PRO LICENSE RESOLUTION
+    // =========================================================
+    //
+    // We support BOTH:
+    //
+    // A) license_key
+    // B) user_id
+    //
+    // If a license key is supplied, use it first.
+    //
+    // If no license key is supplied, search by user_id.
+    //
+    // This is what enables automatic Pro access after Lemon
+    // Squeezy checkout.
+    // =========================================================
+
+
     const normalizedLicense =
       typeof licenseKey === "string"
         ? licenseKey.trim()
         : "";
 
+
+    let license = null;
+
+
     // =========================================================
-    // PAID LICENSE PATH
+    // METHOD A:
+    // MANUAL LICENSE KEY
     // =========================================================
+
     if (normalizedLicense) {
 
       const licenseHash =
@@ -151,7 +249,8 @@ export async function onRequestPost(context) {
           normalizedLicense
         );
 
-      const license =
+
+      license =
         await env.DB.prepare(
           `SELECT
              id,
@@ -162,10 +261,18 @@ export async function onRequestPost(context) {
            WHERE license_key_hash = ?1
            LIMIT 1`
         )
-          .bind(licenseHash)
+          .bind(
+            licenseHash
+          )
           .first();
 
+
+      // -------------------------------------------------------
+      // License key was supplied but does not exist.
+      // -------------------------------------------------------
+
       if (!license) {
+
         return jsonResponse(
           {
             error:
@@ -177,13 +284,16 @@ export async function onRequestPost(context) {
         );
       }
 
+
       // -------------------------------------------------------
-      // License belongs to another browser/user.
+      // Prevent a license from being used by another user.
       // -------------------------------------------------------
+
       if (
         license.user_id &&
-        license.user_id !== userId
+        license.user_id !== normalizedUserId
       ) {
+
         return jsonResponse(
           {
             error:
@@ -195,9 +305,15 @@ export async function onRequestPost(context) {
         );
       }
 
+
+      // -------------------------------------------------------
+      // License must be active.
+      // -------------------------------------------------------
+
       if (
         license.status !== "active"
       ) {
+
         return jsonResponse(
           {
             error:
@@ -209,11 +325,98 @@ export async function onRequestPost(context) {
         );
       }
 
-      if (
+
+      // -------------------------------------------------------
+      // If the license exists but user_id is empty,
+      // attach it to the current browser/user.
+      // -------------------------------------------------------
+
+      if (!license.user_id) {
+
+        await env.DB.prepare(
+          `UPDATE licenses
+           SET user_id = ?1,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?2`
+        )
+          .bind(
+            normalizedUserId,
+            license.id
+          )
+          .run();
+
+        license.user_id =
+          normalizedUserId;
+      }
+    }
+
+
+    // =========================================================
+    // METHOD B:
+    // AUTOMATIC PRO ACCESS BY USER ID
+    // =========================================================
+    //
+    // This is used after Lemon Squeezy purchase.
+    //
+    // The webhook stores:
+    //
+    // user_id
+    // status
+    // credits_remaining
+    //
+    // in the licenses table.
+    //
+    // Therefore the frontend does NOT need to send the
+    // plaintext license key.
+    // =========================================================
+
+    if (!license) {
+
+      license =
+        await env.DB.prepare(
+          `SELECT
+             id,
+             user_id,
+             status,
+             credits_remaining
+           FROM licenses
+           WHERE user_id = ?1
+             AND status = 'active'
+           ORDER BY id DESC
+           LIMIT 1`
+        )
+          .bind(
+            normalizedUserId
+          )
+          .first();
+    }
+
+
+    // =========================================================
+    // PRO USER PATH
+    // =========================================================
+
+    if (license) {
+
+      // -------------------------------------------------------
+      // Make sure credits are numeric.
+      // -------------------------------------------------------
+
+      const currentCredits =
         Number(
           license.credits_remaining
-        ) <= 0
+        );
+
+
+      // -------------------------------------------------------
+      // No Pro credits remaining.
+      // -------------------------------------------------------
+
+      if (
+        !Number.isFinite(currentCredits) ||
+        currentCredits <= 0
       ) {
+
         return jsonResponse(
           {
             error:
@@ -226,27 +429,46 @@ export async function onRequestPost(context) {
         );
       }
 
+
       // -------------------------------------------------------
       // Reserve one Pro credit BEFORE calling Groq.
+      //
+      // This atomic UPDATE prevents two simultaneous requests
+      // from consuming the same credit.
       // -------------------------------------------------------
+
       const reserved =
         await reserveLicenseCredit(
           env.DB,
           license.id
         );
 
+
       if (!reserved) {
+
+        const latest =
+          await getLicenseCredits(
+            env.DB,
+            license.id
+          );
+
         return jsonResponse(
           {
             error:
               "No Pro credits remaining. Please try again.",
-            credits_remaining: 0,
+            credits_remaining:
+              latest,
             is_pro: true
           },
           402,
           corsHeaders
         );
       }
+
+
+      // -------------------------------------------------------
+      // Generate with Groq.
+      // -------------------------------------------------------
 
       try {
 
@@ -256,14 +478,27 @@ export async function onRequestPost(context) {
             env.GROQ_API_KEY
           );
 
+
+        // -----------------------------------------------------
+        // Generation succeeded.
+        // Update license usage information.
+        // -----------------------------------------------------
+
         await env.DB.prepare(
           `UPDATE licenses
            SET updated_at = CURRENT_TIMESTAMP,
                last_used_at = CURRENT_TIMESTAMP
            WHERE id = ?1`
         )
-          .bind(license.id)
+          .bind(
+            license.id
+          )
           .run();
+
+
+        // -----------------------------------------------------
+        // Record generation.
+        // -----------------------------------------------------
 
         await env.DB.prepare(
           `INSERT INTO generations
@@ -271,10 +506,15 @@ export async function onRequestPost(context) {
            VALUES (?1, ?2)`
         )
           .bind(
-            userId,
+            normalizedUserId,
             license.id
           )
           .run();
+
+
+        // -----------------------------------------------------
+        // Get exact remaining balance from D1.
+        // -----------------------------------------------------
 
         const remaining =
           await getLicenseCredits(
@@ -282,32 +522,51 @@ export async function onRequestPost(context) {
             license.id
           );
 
+
         return jsonResponse(
           {
             text,
+
             credits_remaining:
               remaining,
+
             is_pro: true
           },
           200,
           corsHeaders
         );
 
+
       } catch (err) {
 
-        // AI failed, refund the reserved credit.
+        // -----------------------------------------------------
+        // Groq failed.
+        // Refund the reserved credit.
+        // -----------------------------------------------------
+
         await refundLicenseCredit(
           env.DB,
           license.id
         );
 
+
         throw err;
       }
     }
 
+
     // =========================================================
     // FREE USER PATH
     // =========================================================
+    //
+    // If no active Pro license was found for this user_id,
+    // the user remains on the normal 5-generation free system.
+    // =========================================================
+
+
+    // ---------------------------------------------------------
+    // Create free-user record if it doesn't exist.
+    // ---------------------------------------------------------
 
     await env.DB.prepare(
       `INSERT OR IGNORE INTO free_users
@@ -315,27 +574,37 @@ export async function onRequestPost(context) {
        VALUES (?1, ?2)`
     )
       .bind(
-        userId,
+        normalizedUserId,
         FREE_CREDITS
       )
       .run();
 
+
+    // ---------------------------------------------------------
+    // Reserve one free credit.
+    // ---------------------------------------------------------
+
     const reserved =
       await reserveFreeCredit(
         env.DB,
-        userId
+        normalizedUserId
       );
+
 
     if (!reserved) {
 
       const row =
         await env.DB.prepare(
-          `SELECT credits_remaining
+          `SELECT
+             credits_remaining
            FROM free_users
            WHERE user_id = ?1`
         )
-          .bind(userId)
+          .bind(
+            normalizedUserId
+          )
           .first();
+
 
       const remaining =
         row
@@ -344,18 +613,26 @@ export async function onRequestPost(context) {
             )
           : 0;
 
+
       return jsonResponse(
         {
           error:
             "You've used all 5 free generations. Upgrade to Pro for 500 generations.",
+
           credits_remaining:
             remaining,
+
           is_pro: false
         },
         402,
         corsHeaders
       );
     }
+
+
+    // ---------------------------------------------------------
+    // Generate with Groq.
+    // ---------------------------------------------------------
 
     try {
 
@@ -365,63 +642,101 @@ export async function onRequestPost(context) {
           env.GROQ_API_KEY
         );
 
+
+      // -------------------------------------------------------
+      // Generation succeeded.
+      // -------------------------------------------------------
+
       await env.DB.prepare(
         `UPDATE free_users
          SET updated_at = CURRENT_TIMESTAMP,
              last_used_at = CURRENT_TIMESTAMP
          WHERE user_id = ?1`
       )
-        .bind(userId)
+        .bind(
+          normalizedUserId
+        )
         .run();
+
+
+      // -------------------------------------------------------
+      // Record free generation.
+      // -------------------------------------------------------
 
       await env.DB.prepare(
         `INSERT INTO generations
          (user_id, license_id)
          VALUES (?1, NULL)`
       )
-        .bind(userId)
+        .bind(
+          normalizedUserId
+        )
         .run();
+
+
+      // -------------------------------------------------------
+      // Return exact remaining free credits.
+      // -------------------------------------------------------
 
       const row =
         await env.DB.prepare(
-          `SELECT credits_remaining
+          `SELECT
+             credits_remaining
            FROM free_users
            WHERE user_id = ?1`
         )
-          .bind(userId)
+          .bind(
+            normalizedUserId
+          )
           .first();
+
 
       return jsonResponse(
         {
           text,
+
           credits_remaining:
             row
               ? Number(
                   row.credits_remaining
                 )
               : 0,
+
           is_pro: false
         },
         200,
         corsHeaders
       );
 
+
     } catch (err) {
+
+      // -------------------------------------------------------
+      // Groq failed.
+      // Refund the reserved free credit.
+      // -------------------------------------------------------
 
       await refundFreeCredit(
         env.DB,
-        userId
+        normalizedUserId
       );
+
 
       throw err;
     }
 
+
   } catch (err) {
+
+    // =========================================================
+    // TIMEOUT
+    // =========================================================
 
     if (
       err &&
       err.message === "GROQ_TIMEOUT"
     ) {
+
       return jsonResponse(
         {
           error:
@@ -432,10 +747,16 @@ export async function onRequestPost(context) {
       );
     }
 
+
+    // =========================================================
+    // GENERAL ERROR
+    // =========================================================
+
     console.error(
       "Unhandled /api/generate error:",
       err
     );
+
 
     return jsonResponse(
       {
@@ -450,27 +771,45 @@ export async function onRequestPost(context) {
   }
 }
 
+
 /**
+ * =============================================================
  * CORS OPTIONS
+ * =============================================================
  */
+
 export async function onRequestOptions() {
+
   return new Response(
     null,
     {
       status: 204,
+
       headers:
         buildCorsHeaders()
     }
   );
 }
 
+
 /**
- * Reserve one free credit.
+ * =============================================================
+ * RESERVE ONE FREE CREDIT
+ * =============================================================
+ *
+ * Atomic UPDATE:
+ *
+ * credits_remaining > 0
+ *
+ * prevents negative balances and double-spending.
+ * =============================================================
  */
+
 async function reserveFreeCredit(
   db,
   userId
 ) {
+
   const result =
     await db.prepare(
       `UPDATE free_users
@@ -481,8 +820,11 @@ async function reserveFreeCredit(
        WHERE user_id = ?1
          AND credits_remaining > 0`
     )
-      .bind(userId)
+      .bind(
+        userId
+      )
       .run();
+
 
   return (
     Number(
@@ -491,13 +833,21 @@ async function reserveFreeCredit(
   );
 }
 
+
 /**
- * Refund free credit after AI failure.
+ * =============================================================
+ * REFUND FREE CREDIT
+ * =============================================================
+ *
+ * Called if Groq fails after a credit was reserved.
+ * =============================================================
  */
+
 async function refundFreeCredit(
   db,
   userId
 ) {
+
   await db.prepare(
     `UPDATE free_users
      SET credits_remaining =
@@ -514,13 +864,18 @@ async function refundFreeCredit(
     .run();
 }
 
+
 /**
- * Reserve one paid credit.
+ * =============================================================
+ * RESERVE ONE PRO CREDIT
+ * =============================================================
  */
+
 async function reserveLicenseCredit(
   db,
   licenseId
 ) {
+
   const result =
     await db.prepare(
       `UPDATE licenses
@@ -532,8 +887,11 @@ async function reserveLicenseCredit(
          AND status = 'active'
          AND credits_remaining > 0`
     )
-      .bind(licenseId)
+      .bind(
+        licenseId
+      )
       .run();
+
 
   return (
     Number(
@@ -542,13 +900,18 @@ async function reserveLicenseCredit(
   );
 }
 
+
 /**
- * Refund paid credit after AI failure.
+ * =============================================================
+ * REFUND PRO CREDIT
+ * =============================================================
  */
+
 async function refundLicenseCredit(
   db,
   licenseId
 ) {
+
   await db.prepare(
     `UPDATE licenses
      SET credits_remaining =
@@ -565,21 +928,30 @@ async function refundLicenseCredit(
     .run();
 }
 
+
 /**
- * Get current paid credits.
+ * =============================================================
+ * GET CURRENT PRO CREDITS
+ * =============================================================
  */
+
 async function getLicenseCredits(
   db,
   licenseId
 ) {
+
   const row =
     await db.prepare(
-      `SELECT credits_remaining
+      `SELECT
+         credits_remaining
        FROM licenses
        WHERE id = ?1`
     )
-      .bind(licenseId)
+      .bind(
+        licenseId
+      )
       .first();
+
 
   return row
     ? Number(
@@ -588,13 +960,18 @@ async function getLicenseCredits(
     : 0;
 }
 
+
 /**
- * Groq call with fallback.
+ * =============================================================
+ * GROQ CALL WITH FALLBACK
+ * =============================================================
  */
+
 async function callGroq(
   prompt,
   apiKey
 ) {
+
   try {
 
     return await callGroqModel(
@@ -605,12 +982,18 @@ async function callGroq(
 
   } catch (err) {
 
+    // ---------------------------------------------------------
+    // Do not make a second 30-second request after timeout.
+    // ---------------------------------------------------------
+
     if (
       err &&
       err.message === "GROQ_TIMEOUT"
     ) {
+
       throw err;
     }
+
 
     console.error(
       GROQ_MODEL_PRIMARY +
@@ -620,6 +1003,7 @@ async function callGroq(
       err
     );
 
+
     return await callGroqModel(
       GROQ_MODEL_FALLBACK,
       prompt,
@@ -628,16 +1012,22 @@ async function callGroq(
   }
 }
 
+
 /**
- * Single Groq model request.
+ * =============================================================
+ * SINGLE GROQ MODEL REQUEST
+ * =============================================================
  */
+
 async function callGroqModel(
   model,
   prompt,
   apiKey
 ) {
+
   const controller =
     new AbortController();
+
 
   const timeoutId =
     setTimeout(
@@ -646,46 +1036,52 @@ async function callGroqModel(
       GROQ_TIMEOUT_MS
     );
 
+
   let res;
+
 
   try {
 
-    res = await fetch(
-      GROQ_URL,
-      {
-        method: "POST",
+    res =
+      await fetch(
+        GROQ_URL,
+        {
+          method: "POST",
 
-        headers: {
-          "Content-Type":
-            "application/json",
+          headers: {
 
-          "Authorization":
-            "Bearer " + apiKey
-        },
+            "Content-Type":
+              "application/json",
 
-        body: JSON.stringify(
-          {
-            model,
+            "Authorization":
+              "Bearer " + apiKey
+          },
 
-            messages: [
+          body:
+            JSON.stringify(
               {
-                role: "user",
-                content: prompt
+                model,
+
+                messages: [
+                  {
+                    role: "user",
+                    content: prompt
+                  }
+                ],
+
+                temperature: 0.9,
+
+                response_format: {
+                  type: "json_object"
+                }
               }
-            ],
+            ),
 
-            temperature: 0.9,
+          signal:
+            controller.signal
+        }
+      );
 
-            response_format: {
-              type: "json_object"
-            }
-          }
-        ),
-
-        signal:
-          controller.signal
-      }
-    );
 
   } catch (err) {
 
@@ -693,14 +1089,17 @@ async function callGroqModel(
       err &&
       err.name === "AbortError"
     ) {
+
       throw new Error(
         "GROQ_TIMEOUT"
       );
     }
 
+
     throw new Error(
       "Couldn't reach the AI service. Please try again."
     );
+
 
   } finally {
 
@@ -709,6 +1108,11 @@ async function callGroqModel(
     );
   }
 
+
+  // ---------------------------------------------------------
+  // Groq returned an HTTP error.
+  // ---------------------------------------------------------
+
   if (!res.ok) {
 
     let message =
@@ -716,26 +1120,36 @@ async function callGroqModel(
       res.status +
       ").";
 
+
     try {
 
       const errBody =
         await res.json();
 
+
       if (
         errBody?.error?.message
       ) {
+
         message =
           errBody.error.message;
       }
 
     } catch (_) {}
 
+
     throw new Error(
       message
     );
   }
 
+
+  // ---------------------------------------------------------
+  // Parse Groq response.
+  // ---------------------------------------------------------
+
   let data;
+
 
   try {
 
@@ -749,40 +1163,66 @@ async function callGroqModel(
     );
   }
 
+
+  // ---------------------------------------------------------
+  // Get first choice.
+  // ---------------------------------------------------------
+
   const choice =
     data?.choices?.[0];
+
 
   if (
     !choice ||
     choice.finish_reason ===
       "content_filter"
   ) {
+
     throw new Error(
       "The AI couldn't generate a result for this input. Try rephrasing your product keyword."
     );
   }
 
+
+  // ---------------------------------------------------------
+  // Get assistant text.
+  // ---------------------------------------------------------
+
   const text =
     choice.message?.content;
 
+
   if (!text) {
+
     throw new Error(
       "The AI didn't return a usable result. Please try again."
     );
   }
 
+
   return text;
 }
 
+
 /**
+ * =============================================================
  * SHA-256
+ * =============================================================
+ *
+ * Used only when the user manually submits a license key.
+ *
+ * The plaintext license key is never stored in D1.
+ * =============================================================
  */
+
 async function sha256(
   value
 ) {
+
   const data =
     new TextEncoder()
       .encode(value);
+
 
   const digest =
     await crypto.subtle.digest(
@@ -790,30 +1230,44 @@ async function sha256(
       data
     );
 
+
   return Array.from(
-    new Uint8Array(digest)
+    new Uint8Array(
+      digest
+    )
   )
     .map(
       b =>
         b
           .toString(16)
-          .padStart(2, "0")
+          .padStart(
+            2,
+            "0"
+          )
     )
     .join("");
 }
 
+
 /**
- * JSON response helper.
+ * =============================================================
+ * JSON RESPONSE HELPER
+ * =============================================================
  */
+
 function jsonResponse(
   data,
   status,
   corsHeaders
 ) {
+
   return new Response(
-    JSON.stringify(data),
+    JSON.stringify(
+      data
+    ),
     {
       status,
+
       headers:
         Object.assign(
           {
@@ -826,11 +1280,17 @@ function jsonResponse(
   );
 }
 
+
 /**
- * CORS headers.
+ * =============================================================
+ * CORS HEADERS
+ * =============================================================
  */
+
 function buildCorsHeaders() {
+
   return {
+
     "Access-Control-Allow-Origin":
       "*",
 
