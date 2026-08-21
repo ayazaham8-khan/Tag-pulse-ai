@@ -24,16 +24,16 @@
  *   LEMON_WEBHOOK_SECRET
  *
  * Lemon Squeezy:
- *   Product ID: 1296090
- *   Variant ID: 2027791
+ *   Product ID: 1305746
+ *   Variant ID: 2042144
  *
  * Current environment:
- *   Test Mode
+ *   live mode
  * =============================================================
  */
 
-const LEMON_PRODUCT_ID = "1296090";
-const LEMON_VARIANT_ID = "2027791";
+const LEMON_PRODUCT_ID = "1305746";
+const LEMON_VARIANT_ID = "2042144";
 
 const PAID_CREDITS = 500;
 
