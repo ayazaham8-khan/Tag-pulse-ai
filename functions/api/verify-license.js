@@ -1,28 +1,43 @@
 /**
  * =============================================================
- * TagPulse AI — License Verification
+ * TagPulse AI — Lemon Squeezy License Verification
  * Cloudflare Pages Function
  *
  * POST /api/verify-license
  *
- * Purpose:
- * - Verify a Lemon Squeezy license key
- * - Verify TagPulse product + variant
- * - Bind license to browser user_id
- * - Store ONLY SHA-256 license hash in D1
- * - Give 500 Pro credits on first activation
- * - Prevent the same license from being used by another user
+ * Authentication:
+ *   Authorization: Bearer <Supabase access token>
+ *
+ * Request body:
+ * {
+ *   "code": "<Lemon Squeezy license key>"
+ * }
+ *
+ * IMPORTANT:
+ *   The server NEVER trusts a frontend-supplied user_id.
+ *   The user ID is obtained from the authenticated Supabase user.
+ *
+ * Success:
+ * {
+ *   "valid": true,
+ *   "is_pro": true,
+ *   "message": "Pro unlocked! 500 generations available.",
+ *   "credits_remaining": 500
+ * }
  *
  * D1 binding:
  *   DB
  *
- * Lemon Squeezy:
- *   Test Mode
+ * Supabase:
+ *   Publishable key is safe to use for authentication requests.
  *
- * Product:
+ * Lemon Squeezy:
+ *   Live Mode
+ *
+ * Product ID:
  *   1305746
  *
- * Variant:
+ * Variant ID:
  *   2042144
  * =============================================================
  */
@@ -34,17 +49,28 @@
  * =============================================================
  */
 
+const SUPABASE_URL =
+  "https://sjhjoapislwdhtqpbotz.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_GwuI7pu4wcqiJUIZlG6lmg_WKpE-16M";
+
+
 const LEMON_ACTIVATE_URL =
   "https://api.lemonsqueezy.com/v1/licenses/activate";
+
 
 const LEMON_VALIDATE_URL =
   "https://api.lemonsqueezy.com/v1/licenses/validate";
 
+
 const LEMON_PRODUCT_ID =
-  "1296090";
+  "1305746";
+
 
 const LEMON_VARIANT_ID =
-  "2027791";
+  "2042144";
+
 
 const PAID_CREDITS =
   500;
@@ -67,7 +93,7 @@ export async function onRequestPost(context) {
   try {
 
     // ---------------------------------------------------------
-    // 1. Check D1
+    // 1. D1 must exist
     // ---------------------------------------------------------
 
     if (!env.DB) {
@@ -88,7 +114,43 @@ export async function onRequestPost(context) {
 
 
     // ---------------------------------------------------------
-    // 2. Parse JSON
+    // 2. Authenticate the Supabase user
+    // ---------------------------------------------------------
+    //
+    // IMPORTANT:
+    // We do NOT accept user_id from the request body.
+    //
+    // The user's identity comes from the verified Supabase
+    // access token.
+    // ---------------------------------------------------------
+
+    const authenticatedUser =
+      await getAuthenticatedSupabaseUser(
+        request
+      );
+
+
+    if (!authenticatedUser) {
+
+      return jsonResponse(
+        {
+          valid: false,
+          is_pro: false,
+          error:
+            "Please sign in to verify your license."
+        },
+        401,
+        corsHeaders
+      );
+    }
+
+
+    const userId =
+      authenticatedUser.id;
+
+
+    // ---------------------------------------------------------
+    // 3. Parse request
     // ---------------------------------------------------------
 
     let body;
@@ -112,7 +174,7 @@ export async function onRequestPost(context) {
 
 
     // ---------------------------------------------------------
-    // 3. Read inputs
+    // 4. Read license key
     // ---------------------------------------------------------
 
     const code =
@@ -122,15 +184,8 @@ export async function onRequestPost(context) {
         : "";
 
 
-    const userId =
-      body &&
-      typeof body.user_id === "string"
-        ? body.user_id.trim()
-        : "";
-
-
     // ---------------------------------------------------------
-    // 4. Validate license key
+    // 5. Validate license key
     // ---------------------------------------------------------
 
     if (
@@ -150,34 +205,15 @@ export async function onRequestPost(context) {
 
 
     // ---------------------------------------------------------
-    // 5. Validate user ID
-    // ---------------------------------------------------------
-
-    if (
-      !userId ||
-      userId.length > 128
-    ) {
-
-      return jsonResponse(
-        {
-          error:
-            "A valid user_id is required."
-        },
-        400,
-        corsHeaders
-      );
-    }
-
-
-    // ---------------------------------------------------------
     // 6. Hash license key
     //
-    // IMPORTANT:
-    // Plaintext license is NEVER stored in D1.
+    // NEVER store plaintext license keys in D1.
     // ---------------------------------------------------------
 
     const licenseHash =
-      await sha256(code);
+      await sha256(
+        code
+      );
 
 
     // =========================================================
@@ -188,12 +224,10 @@ export async function onRequestPost(context) {
       await env.DB.prepare(
         `SELECT
            id,
-           license_key_hash,
-           status,
-           credits_remaining,
-           initial_credits,
            user_id,
-           instance_id
+           instance_id,
+           status,
+           credits_remaining
          FROM licenses
          WHERE license_key_hash = ?1
          LIMIT 1`
@@ -211,7 +245,8 @@ export async function onRequestPost(context) {
     if (existing) {
 
       // -------------------------------------------------------
-      // Prevent another browser/user from using this license.
+      // Prevent another Supabase account from using the same
+      // license.
       // -------------------------------------------------------
 
       if (
@@ -224,7 +259,7 @@ export async function onRequestPost(context) {
             valid: false,
             is_pro: false,
             message:
-              "This license is already activated on another TagPulse session."
+              "This license is already activated on another TagPulse account."
           },
           403,
           corsHeaders
@@ -243,7 +278,7 @@ export async function onRequestPost(context) {
         validation =
           await validateLicense(
             code,
-            existing.instance_id
+            existing.instance_id || null
           );
 
       } catch (err) {
@@ -265,7 +300,7 @@ export async function onRequestPost(context) {
 
 
       // -------------------------------------------------------
-      // Verify product + variant.
+      // Verify exact TagPulse product + variant.
       // -------------------------------------------------------
 
       if (
@@ -330,10 +365,10 @@ export async function onRequestPost(context) {
 
 
       // -------------------------------------------------------
-      // Make sure the license is active.
+      // Make sure Lemon says the license is active.
       // -------------------------------------------------------
 
-      const lemonLicenseStatus =
+      const lemonStatus =
         validation &&
         validation.license_key &&
         validation.license_key.status
@@ -342,7 +377,7 @@ export async function onRequestPost(context) {
 
 
       if (
-        lemonLicenseStatus !== "active"
+        lemonStatus !== "active"
       ) {
 
         await env.DB.prepare(
@@ -352,7 +387,7 @@ export async function onRequestPost(context) {
            WHERE id = ?2`
         )
           .bind(
-            lemonLicenseStatus || "inactive",
+            lemonStatus || "inactive",
             existing.id
           )
           .run();
@@ -372,7 +407,8 @@ export async function onRequestPost(context) {
 
 
       // -------------------------------------------------------
-      // Attach user_id if this license has no owner yet.
+      // Attach authenticated Supabase user if the license has
+      // not been linked yet.
       // -------------------------------------------------------
 
       if (
@@ -394,7 +430,7 @@ export async function onRequestPost(context) {
 
 
       // -------------------------------------------------------
-      // Return current credit balance.
+      // Return current Pro balance.
       // -------------------------------------------------------
 
       const remaining =
@@ -410,10 +446,12 @@ export async function onRequestPost(context) {
         {
           valid: true,
           is_pro: true,
+
           message:
             "Pro unlocked! " +
             remaining +
             " generations remaining.",
+
           credits_remaining:
             remaining
         },
@@ -468,6 +506,7 @@ export async function onRequestPost(context) {
         {
           valid: false,
           is_pro: false,
+
           message:
             activation &&
             activation.error
@@ -481,7 +520,7 @@ export async function onRequestPost(context) {
 
 
     // ---------------------------------------------------------
-    // Security:
+    // SECURITY:
     // Verify exact TagPulse product + variant.
     // ---------------------------------------------------------
 
@@ -496,11 +535,11 @@ export async function onRequestPost(context) {
         activation.meta
       );
 
-
       return jsonResponse(
         {
           valid: false,
           is_pro: false,
+
           message:
             "This license key does not belong to the TagPulse AI Pro product."
         },
@@ -523,6 +562,7 @@ export async function onRequestPost(context) {
         {
           valid: false,
           is_pro: false,
+
           message:
             "This license key is not active."
         },
@@ -533,7 +573,7 @@ export async function onRequestPost(context) {
 
 
     // ---------------------------------------------------------
-    // Get Lemon instance ID.
+    // Get Lemon Squeezy instance ID.
     // ---------------------------------------------------------
 
     const instanceId =
@@ -550,7 +590,6 @@ export async function onRequestPost(context) {
       console.error(
         "verify-license: Lemon activation returned no instance ID."
       );
-
 
       return jsonResponse(
         {
@@ -614,16 +653,15 @@ export async function onRequestPost(context) {
 
       // -------------------------------------------------------
       // Race-condition check.
-      // Another request may have inserted it first.
       // -------------------------------------------------------
 
       const raceCheck =
         await env.DB.prepare(
           `SELECT
              id,
+             user_id,
              status,
-             credits_remaining,
-             user_id
+             credits_remaining
            FROM licenses
            WHERE license_key_hash = ?1
            LIMIT 1`
@@ -638,7 +676,7 @@ export async function onRequestPost(context) {
         raceCheck
       ) {
 
-        // Another user owns it.
+        // Another Supabase account owns it.
         if (
           raceCheck.user_id &&
           raceCheck.user_id !== userId
@@ -648,8 +686,9 @@ export async function onRequestPost(context) {
             {
               valid: false,
               is_pro: false,
+
               message:
-                "This license is already activated on another TagPulse session."
+                "This license is already activated on another TagPulse account."
             },
             403,
             corsHeaders
@@ -670,10 +709,12 @@ export async function onRequestPost(context) {
           {
             valid: true,
             is_pro: true,
+
             message:
               "Pro unlocked! " +
               remaining +
               " generations remaining.",
+
             credits_remaining:
               remaining
           },
@@ -711,8 +752,10 @@ export async function onRequestPost(context) {
       {
         valid: true,
         is_pro: true,
+
         message:
           "Pro unlocked! 500 generations available.",
+
         credits_remaining:
           PAID_CREDITS
       },
@@ -743,7 +786,121 @@ export async function onRequestPost(context) {
 
 /**
  * =============================================================
- * LEMON SQUEEZY — ACTIVATE LICENSE
+ * SUPABASE AUTHENTICATION
+ * =============================================================
+ *
+ * The frontend sends:
+ *
+ * Authorization: Bearer <Supabase access token>
+ *
+ * We ask Supabase Auth for the authenticated user.
+ *
+ * The returned user.id is the ONLY user identity used by this
+ * function.
+ * =============================================================
+ */
+
+async function getAuthenticatedSupabaseUser(
+  request
+) {
+
+  const authorization =
+    request.headers.get(
+      "Authorization"
+    ) || "";
+
+
+  if (
+    !authorization ||
+    !authorization.startsWith(
+      "Bearer "
+    )
+  ) {
+
+    return null;
+  }
+
+
+  const accessToken =
+    authorization
+      .slice(7)
+      .trim();
+
+
+  if (!accessToken) {
+
+    return null;
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        SUPABASE_URL +
+          "/auth/v1/user",
+        {
+          method: "GET",
+
+          headers: {
+            "Accept":
+              "application/json",
+
+            "apikey":
+              SUPABASE_PUBLISHABLE_KEY,
+
+            "Authorization":
+              "Bearer " +
+              accessToken
+          }
+        }
+      );
+
+
+    if (
+      !response.ok
+    ) {
+
+      console.warn(
+        "Supabase authentication rejected request:",
+        response.status
+      );
+
+      return null;
+    }
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !data ||
+      !data.id ||
+      typeof data.id !== "string"
+    ) {
+
+      return null;
+    }
+
+
+    return data;
+
+  } catch (err) {
+
+    console.error(
+      "Supabase authentication request failed:",
+      err
+    );
+
+    return null;
+  }
+}
+
+
+/**
+ * =============================================================
+ * LEMON SQUEEZY — ACTIVATE
  * =============================================================
  */
 
@@ -795,7 +952,7 @@ async function activateLicense(
   } catch (err) {
 
     console.error(
-      "Lemon activation network error:",
+      "Lemon Squeezy activation network error:",
       err
     );
 
@@ -842,7 +999,7 @@ async function activateLicense(
 
 /**
  * =============================================================
- * LEMON SQUEEZY — VALIDATE LICENSE
+ * LEMON SQUEEZY — VALIDATE
  * =============================================================
  */
 
@@ -898,7 +1055,7 @@ async function validateLicense(
   } catch (err) {
 
     console.error(
-      "Lemon validation network error:",
+      "Lemon Squeezy validation network error:",
       err
     );
 
@@ -975,8 +1132,10 @@ function matchesOurProduct(
 
 
   return (
-    productId === LEMON_PRODUCT_ID &&
-    variantId === LEMON_VARIANT_ID
+    productId ===
+      LEMON_PRODUCT_ID &&
+    variantId ===
+      LEMON_VARIANT_ID
   );
 }
 
@@ -1072,7 +1231,7 @@ function buildCorsHeaders() {
       "POST, OPTIONS",
 
     "Access-Control-Allow-Headers":
-      "Content-Type"
+      "Content-Type, Authorization"
   };
 }
 
