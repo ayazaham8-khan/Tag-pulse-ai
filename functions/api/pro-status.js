@@ -6,35 +6,36 @@
  * POST /api/pro-status
  *
  * Purpose:
- *   - Check whether the current browser/user has an active
- *     TagPulse AI Pro license.
+ *   - Verify the authenticated Supabase user.
+ *   - Check whether that user has an active TagPulse AI Pro
+ *     license.
  *   - Return current Pro credits.
- *   - Used by the frontend after returning from Lemon Squeezy.
+ *   - Return current free credits when the user is not Pro.
  *
- * Request body:
- * {
- *   "user_id": "<browser-generated stable user id>"
- * }
+ * Authentication:
+ *   Authorization: Bearer <Supabase access token>
  *
- * Success — Pro:
- * {
- *   "is_pro": true,
- *   "credits_remaining": 500
- * }
- *
- * Success — Free:
- * {
- *   "is_pro": false,
- *   "credits_remaining": 5
- * }
+ * IMPORTANT:
+ *   - The server NEVER trusts a frontend user_id.
+ *   - The user ID is taken from the verified Supabase user.
  *
  * D1 binding required:
  *   DB
- *
- * Lemon Squeezy:
- *   Test Mode
  * =============================================================
  */
+
+
+/**
+ * =============================================================
+ * SUPABASE CONFIGURATION
+ * =============================================================
+ */
+
+const SUPABASE_URL =
+  "https://sjhjoapislwdhtqpbotz.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_GwuI7pu4wcqiJUIZlG6lmg_WKpE-16M";
 
 
 /**
@@ -42,6 +43,7 @@
  * POST /api/pro-status
  * =============================================================
  */
+
 export async function onRequestPost(context) {
 
   const { request, env } = context;
@@ -74,67 +76,46 @@ export async function onRequestPost(context) {
 
 
     // ---------------------------------------------------------
-    // 2. Parse JSON body
+    // 2. Authenticate Supabase user
+    // ---------------------------------------------------------
+    //
+    // The frontend must send:
+    //
+    // Authorization: Bearer <Supabase access token>
+    //
+    // We do NOT accept body.user_id as an identity source.
     // ---------------------------------------------------------
 
-    let body;
+    const authenticatedUser =
+      await getAuthenticatedSupabaseUser(
+        request
+      );
 
-    try {
 
-      body =
-        await request.json();
-
-    } catch (_) {
+    if (!authenticatedUser) {
 
       return jsonResponse(
         {
           error:
-            "Request body must be valid JSON."
+            "Please sign in to use TagPulse AI."
         },
-        400,
+        401,
         corsHeaders
       );
     }
 
-
-    // ---------------------------------------------------------
-    // 3. Read user_id
-    // ---------------------------------------------------------
 
     const userId =
-      body &&
-      typeof body.user_id === "string"
-        ? body.user_id.trim()
-        : "";
-
-
-    // ---------------------------------------------------------
-    // 4. Validate user_id
-    // ---------------------------------------------------------
-
-    if (
-      !userId ||
-      userId.length > 128
-    ) {
-
-      return jsonResponse(
-        {
-          error:
-            "A valid user_id is required."
-        },
-        400,
-        corsHeaders
-      );
-    }
+      authenticatedUser.id;
 
 
     // =========================================================
-    // 5. CHECK PRO LICENSE
+    // 3. CHECK PRO LICENSE
     // =========================================================
     //
     // A user is considered Pro when:
     //
-    //   user_id matches
+    //   authenticated Supabase user ID matches
     //   AND
     //   license status = active
     //
@@ -155,12 +136,14 @@ export async function onRequestPost(context) {
          ORDER BY id DESC
          LIMIT 1`
       )
-        .bind(userId)
+        .bind(
+          userId
+        )
         .first();
 
 
     // =========================================================
-    // 6. PRO USER
+    // 4. PRO USER
     // =========================================================
 
     if (license) {
@@ -188,7 +171,7 @@ export async function onRequestPost(context) {
 
 
     // =========================================================
-    // 7. FREE USER
+    // 5. FREE USER
     // =========================================================
     //
     // No active license was found.
@@ -198,7 +181,8 @@ export async function onRequestPost(context) {
     // IMPORTANT:
     // We do NOT create the free_users row here.
     //
-    // generate.js already creates it when necessary.
+    // generate.js creates it when the user generates for the
+    // first time.
     //
     // =========================================================
 
@@ -210,7 +194,9 @@ export async function onRequestPost(context) {
          WHERE user_id = ?1
          LIMIT 1`
       )
-        .bind(userId)
+        .bind(
+          userId
+        )
         .first();
 
 
@@ -259,9 +245,123 @@ export async function onRequestPost(context) {
 
 /**
  * =============================================================
+ * SUPABASE AUTHENTICATION
+ * =============================================================
+ *
+ * Reads the Authorization header and verifies the supplied
+ * Supabase access token against the Supabase Auth server.
+ *
+ * The returned user ID comes from Supabase's verified response.
+ * It is NOT taken from request.body.user_id.
+ * =============================================================
+ */
+
+async function getAuthenticatedSupabaseUser(
+  request
+) {
+
+  const authorization =
+    request.headers.get(
+      "Authorization"
+    ) || "";
+
+
+  if (
+    !authorization ||
+    !authorization.startsWith(
+      "Bearer "
+    )
+  ) {
+
+    return null;
+  }
+
+
+  const accessToken =
+    authorization
+      .slice(
+        7
+      )
+      .trim();
+
+
+  if (!accessToken) {
+
+    return null;
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        SUPABASE_URL +
+          "/auth/v1/user",
+        {
+          method: "GET",
+
+          headers: {
+            "Accept":
+              "application/json",
+
+            "apikey":
+              SUPABASE_PUBLISHABLE_KEY,
+
+            "Authorization":
+              "Bearer " +
+              accessToken
+          }
+        }
+      );
+
+
+    if (
+      !response.ok
+    ) {
+
+      console.warn(
+        "Supabase authentication rejected request:",
+        response.status
+      );
+
+      return null;
+    }
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !data ||
+      !data.id ||
+      typeof data.id !== "string"
+    ) {
+
+      return null;
+    }
+
+
+    return data;
+
+  } catch (err) {
+
+    console.error(
+      "Supabase authentication request failed:",
+      err
+    );
+
+    return null;
+  }
+}
+
+
+/**
+ * =============================================================
  * OPTIONS / CORS PREFLIGHT
  * =============================================================
  */
+
 export async function onRequestOptions() {
 
   return new Response(
@@ -281,6 +381,7 @@ export async function onRequestOptions() {
  * JSON RESPONSE
  * =============================================================
  */
+
 function jsonResponse(
   data,
   status,
@@ -288,7 +389,9 @@ function jsonResponse(
 ) {
 
   return new Response(
-    JSON.stringify(data),
+    JSON.stringify(
+      data
+    ),
 
     {
       status,
@@ -312,6 +415,7 @@ function jsonResponse(
  * CORS HEADERS
  * =============================================================
  */
+
 function buildCorsHeaders() {
 
   return {
@@ -323,6 +427,6 @@ function buildCorsHeaders() {
       "POST, OPTIONS",
 
     "Access-Control-Allow-Headers":
-      "Content-Type"
+      "Content-Type, Authorization"
   };
 }
