@@ -3,7 +3,7 @@
  * TagPulse AI — Cloudflare Pages Function
  * POST /api/generate
  *
- * D1-backed credit enforcement:
+ * Supabase Auth + D1-backed credit enforcement
  *
  * FREE USERS
  * - 5 generations total
@@ -11,35 +11,23 @@
  * PAID USERS
  * - 500 generations total
  *
+ * AUTHENTICATION
+ * - Frontend sends:
+ *     Authorization: Bearer <Supabase access token>
+ *
+ * - Server verifies the token against Supabase Auth.
+ * - The verified Supabase user ID becomes the authoritative
+ *   D1 user_id.
+ *
  * IMPORTANT:
- * The server NEVER trusts the frontend credit count.
+ * - The server NEVER trusts a frontend user_id.
+ * - The frontend credit count is never trusted.
+ * - D1 remains the source of truth for credits.
  *
- * Pro users can now be identified in TWO ways:
- *
- * 1. Existing/manual license-key flow:
- *    request.license_key
- *
- * 2. Automatic Lemon Squeezy checkout flow:
- *    request.user_id
- *
- * This allows a user who has just purchased through Lemon
- * Squeezy to use Pro automatically without copying a license key.
- *
- * Flow:
- *
- * Lemon Squeezy
- *       ↓
- * license_key_created webhook
- *       ↓
- * D1 licenses table
- *       ↓
- * user_id linked to license
- *       ↓
- * /api/generate receives user_id
- *       ↓
- * server finds active Pro license
- *       ↓
- * 500-credit system
+ * PRO USERS
+ * 1. Existing/manual Lemon Squeezy license-key flow
+ * 2. Automatic Lemon Squeezy purchase flow linked to the
+ *    authenticated Supabase user ID.
  *
  * Failed AI requests refund the reserved credit.
  * =============================================================
@@ -66,6 +54,27 @@ const GROQ_TIMEOUT_MS = 30000;
 const FREE_CREDITS = 5;
 
 const PAID_CREDITS = 500;
+
+
+/**
+ * =============================================================
+ * SUPABASE CONFIGURATION
+ * =============================================================
+ *
+ * The publishable/anon key is safe to use with Supabase's
+ * public Auth endpoint.
+ *
+ * IMPORTANT:
+ * This is NOT the service-role key.
+ * Never put a service-role/secret key here.
+ * =============================================================
+ */
+
+const SUPABASE_URL =
+  "https://sjhjoapislwdhtqpbotz.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_GwuI7pu4wcqiJUIZlG6lmg_WKpE-16M";
 
 
 /**
@@ -105,7 +114,40 @@ export async function onRequestPost(context) {
 
 
     // ---------------------------------------------------------
-    // 2. Parse request body
+    // 2. Authenticate Supabase user
+    // ---------------------------------------------------------
+    //
+    // The frontend must send:
+    //
+    // Authorization: Bearer <Supabase access token>
+    //
+    // We NEVER accept body.user_id as the identity.
+    // ---------------------------------------------------------
+
+    const authenticatedUser =
+      await getAuthenticatedSupabaseUser(
+        request
+      );
+
+    if (!authenticatedUser) {
+
+      return jsonResponse(
+        {
+          error:
+            "Please sign in to use TagPulse AI."
+        },
+        401,
+        corsHeaders
+      );
+    }
+
+
+    const normalizedUserId =
+      authenticatedUser.id;
+
+
+    // ---------------------------------------------------------
+    // 3. Parse request body
     // ---------------------------------------------------------
 
     let body;
@@ -129,21 +171,18 @@ export async function onRequestPost(context) {
 
 
     // ---------------------------------------------------------
-    // 3. Read request values
+    // 4. Read request values
     // ---------------------------------------------------------
 
     const prompt =
       body && body.prompt;
-
-    const userId =
-      body && body.user_id;
 
     const licenseKey =
       body && body.license_key;
 
 
     // ---------------------------------------------------------
-    // 4. Validate prompt
+    // 5. Validate prompt
     // ---------------------------------------------------------
 
     if (
@@ -161,32 +200,6 @@ export async function onRequestPost(context) {
         corsHeaders
       );
     }
-
-
-    // ---------------------------------------------------------
-    // 5. Validate user ID
-    // ---------------------------------------------------------
-
-    if (
-      !userId ||
-      typeof userId !== "string" ||
-      !userId.trim() ||
-      userId.length > 128
-    ) {
-
-      return jsonResponse(
-        {
-          error:
-            "A valid user_id is required."
-        },
-        400,
-        corsHeaders
-      );
-    }
-
-
-    const normalizedUserId =
-      userId.trim();
 
 
     // ---------------------------------------------------------
@@ -214,17 +227,12 @@ export async function onRequestPost(context) {
     // PRO LICENSE RESOLUTION
     // =========================================================
     //
-    // We support BOTH:
+    // We support:
     //
-    // A) license_key
-    // B) user_id
+    // A) authenticated user + manual license_key
+    // B) authenticated user + automatic D1 Pro license
     //
-    // If a license key is supplied, use it first.
-    //
-    // If no license key is supplied, search by user_id.
-    //
-    // This is what enables automatic Pro access after Lemon
-    // Squeezy checkout.
+    // The authenticated Supabase user ID is ALWAYS authoritative.
     // =========================================================
 
 
@@ -268,7 +276,7 @@ export async function onRequestPost(context) {
 
 
       // -------------------------------------------------------
-      // License key was supplied but does not exist.
+      // License key does not exist.
       // -------------------------------------------------------
 
       if (!license) {
@@ -286,7 +294,7 @@ export async function onRequestPost(context) {
 
 
       // -------------------------------------------------------
-      // Prevent a license from being used by another user.
+      // Prevent license theft / account switching.
       // -------------------------------------------------------
 
       if (
@@ -297,7 +305,7 @@ export async function onRequestPost(context) {
         return jsonResponse(
           {
             error:
-              "This license is already linked to another TagPulse session.",
+              "This license is already linked to another TagPulse account.",
             is_pro: false
           },
           403,
@@ -327,8 +335,8 @@ export async function onRequestPost(context) {
 
 
       // -------------------------------------------------------
-      // If the license exists but user_id is empty,
-      // attach it to the current browser/user.
+      // If an existing license has no owner, bind it to the
+      // authenticated Supabase user.
       // -------------------------------------------------------
 
       if (!license.user_id) {
@@ -353,21 +361,11 @@ export async function onRequestPost(context) {
 
     // =========================================================
     // METHOD B:
-    // AUTOMATIC PRO ACCESS BY USER ID
+    // AUTOMATIC PRO ACCESS BY AUTHENTICATED USER ID
     // =========================================================
     //
-    // This is used after Lemon Squeezy purchase.
-    //
-    // The webhook stores:
-    //
-    // user_id
-    // status
-    // credits_remaining
-    //
-    // in the licenses table.
-    //
-    // Therefore the frontend does NOT need to send the
-    // plaintext license key.
+    // Lemon Squeezy webhook provisions the license against the
+    // authenticated Supabase user's ID.
     // =========================================================
 
     if (!license) {
@@ -397,10 +395,6 @@ export async function onRequestPost(context) {
     // =========================================================
 
     if (license) {
-
-      // -------------------------------------------------------
-      // Make sure credits are numeric.
-      // -------------------------------------------------------
 
       const currentCredits =
         Number(
@@ -432,9 +426,6 @@ export async function onRequestPost(context) {
 
       // -------------------------------------------------------
       // Reserve one Pro credit BEFORE calling Groq.
-      //
-      // This atomic UPDATE prevents two simultaneous requests
-      // from consuming the same credit.
       // -------------------------------------------------------
 
       const reserved =
@@ -481,7 +472,6 @@ export async function onRequestPost(context) {
 
         // -----------------------------------------------------
         // Generation succeeded.
-        // Update license usage information.
         // -----------------------------------------------------
 
         await env.DB.prepare(
@@ -540,15 +530,13 @@ export async function onRequestPost(context) {
       } catch (err) {
 
         // -----------------------------------------------------
-        // Groq failed.
-        // Refund the reserved credit.
+        // Groq failed — refund reserved Pro credit.
         // -----------------------------------------------------
 
         await refundLicenseCredit(
           env.DB,
           license.id
         );
-
 
         throw err;
       }
@@ -559,8 +547,7 @@ export async function onRequestPost(context) {
     // FREE USER PATH
     // =========================================================
     //
-    // If no active Pro license was found for this user_id,
-    // the user remains on the normal 5-generation free system.
+    // No active Pro license exists for the authenticated user.
     // =========================================================
 
 
@@ -712,15 +699,13 @@ export async function onRequestPost(context) {
     } catch (err) {
 
       // -------------------------------------------------------
-      // Groq failed.
-      // Refund the reserved free credit.
+      // Groq failed — refund reserved free credit.
       // -------------------------------------------------------
 
       await refundFreeCredit(
         env.DB,
         normalizedUserId
       );
-
 
       throw err;
     }
@@ -768,6 +753,119 @@ export async function onRequestPost(context) {
       502,
       corsHeaders
     );
+  }
+}
+
+
+/**
+ * =============================================================
+ * SUPABASE AUTHENTICATION
+ * =============================================================
+ *
+ * Reads the Authorization header and verifies the supplied
+ * Supabase access token against the Supabase Auth server.
+ *
+ * IMPORTANT:
+ * The returned user ID comes from Supabase's verified user
+ * response. It is NOT taken from request.body.user_id.
+ * =============================================================
+ */
+
+async function getAuthenticatedSupabaseUser(
+  request
+) {
+
+  const authorization =
+    request.headers.get(
+      "Authorization"
+    ) || "";
+
+
+  if (
+    !authorization ||
+    !authorization.startsWith(
+      "Bearer "
+    )
+  ) {
+
+    return null;
+  }
+
+
+  const accessToken =
+    authorization
+      .slice(
+        7
+      )
+      .trim();
+
+
+  if (!accessToken) {
+    return null;
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        SUPABASE_URL +
+          "/auth/v1/user",
+        {
+          method: "GET",
+
+          headers: {
+            "Accept":
+              "application/json",
+
+            "apikey":
+              SUPABASE_PUBLISHABLE_KEY,
+
+            "Authorization":
+              "Bearer " +
+              accessToken
+          }
+        }
+      );
+
+
+    if (
+      !response.ok
+    ) {
+
+      console.warn(
+        "Supabase authentication rejected request:",
+        response.status
+      );
+
+      return null;
+    }
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !data ||
+      !data.id ||
+      typeof data.id !== "string"
+    ) {
+
+      return null;
+    }
+
+
+    return data;
+
+  } catch (err) {
+
+    console.error(
+      "Supabase authentication request failed:",
+      err
+    );
+
+    return null;
   }
 }
 
@@ -837,9 +935,6 @@ async function reserveFreeCredit(
 /**
  * =============================================================
  * REFUND FREE CREDIT
- * =============================================================
- *
- * Called if Groq fails after a credit was reserved.
  * =============================================================
  */
 
@@ -917,7 +1012,7 @@ async function refundLicenseCredit(
      SET credits_remaining =
            credits_remaining + 1,
          updated_at =
-           CURRENT_TIMESTAMP
+             CURRENT_TIMESTAMP
      WHERE id = ?1
        AND credits_remaining < ?2`
   )
@@ -981,10 +1076,6 @@ async function callGroq(
     );
 
   } catch (err) {
-
-    // ---------------------------------------------------------
-    // Do not make a second 30-second request after timeout.
-    // ---------------------------------------------------------
 
     if (
       err &&
@@ -1100,7 +1191,6 @@ async function callGroqModel(
       "Couldn't reach the AI service. Please try again."
     );
 
-
   } finally {
 
     clearTimeout(
@@ -1108,10 +1198,6 @@ async function callGroqModel(
     );
   }
 
-
-  // ---------------------------------------------------------
-  // Groq returned an HTTP error.
-  // ---------------------------------------------------------
 
   if (!res.ok) {
 
@@ -1144,10 +1230,6 @@ async function callGroqModel(
   }
 
 
-  // ---------------------------------------------------------
-  // Parse Groq response.
-  // ---------------------------------------------------------
-
   let data;
 
 
@@ -1164,10 +1246,6 @@ async function callGroqModel(
   }
 
 
-  // ---------------------------------------------------------
-  // Get first choice.
-  // ---------------------------------------------------------
-
   const choice =
     data?.choices?.[0];
 
@@ -1183,10 +1261,6 @@ async function callGroqModel(
     );
   }
 
-
-  // ---------------------------------------------------------
-  // Get assistant text.
-  // ---------------------------------------------------------
 
   const text =
     choice.message?.content;
@@ -1208,11 +1282,6 @@ async function callGroqModel(
  * =============================================================
  * SHA-256
  * =============================================================
- *
- * Used only when the user manually submits a license key.
- *
- * The plaintext license key is never stored in D1.
- * =============================================================
  */
 
 async function sha256(
@@ -1221,7 +1290,9 @@ async function sha256(
 
   const data =
     new TextEncoder()
-      .encode(value);
+      .encode(
+        value
+      );
 
 
   const digest =
@@ -1298,6 +1369,6 @@ function buildCorsHeaders() {
       "POST, OPTIONS",
 
     "Access-Control-Allow-Headers":
-      "Content-Type"
+      "Content-Type, Authorization"
   };
 }
