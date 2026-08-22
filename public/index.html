@@ -120,6 +120,56 @@ a{ color:inherit; }
    LAYOUT / CARDS
    ============================================================ */
 .hidden{ display:none !important; }
+
+/* ============================================================
+   LANDING / ONBOARDING
+   ============================================================ */
+.landing-screen{
+  min-height:calc(100vh - 72px);
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  padding-top:18px;
+}
+.landing-hero{
+  text-align:center;
+  padding:52px 10px 30px;
+}
+.landing-hero h2{
+  font-size:clamp(30px, 7vw, 52px);
+  line-height:1.08;
+  font-weight:900;
+  letter-spacing:-0.035em;
+  max-width:13ch;
+  margin:0 auto 16px;
+}
+.landing-hero p{
+  font-size:15px;
+  color:var(--ink-soft);
+  max-width:58ch;
+  margin:0 auto 22px;
+}
+.get-started-btn{
+  width:auto;
+  min-width:190px;
+  padding:15px 24px;
+  font-size:15px;
+  border-radius:999px;
+}
+.landing-note{
+  margin-top:10px;
+  font-size:11.5px !important;
+  color:var(--muted) !important;
+}
+.generator-page{
+  display:none;
+}
+body.authenticated .landing-screen{
+  display:none;
+}
+body.authenticated .generator-page{
+  display:block;
+}
 main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 
 .hero{ margin-bottom:22px; }
@@ -477,12 +527,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      MAIN APP
      ============================================================ -->
 <main id="mainApp">
-  <div class="hero">
-    <h2>Generate a ranking-ready product listing</h2>
-    <p>Enter your product, pick a platform and audience, and get a keyword-rich title, 13 exact tags, and a description template in one pass.</p>
-  </div>
+  <section class="landing-screen" id="landingScreen">
+    <div class="landing-hero">
+      <h2>Turn Any Product Idea Into a Search-Ready Listing</h2>
+      <p>Generate a keyword-rich title, 13 targeted SEO tags, and a ready-to-use description in seconds.</p>
+      <button type="button" class="btn btn-primary get-started-btn" id="getStartedBtn">Get Started</button>
+      <p class="landing-note">Free account · 5 lifetime generations · No credit card required</p>
+    </div>
 
-  <section class="compare-section">
+    <section class="compare-section">
     <h2 class="compare-title">Stop Doing SEO the Hard Way</h2>
     <div class="compare-grid">
       <div class="compare-card compare-old">
@@ -506,8 +559,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         </ul>
       </div>
     </div>
+    </section>
   </section>
 
+  <section class="generator-page" id="generatorPage">
   <div class="credits-banner hidden" id="creditsBanner">
     <p><strong>You're out of free credits.</strong> Upgrade to Pro for up to 500 more generations.</p>
     <button type="button" class="btn btn-primary" id="creditsBannerBtn">Upgrade to Pro</button>
@@ -633,6 +688,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     </div>
 
   </section>
+  </section>
 </main>
 
 <!-- ============================================================
@@ -737,11 +793,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 <div id="authModal" class="modal-overlay hidden" data-modal>
   <div class="modal-panel">
     <div class="modal-head">
-      <h3 id="authTitle">Sign in to TagPulse AI</h3>
+      <h3 id="authTitle">Get started with TagPulse AI</h3>
       <button type="button" class="modal-close" data-close>✕</button>
     </div>
     <div class="modal-body">
-      <p id="authMessage">Enter your email and we'll send you a 6-digit verification code.</p>
+      <p id="authMessage">Enter your email and we'll send you a secure sign-in link.</p>
 
       <div id="authError" class="paywall-error"></div>
 
@@ -751,18 +807,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           <input type="email" id="authEmail" autocomplete="email" inputmode="email" placeholder="you@example.com">
         </div>
         <button type="button" class="btn btn-primary" id="sendOtpBtn">
-          <span id="sendOtpLabel">Send verification code</span>
+          <span id="sendOtpLabel">Send secure sign-in link</span>
         </button>
       </div>
 
-      <div id="otpStep" class="hidden">
-        <div class="paywall-field">
-          <label for="authOtp">6-digit verification code</label>
-          <input type="text" id="authOtp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+      <div id="emailSentStep" class="hidden">
+        <div style="background:var(--primary-tint);border:1px solid #f8cba9;border-radius:var(--radius-sm);padding:13px 14px;margin-bottom:12px;">
+          <strong style="display:block;color:var(--ink);margin-bottom:4px;">Check your email</strong>
+          <span style="font-size:12.5px;color:var(--ink-soft);">We sent you a secure confirmation link. Tap the link in the email to finish signing in.</span>
         </div>
-        <button type="button" class="btn btn-primary" id="verifyOtpBtn">
-          <span id="verifyOtpLabel">Verify code</span>
-        </button>
         <button type="button" class="btn" id="changeEmailBtn" style="margin-top:10px;background:#f4f1eb;color:#22262b;">
           Use a different email
         </button>
@@ -890,20 +943,18 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   let toastTimer = null;
 
   const signInBtn = $("signInBtn");
+  const getStartedBtn = $("getStartedBtn");
   const accountBtn = $("accountBtn");
   const authModal = $("authModal");
   const authTitle = $("authTitle");
   const authMessage = $("authMessage");
   const authError = $("authError");
   const emailStep = $("emailStep");
-  const otpStep = $("otpStep");
+  const emailSentStep = $("emailSentStep");
   const accountStep = $("accountStep");
   const authEmail = $("authEmail");
-  const authOtp = $("authOtp");
   const sendOtpBtn = $("sendOtpBtn");
   const sendOtpLabel = $("sendOtpLabel");
-  const verifyOtpBtn = $("verifyOtpBtn");
-  const verifyOtpLabel = $("verifyOtpLabel");
   const changeEmailBtn = $("changeEmailBtn");
   const accountEmail = $("accountEmail");
   const signOutBtn = $("signOutBtn");
@@ -927,6 +978,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
   function updateAuthUI(){
     const signedIn = !!authUser;
+    document.body.classList.toggle("authenticated", signedIn);
     signInBtn.classList.toggle("hidden", signedIn);
     accountBtn.classList.toggle("hidden", !signedIn);
 
@@ -994,68 +1046,19 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       if (error) throw error;
 
       emailStep.classList.add("hidden");
-      otpStep.classList.remove("hidden");
+      emailSentStep.classList.remove("hidden");
       accountStep.classList.add("hidden");
-      authMessage.textContent = "We sent a 6-digit verification code to " + email + ".";
-      authOtp.value = "";
-      authOtp.focus();
+      authMessage.textContent = "We sent a secure sign-in link to " + email + ".";
+
     } catch (err) {
-      console.error("Supabase OTP send failed:", err);
-      showAuthError(err?.message || "Couldn't send the verification code. Please try again.");
+      console.error("Supabase magic link send failed:", err);
+      showAuthError(err?.message || "Couldn't send the sign-in link. Please try again.");
     } finally {
       sendOtpBtn.disabled = false;
-      sendOtpLabel.textContent = "Send verification code";
+      sendOtpLabel.textContent = "Send secure sign-in link";
     }
   }
 
-  async function verifyAuthOtp(){
-    const email = authEmail.value.trim().toLowerCase();
-    const token = authOtp.value.trim();
-
-    if (!email) {
-      showAuthError("Enter your email address.");
-      return;
-    }
-
-    if (!/^\d{6}$/.test(token)) {
-      showAuthError("Enter the 6-digit verification code.");
-      authOtp.focus();
-      return;
-    }
-
-    hideAuthError();
-    verifyOtpBtn.disabled = true;
-    verifyOtpLabel.innerHTML = '<span class="spinner"></span> Verifying…';
-
-    try {
-      const { data, error } = await supabaseClient.auth.verifyOtp({
-        email,
-        token,
-        type: "email"
-      });
-
-      if (error) throw error;
-
-      authSession = data?.session || null;
-      authUser = data?.user || null;
-      userId = getAuthenticatedUserId();
-
-      if (!authSession || !authUser) {
-        throw new Error("Authentication succeeded but no session was returned.");
-      }
-
-      updateAuthUI();
-      closeModal(authModal);
-      showToast("Signed in successfully.", "success");
-      await syncAuthenticatedState();
-    } catch (err) {
-      console.error("Supabase OTP verification failed:", err);
-      showAuthError(err?.message || "Invalid or expired verification code.");
-    } finally {
-      verifyOtpBtn.disabled = false;
-      verifyOtpLabel.textContent = "Verify code";
-    }
-  }
 
   async function syncAuthenticatedState(){
     if (!authSession || !authUser) {
@@ -1070,16 +1073,19 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     renderCredits();
   }
 
-  signInBtn.addEventListener("click", () => {
+  function openSignInModal(){
     openModal(authModal);
-    authTitle.textContent = "Sign in to TagPulse AI";
-    authMessage.textContent = "Enter your email and we'll send you a 6-digit verification code.";
+    authTitle.textContent = "Get started with TagPulse AI";
+    authMessage.textContent = "Enter your email and we'll send you a secure sign-in link.";
     emailStep.classList.remove("hidden");
-    otpStep.classList.add("hidden");
+    emailSentStep.classList.add("hidden");
     accountStep.classList.add("hidden");
     hideAuthError();
     setTimeout(() => authEmail.focus(), 100);
-  });
+  }
+
+  signInBtn.addEventListener("click", openSignInModal);
+  getStartedBtn.addEventListener("click", openSignInModal);
 
   accountBtn.addEventListener("click", () => {
     if (!authUser) return;
@@ -1087,19 +1093,17 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     authTitle.textContent = "Your Account";
     authMessage.textContent = "You're signed in to TagPulse AI.";
     emailStep.classList.add("hidden");
-    otpStep.classList.add("hidden");
+    emailSentStep.classList.add("hidden");
     accountStep.classList.remove("hidden");
     accountEmail.textContent = authUser.email || "";
     hideAuthError();
   });
 
   sendOtpBtn.addEventListener("click", sendAuthOtp);
-  verifyOtpBtn.addEventListener("click", verifyAuthOtp);
 
   changeEmailBtn.addEventListener("click", () => {
-    otpStep.classList.add("hidden");
+    emailSentStep.classList.add("hidden");
     emailStep.classList.remove("hidden");
-    authOtp.value = "";
     hideAuthError();
     authEmail.focus();
   });
@@ -1213,7 +1217,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       authTitle.textContent = "Sign in before upgrading";
       authMessage.textContent = "Sign in with your email first so your Pro purchase can be linked to your account.";
       emailStep.classList.remove("hidden");
-      otpStep.classList.add("hidden");
+      emailSentStep.classList.add("hidden");
       accountStep.classList.add("hidden");
       hideAuthError();
       setTimeout(() => authEmail.focus(), 100);
@@ -1431,10 +1435,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     if (!authUser || !authSession) {
       openModal(authModal);
-      authTitle.textContent = "Sign in to generate";
-      authMessage.textContent = "Create a free TagPulse AI account with your email to receive 5 lifetime free generations.";
+      authTitle.textContent = "Get started with TagPulse AI";
+      authMessage.textContent = "Enter your email and we'll send you a secure sign-in link. You’ll get 5 lifetime free generations.";
       emailStep.classList.remove("hidden");
-      otpStep.classList.add("hidden");
+      emailSentStep.classList.add("hidden");
       accountStep.classList.add("hidden");
       hideAuthError();
       setTimeout(() => authEmail.focus(), 100);
