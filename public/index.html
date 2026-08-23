@@ -747,6 +747,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <div class="field-error" id="customGoalError">Please describe your SEO goal.</div>
     </div>
 
+    <div class="field">
+      <label for="wordsToAvoidInput">
+        Words to Avoid
+        <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span>
+      </label>
+      <input type="text" id="wordsToAvoidInput" placeholder="e.g. cheap, free, custom" autocomplete="off">
+      <p class="field-help">Add comma-separated words or phrases you don't want used in the generated listing.</p>
+    </div>
+
     <div class="cta-banner">
       <h3>Your SEO, handled in one click.</h3>
       <p>Tell us what you're selling, who you're targeting, and what you want to achieve. TagPulse AI handles the SEO work for you.</p>
@@ -1035,6 +1044,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const customGoalField = $("customGoalField");
   const customGoalInput = $("customGoalInput");
   const customGoalError = $("customGoalError");
+  const wordsToAvoidInput = $("wordsToAvoidInput");
   const generateBtn    = $("generateBtn");
   const generateBtnLabel = $("generateBtnLabel");
   const riskAlert = $("riskAlert");
@@ -1668,7 +1678,18 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     setGenerating(true);
     outputSection.classList.add("hidden");
 
-    const prompt = buildPrompt(keyword, category, audience, seoGoal);
+    const wordsToAvoid = wordsToAvoidInput.value
+      .split(",")
+      .map(word => word.trim())
+      .filter(Boolean);
+
+    const prompt = buildPrompt(
+      keyword,
+      category,
+      audience,
+      seoGoal,
+      wordsToAvoid
+    );
 
     try {
       const result = await callGenerate(prompt);
@@ -1708,7 +1729,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
   }
 
-  function buildPrompt(keyword, category, audience, seoGoal){
+  function buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
     return [
       "Act as a top 1% e-commerce SEO strategist and product listing copywriter, specializing in " + category + " listings.",
       "",
@@ -1717,6 +1738,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       "- Platform/Category: " + category,
       "- Target Audience: " + audience,
       "- SEO Goal: " + seoGoal,
+      "- Words to Avoid: " + (
+        wordsToAvoid.length
+          ? wordsToAvoid.join(", ")
+          : "None specified"
+      ),
       "",
       "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
       "{",
@@ -1726,6 +1752,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       "}",
       "",
       "STRICT RULES FOR TAGS: Exactly 13 tags. Each tag MUST be under 20 characters. No generic single words — every tag must be a specific multi-word long-tail phrase. No duplicate or near-duplicate tags. Tailor tag style to how " + category + " search actually works (e.g. exact-match tags for Etsy, hashtag-style keywords for Pinterest), and to the stated SEO Goal above.",
+      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, tags, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term.",
       "STRICT RULES FOR TITLE: Under 140 characters, keyword-rich but naturally readable, not a keyword dump, written for the stated Target Audience and SEO Goal above."
     ].join("\n");
   }
