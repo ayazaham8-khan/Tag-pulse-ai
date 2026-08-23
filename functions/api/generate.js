@@ -11,6 +11,11 @@
  * PAID USERS
  * - 500 generations total
  *
+ * CREATOR PRO USERS
+ * - 500 generations total
+ * - Provisioned manually in D1 creator_pro table
+ * - No Lemon Squeezy checkout required
+ *
  * AUTHENTICATION
  * - Frontend sends:
  *     Authorization: Bearer <Supabase access token>
@@ -25,8 +30,9 @@
  * - D1 remains the source of truth for credits.
  *
  * PRO USERS
- * 1. Existing/manual Lemon Squeezy license-key flow
- * 2. Automatic Lemon Squeezy purchase flow linked to the
+ * 1. Creator Pro entitlement in creator_pro
+ * 2. Existing/manual Lemon Squeezy license-key flow
+ * 3. Automatic Lemon Squeezy purchase flow linked to the
  *    authenticated Supabase user ID.
  *
  * Failed AI requests refund the reserved credit.
@@ -59,14 +65,6 @@ const PAID_CREDITS = 500;
 /**
  * =============================================================
  * SUPABASE CONFIGURATION
- * =============================================================
- *
- * The publishable/anon key is safe to use with Supabase's
- * public Auth endpoint.
- *
- * IMPORTANT:
- * This is NOT the service-role key.
- * Never put a service-role/secret key here.
  * =============================================================
  */
 
@@ -224,6 +222,200 @@ export async function onRequestPost(context) {
 
 
     // =========================================================
+    // CREATOR PRO RESOLUTION
+    // =========================================================
+    //
+    // Creator Pro is stored separately in:
+    //
+    //   creator_pro
+    //
+    // This is intentionally checked before the Lemon license.
+    //
+    // A creator account therefore does not need:
+    //
+    // - a Lemon Squeezy license
+    // - checkout
+    // - a card
+    //
+    // The creator_pro table itself is server-controlled.
+    // =========================================================
+
+    const creatorPro =
+      await env.DB.prepare(
+        `SELECT
+           user_id,
+           credits_remaining
+         FROM creator_pro
+         WHERE user_id = ?1
+         LIMIT 1`
+      )
+        .bind(
+          normalizedUserId
+        )
+        .first();
+
+
+    // =========================================================
+    // CREATOR PRO USER PATH
+    // =========================================================
+
+    if (creatorPro) {
+
+      const currentCredits =
+        Number(
+          creatorPro.credits_remaining
+        );
+
+
+      // -------------------------------------------------------
+      // No creator credits remaining.
+      // -------------------------------------------------------
+
+      if (
+        !Number.isFinite(currentCredits) ||
+        currentCredits <= 0
+      ) {
+
+        return jsonResponse(
+          {
+            error:
+              "Your creator Pro allowance has been used.",
+            credits_remaining: 0,
+            is_pro: true,
+            pro_type: "creator"
+          },
+          402,
+          corsHeaders
+        );
+      }
+
+
+      // -------------------------------------------------------
+      // Reserve one creator Pro credit BEFORE calling Groq.
+      // -------------------------------------------------------
+
+      const reserved =
+        await reserveCreatorCredit(
+          env.DB,
+          normalizedUserId
+        );
+
+
+      if (!reserved) {
+
+        const latest =
+          await getCreatorCredits(
+            env.DB,
+            normalizedUserId
+          );
+
+
+        return jsonResponse(
+          {
+            error:
+              "No creator Pro credits remaining. Please try again.",
+            credits_remaining:
+              latest,
+            is_pro: true,
+            pro_type: "creator"
+          },
+          402,
+          corsHeaders
+        );
+      }
+
+
+      // -------------------------------------------------------
+      // Generate with Groq.
+      // -------------------------------------------------------
+
+      try {
+
+        const text =
+          await callGroq(
+            prompt,
+            env.GROQ_API_KEY
+          );
+
+
+        // -----------------------------------------------------
+        // Generation succeeded.
+        // -----------------------------------------------------
+
+        await env.DB.prepare(
+          `UPDATE creator_pro
+           SET updated_at = CURRENT_TIMESTAMP,
+               last_used_at = CURRENT_TIMESTAMP
+           WHERE user_id = ?1`
+        )
+          .bind(
+            normalizedUserId
+          )
+          .run();
+
+
+        // -----------------------------------------------------
+        // Record generation.
+        //
+        // creator Pro is not a Lemon license, so license_id is
+        // intentionally NULL.
+        // -----------------------------------------------------
+
+        await env.DB.prepare(
+          `INSERT INTO generations
+           (user_id, license_id)
+           VALUES (?1, NULL)`
+        )
+          .bind(
+            normalizedUserId
+          )
+          .run();
+
+
+        // -----------------------------------------------------
+        // Get exact remaining creator balance.
+        // -----------------------------------------------------
+
+        const remaining =
+          await getCreatorCredits(
+            env.DB,
+            normalizedUserId
+          );
+
+
+        return jsonResponse(
+          {
+            text,
+
+            credits_remaining:
+              remaining,
+
+            is_pro: true,
+
+            pro_type: "creator"
+          },
+          200,
+          corsHeaders
+        );
+
+
+      } catch (err) {
+
+        // -----------------------------------------------------
+        // Groq failed — refund reserved creator credit.
+        // -----------------------------------------------------
+
+        await refundCreatorCredit(
+          env.DB,
+          normalizedUserId
+        );
+
+        throw err;
+      }
+    }
+
+
+    // =========================================================
     // PRO LICENSE RESOLUTION
     // =========================================================
     //
@@ -363,10 +555,6 @@ export async function onRequestPost(context) {
     // METHOD B:
     // AUTOMATIC PRO ACCESS BY AUTHENTICATED USER ID
     // =========================================================
-    //
-    // Lemon Squeezy webhook provisions the license against the
-    // authenticated Supabase user's ID.
-    // =========================================================
 
     if (!license) {
 
@@ -391,7 +579,7 @@ export async function onRequestPost(context) {
 
 
     // =========================================================
-    // PRO USER PATH
+    // LEMON PRO USER PATH
     // =========================================================
 
     if (license) {
@@ -416,7 +604,8 @@ export async function onRequestPost(context) {
             error:
               "Your 500-generation Pro allowance has been used.",
             credits_remaining: 0,
-            is_pro: true
+            is_pro: true,
+            pro_type: "lemon"
           },
           402,
           corsHeaders
@@ -449,7 +638,8 @@ export async function onRequestPost(context) {
               "No Pro credits remaining. Please try again.",
             credits_remaining:
               latest,
-            is_pro: true
+            is_pro: true,
+            pro_type: "lemon"
           },
           402,
           corsHeaders
@@ -520,7 +710,9 @@ export async function onRequestPost(context) {
             credits_remaining:
               remaining,
 
-            is_pro: true
+            is_pro: true,
+
+            pro_type: "lemon"
           },
           200,
           corsHeaders
@@ -547,7 +739,9 @@ export async function onRequestPost(context) {
     // FREE USER PATH
     // =========================================================
     //
-    // No active Pro license exists for the authenticated user.
+    // No creator Pro entitlement.
+    // No active Lemon Pro license.
+    // Therefore use the normal 5-generation system.
     // =========================================================
 
 
@@ -609,7 +803,9 @@ export async function onRequestPost(context) {
           credits_remaining:
             remaining,
 
-          is_pro: false
+          is_pro: false,
+
+          pro_type: null
         },
         402,
         corsHeaders
@@ -689,7 +885,9 @@ export async function onRequestPost(context) {
                 )
               : 0,
 
-          is_pro: false
+          is_pro: false,
+
+          pro_type: null
         },
         200,
         corsHeaders
@@ -760,14 +958,6 @@ export async function onRequestPost(context) {
 /**
  * =============================================================
  * SUPABASE AUTHENTICATION
- * =============================================================
- *
- * Reads the Authorization header and verifies the supplied
- * Supabase access token against the Supabase Auth server.
- *
- * IMPORTANT:
- * The returned user ID comes from Supabase's verified user
- * response. It is NOT taken from request.body.user_id.
  * =============================================================
  */
 
@@ -872,34 +1062,102 @@ async function getAuthenticatedSupabaseUser(
 
 /**
  * =============================================================
- * CORS OPTIONS
+ * RESERVE ONE CREATOR PRO CREDIT
  * =============================================================
  */
 
-export async function onRequestOptions() {
+async function reserveCreatorCredit(
+  db,
+  userId
+) {
 
-  return new Response(
-    null,
-    {
-      status: 204,
+  const result =
+    await db.prepare(
+      `UPDATE creator_pro
+       SET credits_remaining =
+             credits_remaining - 1,
+           updated_at =
+             CURRENT_TIMESTAMP
+       WHERE user_id = ?1
+         AND credits_remaining > 0`
+    )
+      .bind(
+        userId
+      )
+      .run();
 
-      headers:
-        buildCorsHeaders()
-    }
+
+  return (
+    Number(
+      result.meta?.changes || 0
+    ) === 1
   );
 }
 
 
 /**
  * =============================================================
- * RESERVE ONE FREE CREDIT
+ * REFUND ONE CREATOR PRO CREDIT
  * =============================================================
- *
- * Atomic UPDATE:
- *
- * credits_remaining > 0
- *
- * prevents negative balances and double-spending.
+ */
+
+async function refundCreatorCredit(
+  db,
+  userId
+) {
+
+  await db.prepare(
+    `UPDATE creator_pro
+     SET credits_remaining =
+           credits_remaining + 1,
+         updated_at =
+           CURRENT_TIMESTAMP
+     WHERE user_id = ?1
+       AND credits_remaining < ?2`
+  )
+    .bind(
+      userId,
+      PAID_CREDITS
+    )
+    .run();
+}
+
+
+/**
+ * =============================================================
+ * GET CURRENT CREATOR PRO CREDITS
+ * =============================================================
+ */
+
+async function getCreatorCredits(
+  db,
+  userId
+) {
+
+  const row =
+    await db.prepare(
+      `SELECT
+         credits_remaining
+       FROM creator_pro
+       WHERE user_id = ?1`
+    )
+      .bind(
+        userId
+      )
+      .first();
+
+
+  return row
+    ? Number(
+        row.credits_remaining
+      )
+    : 0;
+}
+
+
+/**
+ * =============================================================
+ * RESERVE ONE FREE CREDIT
  * =============================================================
  */
 
@@ -1290,9 +1548,7 @@ async function sha256(
 
   const data =
     new TextEncoder()
-      .encode(
-        value
-      );
+      .encode(value);
 
 
   const digest =
@@ -1371,4 +1627,24 @@ function buildCorsHeaders() {
     "Access-Control-Allow-Headers":
       "Content-Type, Authorization"
   };
+}
+
+
+/**
+ * =============================================================
+ * CORS OPTIONS
+ * =============================================================
+ */
+
+export async function onRequestOptions() {
+
+  return new Response(
+    null,
+    {
+      status: 204,
+
+      headers:
+        buildCorsHeaders()
+    }
+  );
 }
