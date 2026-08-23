@@ -672,6 +672,230 @@ footer{ border-top:1px solid var(--border); padding:26px 20px 40px; text-align:c
 .footer-dot{ color:var(--border); }
 footer .fine{ font-size:11.5px; color:var(--muted); }
 footer .fine a{ color:var(--muted); text-decoration:underline; }
+
+/* ============================================================
+   MOBILE UX / RESPONSIVE POLISH
+   ------------------------------------------------------------
+   UI-only responsive adjustments. No backend/API behavior is
+   changed.
+   ============================================================ */
+@media (max-width:560px){
+
+  .site-header{
+    padding:10px 12px;
+  }
+
+  .site-header-inner{
+    width:100%;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .brand-mark{
+    width:36px;
+    height:36px;
+  }
+
+  .brand-mark svg{
+    width:19px;
+    height:19px;
+  }
+
+  .brand-text{
+    flex:1 1 auto;
+    min-width:0;
+  }
+
+  .brand-text h1{
+    font-size:15px;
+  }
+
+  .brand-text p{
+    font-size:10px;
+  }
+
+  .header-actions{
+    width:100%;
+    min-width:0;
+    margin-left:0;
+    justify-content:flex-end;
+    gap:6px;
+    padding-top:2px;
+  }
+
+  .credits-pill,
+  .upgrade-btn,
+  .history-btn{
+    font-size:10px;
+    padding:7px 9px;
+  }
+
+  .credits-pill{
+    margin-right:auto;
+    max-width:110px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  #accountBtn{
+    max-width:150px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  main{
+    width:100%;
+    max-width:760px;
+    padding:18px 12px 48px;
+  }
+
+  .generator-page{
+    width:100%;
+    min-width:0;
+  }
+
+  .generator-page .card{
+    width:100%;
+    max-width:none;
+    padding:18px 16px;
+  }
+
+  .field{
+    margin-bottom:16px;
+  }
+
+  .field input[type="text"],
+  .field select{
+    width:100%;
+    min-width:0;
+  }
+
+  .sample-chips{
+    gap:6px;
+  }
+
+  .sample-chip{
+    max-width:100%;
+  }
+
+  .cta-banner{
+    padding:2px 6px 16px;
+  }
+
+  .cta-banner h3{
+    font-size:15.5px;
+  }
+
+  .cta-banner p{
+    font-size:12px;
+  }
+
+  .generate-btn{
+    width:100%;
+    min-height:54px;
+    padding:15px 14px;
+  }
+
+  .credits-banner{
+    align-items:stretch;
+  }
+
+  .credits-banner p{
+    min-width:0;
+  }
+
+  .credits-banner .btn{
+    width:100%;
+  }
+
+  .output-card-head{
+    flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .output-card-head h3{
+    min-width:0;
+    flex:1 1 auto;
+  }
+
+  .copy-btn{
+    flex:0 0 auto;
+  }
+
+  .listing-preview{
+    align-items:flex-start;
+  }
+
+  .listing-preview-body{
+    min-width:0;
+  }
+
+  .tag-limit-note{
+    line-height:1.45;
+  }
+
+  .raw-box{
+    min-height:78px;
+  }
+
+  .modal-panel{
+    width:100%;
+    max-width:none;
+    padding:22px 16px 20px;
+  }
+
+  .history-action-btn{
+    min-height:38px;
+  }
+
+}
+
+@media (max-width:380px){
+
+  .brand-text p{
+    display:none;
+  }
+
+  .credits-pill{
+    max-width:92px;
+  }
+
+  #accountBtn{
+    max-width:115px;
+  }
+
+  .history-btn,
+  .upgrade-btn{
+    padding-left:8px;
+    padding-right:8px;
+  }
+
+  .generator-page .card{
+    padding:16px 14px;
+  }
+
+  .field input[type="text"],
+  .field select{
+    padding-left:12px;
+    padding-right:12px;
+  }
+
+  .sample-chip{
+    font-size:10px;
+    padding:6px 8px;
+  }
+
+  .output-card-head h3{
+    font-size:13px;
+  }
+
+  .copy-btn{
+    font-size:11px;
+    padding:7px 10px;
+  }
+
+}
+
 </style>
 </head>
 <body>
