@@ -7,20 +7,25 @@
  *
  * Purpose:
  *   - Verify the authenticated Supabase user.
- *   - Check whether that user has an active TagPulse AI Pro
- *     license.
- *   - Return current Pro credits.
- *   - Return current free credits when the user is not Pro.
+ *   - Check Creator Pro entitlement in D1.
+ *   - Check Lemon Squeezy Pro license in D1.
+ *   - Return current Pro/free credits.
  *
  * Authentication:
  *   Authorization: Bearer <Supabase access token>
  *
  * IMPORTANT:
  *   - The server NEVER trusts a frontend user_id.
- *   - The user ID is taken from the verified Supabase user.
+ *   - The authenticated Supabase user ID is authoritative.
  *
- * D1 binding required:
- *   DB
+ * D1 tables:
+ *   creator_pro
+ *   licenses
+ *   free_users
+ *
+ * Pro types:
+ *   creator
+ *   lemon
  * =============================================================
  */
 
@@ -78,13 +83,6 @@ export async function onRequestPost(context) {
     // ---------------------------------------------------------
     // 2. Authenticate Supabase user
     // ---------------------------------------------------------
-    //
-    // The frontend must send:
-    //
-    // Authorization: Bearer <Supabase access token>
-    //
-    // We do NOT accept body.user_id as an identity source.
-    // ---------------------------------------------------------
 
     const authenticatedUser =
       await getAuthenticatedSupabaseUser(
@@ -110,18 +108,71 @@ export async function onRequestPost(context) {
 
 
     // =========================================================
-    // 3. CHECK PRO LICENSE
+    // 3. CHECK CREATOR PRO
     // =========================================================
     //
-    // A user is considered Pro when:
+    // Creator Pro is manually provisioned in:
     //
-    //   authenticated Supabase user ID matches
-    //   AND
-    //   license status = active
+    //   creator_pro
     //
-    // We order by id DESC so that if a user somehow has more
-    // than one license, the newest active license is preferred.
+    // This path is checked before Lemon Squeezy.
     //
+    // Creator accounts therefore do not need:
+    //
+    // - Lemon checkout
+    // - a payment card
+    // - a Lemon license
+    //
+    // =========================================================
+
+    const creatorPro =
+      await env.DB.prepare(
+        `SELECT
+           user_id,
+           credits_remaining
+         FROM creator_pro
+         WHERE user_id = ?1
+         LIMIT 1`
+      )
+        .bind(
+          userId
+        )
+        .first();
+
+
+    // =========================================================
+    // 4. CREATOR PRO USER
+    // =========================================================
+
+    if (creatorPro) {
+
+      const credits =
+        Math.max(
+          0,
+          Number(
+            creatorPro.credits_remaining || 0
+          )
+        );
+
+
+      return jsonResponse(
+        {
+          is_pro: true,
+
+          pro_type:
+            "creator",
+
+          credits_remaining:
+            credits
+        },
+        200,
+        corsHeaders
+      );
+    }
+
+
+    // =========================================================
+    // 5. CHECK LEMON SQUEEZY PRO LICENSE
     // =========================================================
 
     const license =
@@ -143,7 +194,7 @@ export async function onRequestPost(context) {
 
 
     // =========================================================
-    // 4. PRO USER
+    // 6. LEMON PRO USER
     // =========================================================
 
     if (license) {
@@ -161,6 +212,9 @@ export async function onRequestPost(context) {
         {
           is_pro: true,
 
+          pro_type:
+            "lemon",
+
           credits_remaining:
             credits
         },
@@ -171,16 +225,15 @@ export async function onRequestPost(context) {
 
 
     // =========================================================
-    // 5. FREE USER
+    // 7. FREE USER
     // =========================================================
     //
-    // No active license was found.
+    // No creator Pro entitlement.
+    // No active Lemon Pro license.
     //
-    // Read the user's free credits from D1.
+    // Read normal free credits from D1.
     //
-    // IMPORTANT:
-    // We do NOT create the free_users row here.
-    //
+    // We intentionally do NOT create the free_users row here.
     // generate.js creates it when the user generates for the
     // first time.
     //
@@ -215,6 +268,9 @@ export async function onRequestPost(context) {
       {
         is_pro: false,
 
+        pro_type:
+          null,
+
         credits_remaining:
           freeCredits
       },
@@ -248,11 +304,14 @@ export async function onRequestPost(context) {
  * SUPABASE AUTHENTICATION
  * =============================================================
  *
- * Reads the Authorization header and verifies the supplied
- * Supabase access token against the Supabase Auth server.
+ * Reads:
  *
- * The returned user ID comes from Supabase's verified response.
- * It is NOT taken from request.body.user_id.
+ *   Authorization: Bearer <Supabase access token>
+ *
+ * and verifies the token against Supabase Auth.
+ *
+ * The returned user ID comes from Supabase's authenticated
+ * response and is not taken from the request body.
  * =============================================================
  */
 
