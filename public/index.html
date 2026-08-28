@@ -462,7 +462,7 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 /* ============================================================
    OUTPUT
    ============================================================ */
-#outputSection{ margin-top:26px; }
+#outputSection, #amazonMerchOutputSection, #amazonKdpOutputSection, #amazonHandmadeOutputSection{ margin-top:26px; }
 .output-card-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
 .output-card-head h3{ font-size:14px; font-weight:800; display:flex; align-items:center; gap:7px; }
 .output-card-head h3 .num{
@@ -1015,10 +1015,17 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     <div class="field">
       <label for="categorySelect">Platform / category</label>
       <select id="categorySelect">
-        <option>Etsy</option>
-        <option>Digital / Printable</option>
-        <option>Print on Demand</option>
-        <option>Pinterest</option>
+        <optgroup label="Marketplace">
+          <option>Etsy</option>
+          <option>Digital / Printable</option>
+          <option>Print on Demand</option>
+          <option>Pinterest</option>
+        </optgroup>
+        <optgroup label="Amazon">
+          <option>Amazon Merch on Demand</option>
+          <option>Amazon KDP</option>
+          <option>Amazon Handmade</option>
+        </optgroup>
       </select>
     </div>
 
@@ -1134,6 +1141,98 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <p class="desc-output" id="descOutput"></p>
     </div>
 
+  </section>
+
+  <!-- ============ AMAZON MERCH ON DEMAND OUTPUT ============ -->
+  <section id="amazonMerchOutputSection" class="hidden">
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">1</span>Title &amp; Brand</h3>
+        <button type="button" class="copy-btn" id="copyMerchTitleBtn">Copy Title</button>
+      </div>
+      <p class="title-output" id="merchTitleOutput"></p>
+      <p class="char-count" id="merchTitleCharCount"></p>
+      <p class="field-help" style="margin-top:14px;">Brand Name</p>
+      <p class="title-output" style="font-size:14px;" id="merchBrandOutput"></p>
+      <p class="char-count" id="merchBrandCharCount"></p>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">2</span>Bullet Points</h3>
+        <button type="button" class="copy-btn" id="copyMerchBulletsBtn">Copy Both Bullets</button>
+      </div>
+      <p class="desc-output" style="margin-bottom:12px;" id="merchBullet1Output"></p>
+      <p class="desc-output" id="merchBullet2Output"></p>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">3</span>Description</h3>
+        <button type="button" class="copy-btn" id="copyMerchDescBtn">Copy Description</button>
+      </div>
+      <p class="desc-output" id="merchDescOutput"></p>
+    </div>
+  </section>
+
+  <!-- ============ AMAZON KDP OUTPUT ============ -->
+  <section id="amazonKdpOutputSection" class="hidden">
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">1</span>Book Title</h3>
+        <button type="button" class="copy-btn" id="copyKdpTitleBtn">Copy Title</button>
+      </div>
+      <p class="title-output" id="kdpTitleOutput"></p>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">2</span>7 Backend Search Terms</h3>
+        <button type="button" class="copy-btn" id="copyKdpKeywordsBtn">Copy All 7</button>
+      </div>
+      <p class="tag-limit-note"><strong>KDP:</strong> 50 characters max per field · combine with spaces, not commas, when pasting into KDP</p>
+      <div class="tags-wrap" id="kdpKeywordsWrap"></div>
+      <textarea class="raw-box" id="kdpKeywordsRaw" rows="3" readonly aria-label="Space-separated backend keywords"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">3</span>Book Description</h3>
+        <button type="button" class="copy-btn" id="copyKdpDescBtn">Copy HTML</button>
+      </div>
+      <p class="char-count" id="kdpDescCharCount"></p>
+      <div class="desc-output" id="kdpDescPreview"></div>
+      <p class="field-help" style="margin-top:10px;">Raw HTML (paste directly into the KDP description field)</p>
+      <textarea class="raw-box" id="kdpDescRaw" rows="4" readonly></textarea>
+    </div>
+  </section>
+
+  <!-- ============ AMAZON HANDMADE OUTPUT ============ -->
+  <section id="amazonHandmadeOutputSection" class="hidden">
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">1</span>Listing Title</h3>
+        <button type="button" class="copy-btn" id="copyHandmadeTitleBtn">Copy Title</button>
+      </div>
+      <p class="title-output" id="handmadeTitleOutput"></p>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">2</span>Search Terms</h3>
+        <button type="button" class="copy-btn" id="copyHandmadeTermsBtn">Copy Search Terms</button>
+      </div>
+      <p class="char-count" id="handmadeTermsCharCount"></p>
+      <textarea class="raw-box" id="handmadeTermsRaw" rows="3" readonly></textarea>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">3</span>Description</h3>
+        <button type="button" class="copy-btn" id="copyHandmadeDescBtn">Copy Description</button>
+      </div>
+      <p class="desc-output" id="handmadeDescOutput"></p>
+    </div>
   </section>
   </section>
 </main>
@@ -1406,6 +1505,64 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const copyTitleBtn = $("copyTitleBtn");
   const copyTagsBtn  = $("copyTagsBtn");
   const copyDescBtn  = $("copyDescBtn");
+
+  // Amazon Merch on Demand output
+  const amazonMerchOutputSection = $("amazonMerchOutputSection");
+  const merchTitleOutput     = $("merchTitleOutput");
+  const merchTitleCharCount  = $("merchTitleCharCount");
+  const merchBrandOutput     = $("merchBrandOutput");
+  const merchBrandCharCount  = $("merchBrandCharCount");
+  const merchBullet1Output   = $("merchBullet1Output");
+  const merchBullet2Output   = $("merchBullet2Output");
+  const merchDescOutput      = $("merchDescOutput");
+  const copyMerchTitleBtn    = $("copyMerchTitleBtn");
+  const copyMerchBulletsBtn  = $("copyMerchBulletsBtn");
+  const copyMerchDescBtn     = $("copyMerchDescBtn");
+
+  // Amazon KDP output
+  const amazonKdpOutputSection = $("amazonKdpOutputSection");
+  const kdpTitleOutput    = $("kdpTitleOutput");
+  const kdpKeywordsWrap   = $("kdpKeywordsWrap");
+  const kdpKeywordsRaw    = $("kdpKeywordsRaw");
+  const kdpDescCharCount  = $("kdpDescCharCount");
+  const kdpDescPreview    = $("kdpDescPreview");
+  const kdpDescRaw        = $("kdpDescRaw");
+  const copyKdpTitleBtn    = $("copyKdpTitleBtn");
+  const copyKdpKeywordsBtn = $("copyKdpKeywordsBtn");
+  const copyKdpDescBtn     = $("copyKdpDescBtn");
+
+  // Amazon Handmade output
+  const amazonHandmadeOutputSection = $("amazonHandmadeOutputSection");
+  const handmadeTitleOutput    = $("handmadeTitleOutput");
+  const handmadeTermsCharCount = $("handmadeTermsCharCount");
+  const handmadeTermsRaw       = $("handmadeTermsRaw");
+  const handmadeDescOutput     = $("handmadeDescOutput");
+  const copyHandmadeTitleBtn  = $("copyHandmadeTitleBtn");
+  const copyHandmadeTermsBtn  = $("copyHandmadeTermsBtn");
+  const copyHandmadeDescBtn   = $("copyHandmadeDescBtn");
+
+  /* ============================================================
+     PLATFORM CATALOG
+     ------------------------------------------------------------
+     Maps each dropdown option to an output type. "standard" is the
+     original Etsy/POD/Pinterest/Digital behavior — untouched. New
+     platform groups each get their own outputType, prompt builder,
+     and render function, so they never share code paths with the
+     original (or each other) and can't affect one another.
+     ============================================================ */
+  const PLATFORM_CATALOG = {
+    "Etsy":                    { outputType: "standard" },
+    "Digital / Printable":     { outputType: "standard" },
+    "Print on Demand":         { outputType: "standard" },
+    "Pinterest":               { outputType: "standard" },
+    "Amazon Merch on Demand":  { outputType: "amazon_merch" },
+    "Amazon KDP":              { outputType: "amazon_kdp" },
+    "Amazon Handmade":         { outputType: "amazon_handmade" }
+  };
+
+  function getOutputType(category){
+    return (PLATFORM_CATALOG[category] && PLATFORM_CATALOG[category].outputType) || "standard";
+  }
 
   const paywallModal  = $("paywallModal");
   const buyProBtn     = $("buyProBtn");
@@ -1799,26 +1956,26 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       customGoalInput.value = "";
     }
 
+    const outputType = item.outputType || "standard";
+    const payload = item.payload || {
+      title: item.title || "",
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      description: item.description || ""
+    };
+
     updateTagLimitUI(categorySelect.value);
     updateRiskAlert(
       [
         keywordInput.value,
         item.title || "",
-        Array.isArray(item.tags) ? item.tags.join(" ") : ""
+        outputType === "standard" && Array.isArray(payload.tags) ? payload.tags.join(" ") : ""
       ].join(" ")
     );
 
-    renderOutput(
-      {
-        title: item.title || "",
-        tags: Array.isArray(item.tags) ? item.tags : [],
-        description: item.description || ""
-      },
-      item.category || categorySelect.value
-    );
+    const activeSection = renderOutputByType(outputType, payload, item.category || categorySelect.value);
 
     closeModal(historyModal);
-    outputSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    activeSection.scrollIntoView({ behavior: "smooth", block: "start" });
     showToast("Saved generation reopened. No credit used.", "success");
   }
 
@@ -2194,7 +2351,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
 
     setGenerating(true);
-    outputSection.classList.add("hidden");
+    hideAllOutputSections();
 
     const wordsToAvoid = wordsToAvoidInput.value
       .split(",")
@@ -2221,13 +2378,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         return;
       }
 
+      const outputType = getOutputType(category);
       const parsed = extractJSON(result.data.text);
 
-      if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
-        throw new Error("Received an unexpected response format. Please try again.");
-      }
+      validateParsedOutput(outputType, parsed);
 
-      renderOutput(parsed, category);
+      const activeSection = renderOutputByType(outputType, parsed, category);
       applyServerState(result.data);
 
       saveHistoryEntry({
@@ -2236,9 +2392,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         audience: audience,
         seoGoal: seoGoal,
         wordsToAvoid: wordsToAvoid,
+        outputType: outputType,
         title: String(parsed.title || "").trim(),
-        tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 13).map(tag => String(tag).trim()).filter(Boolean) : [],
         description: String(parsed.description || "").trim(),
+        payload: parsed,
         createdAt: new Date().toISOString()
       });
 
@@ -2249,7 +2406,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         "SEO listing generated!",
         "success"
       );
-      outputSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      activeSection.scrollIntoView({ behavior: "smooth", block: "start" });
 
     } catch (err) {
       console.error(err);
@@ -2259,7 +2416,24 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
   }
 
+  /* ============================================================
+     PROMPT BUILDERS
+     ------------------------------------------------------------
+     buildPrompt() dispatches by platform. buildStandardPrompt() is
+     the ORIGINAL function body, byte-for-byte, still used for
+     Etsy/Digital/POD/Pinterest. Each new platform gets its own
+     dedicated builder below so none of them can affect the
+     original prompt text.
+     ============================================================ */
   function buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
+    const outputType = getOutputType(category);
+    if (outputType === "amazon_merch") return buildAmazonMerchPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+    if (outputType === "amazon_kdp") return buildAmazonKdpPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+    if (outputType === "amazon_handmade") return buildAmazonHandmadePrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+    return buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+  }
+
+  function buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
     return [
       "Act as a top 1% e-commerce SEO strategist and product listing copywriter, specializing in " + category + " listings.",
       "",
@@ -2284,6 +2458,78 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       "STRICT RULES FOR TAGS: Exactly 13 tags. Each tag MUST be under 20 characters. No generic single words — every tag must be a specific multi-word long-tail phrase. No duplicate or near-duplicate tags. Tailor tag style to how " + category + " search actually works (e.g. exact-match tags for Etsy, hashtag-style keywords for Pinterest), and to the stated SEO Goal above.",
       "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, tags, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term.",
       "STRICT RULES FOR TITLE: Under 140 characters, keyword-rich but naturally readable, not a keyword dump, written for the stated Target Audience and SEO Goal above."
+    ].join("\n");
+  }
+
+  function buildAmazonMerchPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
+    return [
+      "Act as a top 1% Amazon Merch on Demand (print-on-demand apparel) listing optimizer.",
+      "",
+      "Analyze the following product inputs:",
+      "- Product Keyword/Design Idea: " + keyword,
+      "- Platform: Amazon Merch on Demand",
+      "- Target Audience: " + audience,
+      "- SEO Goal: " + seoGoal,
+      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
+      "",
+      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
+      "{",
+      '  "title": "A high-converting Merch on Demand title, 60 characters or under, front-loaded with the primary keyword, no ALL CAPS words, no emojis, no pipe characters",',
+      '  "brandName": "A niche-relevant, Amazon-compliant brand name, 50 characters or under",',
+      '  "bulletPoint1": "A feature-driven bullet point starting with a short capitalized lead-in, focused on the design or use case",',
+      '  "bulletPoint2": "A second feature-driven bullet point covering a different angle (occasion, audience, or fit/material)",',
+      '  "description": "A compelling product description under 2000 characters covering design details, who it is for, and a closing call-to-action"',
+      "}",
+      "",
+      "STRICT RULES: Title MUST be 60 characters or under. Brand Name MUST be 50 characters or under. No emojis anywhere. No ALL-CAPS words in the title. No pipe (|) characters. Each bullet point should be a single scannable sentence, not a paragraph.",
+      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, brand name, bullets, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
+    ].join("\n");
+  }
+
+  function buildAmazonKdpPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
+    return [
+      "Act as a top 1% Amazon KDP (Kindle Direct Publishing) book listing optimizer.",
+      "",
+      "Analyze the following product inputs:",
+      "- Book Topic/Keyword: " + keyword,
+      "- Platform: Amazon KDP",
+      "- Target Audience: " + audience,
+      "- SEO Goal: " + seoGoal,
+      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
+      "",
+      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
+      "{",
+      '  "title": "A compelling, keyword-rich book title/subtitle combination",',
+      '  "backendKeywords": ["term1","term2","term3","term4","term5","term6","term7"],',
+      '  "description": "A book description formatted with a small set of Amazon-supported HTML tags only (<b>, <i>, <p>, <br>, <h4>, <ul>, <li>), under 4000 characters including the HTML markup, opening with a strong hook and ending with a call to action"',
+      "}",
+      "",
+      "STRICT RULES FOR BACKEND KEYWORDS: Return EXACTLY 7 keyword phrases. Each phrase MUST be 50 characters or under. Do not repeat any word already used in the title. Do not repeat words across the 7 phrases. No punctuation, no ALL CAPS, no subjective claims (e.g. best, amazing, cheapest). Each phrase should target a distinct angle: reader intent, genre/topic synonyms, format or feature terms, and audience terms.",
+      "STRICT RULES FOR DESCRIPTION: Total length including HTML markup MUST stay under 4000 characters. Only use these HTML tags: <b>, <i>, <p>, <br>, <h4>, <ul>, <li>. Do not use any other HTML tags, inline styles, or attributes.",
+      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, keywords, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
+    ].join("\n");
+  }
+
+  function buildAmazonHandmadePrompt(keyword, category, audience, seoGoal, wordsToAvoid){
+    return [
+      "Act as a top 1% Amazon Handmade listing optimizer for artisan/handcrafted goods.",
+      "",
+      "Analyze the following product inputs:",
+      "- Product Keyword: " + keyword,
+      "- Platform: Amazon Handmade",
+      "- Target Audience: " + audience,
+      "- SEO Goal: " + seoGoal,
+      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
+      "",
+      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
+      "{",
+      '  "title": "A keyword-rich, human-readable Amazon Handmade title that leads with the product type and key attributes",',
+      '  "searchTerms": "A single block of backend search terms, space-separated (not comma-separated), all lowercase, no punctuation, no repeated words, no words already used in the title",',
+      '  "description": "A warm, story-driven Amazon Handmade description covering materials, craftsmanship, and use case, ending with a call-to-action"',
+      "}",
+      "",
+      "STRICT RULES FOR SEARCH TERMS: The searchTerms string MUST be 250 characters or under in total. Words must be separated by single spaces only — no commas, no semicolons. Do not repeat any word already used in the title. Do not include the brand name.",
+      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, search terms, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
     ].join("\n");
   }
 
@@ -2377,6 +2623,173 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     div.textContent = str;
     return div.innerHTML;
   }
+
+  /* ============================================================
+     PLATFORM OUTPUT VALIDATION + RENDER DISPATCH
+     ------------------------------------------------------------
+     validateParsedOutput() and renderOutputByType() route by
+     outputType. The "standard" branch calls the ORIGINAL
+     renderOutput()/validation above, untouched. Each Amazon
+     platform gets its own render function and its own output
+     section, so none of them can affect the standard path or
+     each other.
+     ============================================================ */
+  function validateParsedOutput(outputType, parsed){
+    if (outputType === "amazon_merch") {
+      if (!parsed.title || !parsed.brandName || !parsed.bulletPoint1 || !parsed.bulletPoint2 || !parsed.description) {
+        throw new Error("Received an unexpected response format. Please try again.");
+      }
+      return;
+    }
+    if (outputType === "amazon_kdp") {
+      if (!parsed.title || !Array.isArray(parsed.backendKeywords) || !parsed.description) {
+        throw new Error("Received an unexpected response format. Please try again.");
+      }
+      return;
+    }
+    if (outputType === "amazon_handmade") {
+      if (!parsed.title || !parsed.searchTerms || !parsed.description) {
+        throw new Error("Received an unexpected response format. Please try again.");
+      }
+      return;
+    }
+    if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
+      throw new Error("Received an unexpected response format. Please try again.");
+    }
+  }
+
+  function hideAllOutputSections(){
+    outputSection.classList.add("hidden");
+    amazonMerchOutputSection.classList.add("hidden");
+    amazonKdpOutputSection.classList.add("hidden");
+    amazonHandmadeOutputSection.classList.add("hidden");
+  }
+
+  function renderOutputByType(outputType, parsed, category){
+    hideAllOutputSections();
+    if (outputType === "amazon_merch") {
+      renderAmazonMerchOutput(parsed, category);
+      return amazonMerchOutputSection;
+    }
+    if (outputType === "amazon_kdp") {
+      renderAmazonKdpOutput(parsed, category);
+      return amazonKdpOutputSection;
+    }
+    if (outputType === "amazon_handmade") {
+      renderAmazonHandmadeOutput(parsed, category);
+      return amazonHandmadeOutputSection;
+    }
+    renderOutput(parsed, category);
+    return outputSection;
+  }
+
+  function renderAmazonMerchOutput(parsed, category){
+    const title = String(parsed.title || "").trim();
+    const brand = String(parsed.brandName || "").trim();
+    const b1 = String(parsed.bulletPoint1 || "").trim();
+    const b2 = String(parsed.bulletPoint2 || "").trim();
+    const desc = String(parsed.description || "").trim();
+
+    merchTitleOutput.textContent = title;
+    merchTitleCharCount.textContent = title.length + " / 60 characters" + (title.length > 60 ? " — over limit" : "");
+    merchBrandOutput.textContent = brand;
+    merchBrandCharCount.textContent = brand.length + " / 50 characters" + (brand.length > 50 ? " — over limit" : "");
+    merchBullet1Output.textContent = b1;
+    merchBullet2Output.textContent = b2;
+    merchDescOutput.textContent = desc;
+
+    updateRiskAlert([keywordInput.value, title, brand, b1, b2].join(" "));
+
+    amazonMerchOutputSection.classList.remove("hidden");
+  }
+
+  function renderAmazonKdpOutput(parsed, category){
+    const title = String(parsed.title || "").trim();
+    const keywords = Array.isArray(parsed.backendKeywords)
+      ? parsed.backendKeywords.slice(0, 7).map(k => String(k).trim()).filter(Boolean)
+      : [];
+    const desc = String(parsed.description || "").trim();
+
+    kdpTitleOutput.textContent = title;
+
+    kdpKeywordsWrap.innerHTML = "";
+    keywords.forEach((kw, i) => {
+      const length = [...kw].length;
+      const overLimit = length > 50;
+      const chip = document.createElement("span");
+      chip.className = "tag-chip" + (overLimit ? " is-over-limit" : "");
+      chip.style.animationDelay = (i * 0.03) + "s";
+      chip.innerHTML = escapeHTML(kw) + '<span class="tag-count" title="Character count">' + length + '/50</span>';
+      kdpKeywordsWrap.appendChild(chip);
+    });
+    kdpKeywordsRaw.value = keywords.join(" ");
+
+    kdpDescCharCount.textContent = desc.length + " / 4000 characters (including HTML)" + (desc.length > 4000 ? " — over limit" : "");
+    kdpDescPreview.innerHTML = sanitizeKdpHTML(desc);
+    kdpDescRaw.value = desc;
+
+    updateRiskAlert([keywordInput.value, title, keywords.join(" ")].join(" "));
+
+    amazonKdpOutputSection.classList.remove("hidden");
+  }
+
+  // Strips any HTML tag not on KDP's supported list before the AI's
+  // description is rendered via innerHTML. Defensive measure so
+  // unexpected AI output (or a mischievous prompt) can never inject
+  // a script, link, or styled/clickable element into the page —
+  // disallowed tags become plain text, and every attribute (style,
+  // onclick, href, etc.) is stripped even from allowed tags.
+  function sanitizeKdpHTML(html){
+    const allowedTags = ["b", "i", "p", "br", "h4", "ul", "li"];
+    const container = document.createElement("div");
+    container.innerHTML = html;
+
+    function clean(node){
+      [...node.childNodes].forEach(child => {
+        if (child.nodeType === 1) {
+          const tag = child.tagName.toLowerCase();
+          if (!allowedTags.includes(tag)) {
+            child.replaceWith(document.createTextNode(child.textContent));
+          } else {
+            [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
+            clean(child);
+          }
+        }
+      });
+    }
+    clean(container);
+    return container.innerHTML;
+  }
+
+  function renderAmazonHandmadeOutput(parsed, category){
+    const title = String(parsed.title || "").trim();
+    const terms = String(parsed.searchTerms || "").trim();
+    const desc = String(parsed.description || "").trim();
+
+    handmadeTitleOutput.textContent = title;
+    handmadeTermsCharCount.textContent = terms.length + " / 250 characters" + (terms.length > 250 ? " — over limit" : "");
+    handmadeTermsRaw.value = terms;
+    handmadeDescOutput.textContent = desc;
+
+    updateRiskAlert([keywordInput.value, title, terms].join(" "));
+
+    amazonHandmadeOutputSection.classList.remove("hidden");
+  }
+
+  /* ============================================================
+     COPY BUTTONS — AMAZON OUTPUTS
+     ============================================================ */
+  copyMerchTitleBtn.addEventListener("click", () => copyText(merchTitleOutput.textContent, copyMerchTitleBtn, "Copy Title"));
+  copyMerchBulletsBtn.addEventListener("click", () => copyText(merchBullet1Output.textContent + "\n" + merchBullet2Output.textContent, copyMerchBulletsBtn, "Copy Both Bullets"));
+  copyMerchDescBtn.addEventListener("click", () => copyText(merchDescOutput.textContent, copyMerchDescBtn, "Copy Description"));
+
+  copyKdpTitleBtn.addEventListener("click", () => copyText(kdpTitleOutput.textContent, copyKdpTitleBtn, "Copy Title"));
+  copyKdpKeywordsBtn.addEventListener("click", () => copyText(kdpKeywordsRaw.value, copyKdpKeywordsBtn, "Copy All 7"));
+  copyKdpDescBtn.addEventListener("click", () => copyText(kdpDescRaw.value, copyKdpDescBtn, "Copy HTML"));
+
+  copyHandmadeTitleBtn.addEventListener("click", () => copyText(handmadeTitleOutput.textContent, copyHandmadeTitleBtn, "Copy Title"));
+  copyHandmadeTermsBtn.addEventListener("click", () => copyText(handmadeTermsRaw.value, copyHandmadeTermsBtn, "Copy Search Terms"));
+  copyHandmadeDescBtn.addEventListener("click", () => copyText(handmadeDescOutput.textContent, copyHandmadeDescBtn, "Copy Description"));
 
   function setGenerating(isLoading){
     generateBtn.disabled = isLoading;
