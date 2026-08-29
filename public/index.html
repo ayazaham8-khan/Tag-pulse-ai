@@ -382,6 +382,65 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
   outline:none;
 }
 .field-help{ font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.4; }
+
+.platform-picker{ position:relative; }
+.platform-trigger{
+  width:100%;
+  display:flex; align-items:center; gap:10px;
+  padding:12px 14px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--bg);
+  color:var(--ink);
+  font-size:14px; font-weight:700; font-family:inherit;
+  cursor:pointer;
+  transition:border-color .15s, box-shadow .15s;
+}
+.platform-trigger:hover{ border-color:#d8cfc0; }
+.platform-trigger.is-open{
+  border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(241,100,30,0.15);
+}
+.platform-trigger-icon{ display:flex; flex:0 0 auto; width:22px; height:22px; }
+.platform-trigger-icon svg{ width:22px; height:22px; display:block; }
+.platform-trigger-label{ flex:1; text-align:left; }
+.platform-trigger-chevron{ width:12px; height:8px; flex:0 0 auto; color:var(--muted); transition:transform .2s ease; }
+.platform-trigger.is-open .platform-trigger-chevron{ transform:rotate(180deg); }
+
+.platform-menu{
+  position:absolute; left:0; right:0; top:calc(100% + 6px);
+  z-index:30;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  box-shadow:var(--shadow-lg);
+  max-height:320px;
+  overflow-y:auto;
+  padding:6px;
+  animation:modal-in .18s cubic-bezier(.22,1,.36,1);
+}
+.platform-menu-heading{
+  font-size:10.5px; font-weight:800; letter-spacing:0.05em; text-transform:uppercase;
+  color:var(--muted);
+  padding:10px 10px 4px;
+}
+.platform-menu-option{
+  width:100%;
+  display:flex; align-items:center; gap:10px;
+  padding:10px;
+  border:none; background:none; font-family:inherit;
+  border-radius:8px;
+  font-size:13.5px; font-weight:600; color:var(--ink);
+  text-align:left;
+  cursor:pointer;
+  transition:background .12s;
+}
+.platform-menu-option:hover{ background:var(--bg); }
+.platform-menu-option.is-selected{ background:var(--primary-tint); color:var(--primary-dark); }
+.platform-menu-icon{ display:flex; flex:0 0 auto; width:20px; height:20px; }
+.platform-menu-icon svg{ width:20px; height:20px; display:block; }
+.platform-menu-label{ flex:1; }
+
 .sample-chips{
   display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;
 }
@@ -1014,7 +1073,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     <div class="field">
       <label for="categorySelect">Platform / category</label>
-      <select id="categorySelect">
+      <div class="platform-picker" id="platformPicker">
+        <button type="button" class="platform-trigger" id="platformTrigger" aria-haspopup="listbox" aria-expanded="false">
+          <span class="platform-trigger-icon" id="platformTriggerIcon"></span>
+          <span class="platform-trigger-label" id="platformTriggerLabel">Etsy</span>
+          <svg class="platform-trigger-chevron" viewBox="0 0 14 9" fill="none"><path d="M1 1l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="platform-menu hidden" id="platformMenu" role="listbox"></div>
+      </div>
+      <select id="categorySelect" class="hidden" tabindex="-1" aria-hidden="true">
         <optgroup label="Marketplace">
           <option>Etsy</option>
           <option>Digital / Printable</option>
@@ -1542,6 +1609,23 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const copyHandmadeDescBtn   = $("copyHandmadeDescBtn");
 
   /* ============================================================
+     PLATFORM ICONS
+     ------------------------------------------------------------
+     Simple generic line icons — NOT the platforms' actual logos.
+     Using real trademarked logos on a paid product risks implying
+     an affiliation/endorsement that doesn't exist, so each platform
+     gets a clean icon in a brand-adjacent accent color instead.
+     ============================================================ */
+  const PLATFORM_ICONS = {
+    tag: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 12L12 20L4 12V4H12L20 12Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="15.2" cy="8.8" r="1.3" fill="currentColor"/></svg>',
+    download: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v11m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    shirt: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.5 4L4.5 6.8L6.3 9.8L8.5 8.6V19.5H15.5V8.6L17.7 9.8L19.5 6.8L15.5 4L13.2 5.8H10.8L8.5 4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21S19 14.4 19 9.5A7 7 0 105 9.5C5 14.4 12 21 12 21Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="9.3" r="2.2" stroke="currentColor" stroke-width="1.5"/></svg>',
+    book: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5.3C4 4.6 4.6 4 5.3 4H11a2 2 0 012 2v13.3a2 2 0 00-2-1.8H4V5.3ZM20 5.3C20 4.6 19.4 4 18.7 4H13a2 2 0 00-2 2v13.3a2 2 0 012-1.8h7V5.3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+    handmade: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 12.5V6.5a1.4 1.4 0 012.8 0V12m0-5.5a1.4 1.4 0 012.8 0V12m0-4a1.4 1.4 0 012.8 0v4.3m0-1.8a1.4 1.4 0 012.8 0v3.7c0 3-2.2 5.8-6.4 5.8h-.8C7.3 20 5 17.6 5 15.1v-3c0-.9.6-1.5 1.4-1.5S8 11.2 8 12.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  };
+
+  /* ============================================================
      PLATFORM CATALOG
      ------------------------------------------------------------
      Maps each dropdown option to an output type. "standard" is the
@@ -1549,20 +1633,121 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      platform groups each get their own outputType, prompt builder,
      and render function, so they never share code paths with the
      original (or each other) and can't affect one another.
+
+     group/icon/accent below only drive the custom platform picker
+     UI — the real <select id="categorySelect"> (hidden, but still
+     the actual source of truth for .value) is unaffected by them.
      ============================================================ */
   const PLATFORM_CATALOG = {
-    "Etsy":                    { outputType: "standard" },
-    "Digital / Printable":     { outputType: "standard" },
-    "Print on Demand":         { outputType: "standard" },
-    "Pinterest":               { outputType: "standard" },
-    "Amazon Merch on Demand":  { outputType: "amazon_merch" },
-    "Amazon KDP":              { outputType: "amazon_kdp" },
-    "Amazon Handmade":         { outputType: "amazon_handmade" }
+    "Etsy":                    { outputType: "standard",        group: "Marketplace", icon: PLATFORM_ICONS.tag,      accent: "#f1641e" },
+    "Digital / Printable":     { outputType: "standard",        group: "Marketplace", icon: PLATFORM_ICONS.download, accent: "#f1641e" },
+    "Print on Demand":         { outputType: "standard",        group: "Marketplace", icon: PLATFORM_ICONS.shirt,    accent: "#f1641e" },
+    "Pinterest":               { outputType: "standard",        group: "Marketplace", icon: PLATFORM_ICONS.pin,      accent: "#e60023" },
+    "Amazon Merch on Demand":  { outputType: "amazon_merch",    group: "Amazon",      icon: PLATFORM_ICONS.shirt,    accent: "#ff9900" },
+    "Amazon KDP":              { outputType: "amazon_kdp",      group: "Amazon",      icon: PLATFORM_ICONS.book,     accent: "#ff9900" },
+    "Amazon Handmade":         { outputType: "amazon_handmade", group: "Amazon",      icon: PLATFORM_ICONS.handmade, accent: "#ff9900" }
   };
 
   function getOutputType(category){
     return (PLATFORM_CATALOG[category] && PLATFORM_CATALOG[category].outputType) || "standard";
   }
+
+  /* ============================================================
+     CUSTOM PLATFORM PICKER
+     ------------------------------------------------------------
+     Purely a visual layer over the real (hidden) #categorySelect.
+     It reads/writes categorySelect.value and dispatches a native
+     "change" event on it, so every existing piece of logic that
+     already listens to or reads that select keeps working exactly
+     as before, completely unaware this new UI exists.
+     ============================================================ */
+  const platformPicker = $("platformPicker");
+  const platformTrigger = $("platformTrigger");
+  const platformTriggerIcon = $("platformTriggerIcon");
+  const platformTriggerLabel = $("platformTriggerLabel");
+  const platformMenu = $("platformMenu");
+
+  function buildPlatformMenu(){
+    platformMenu.innerHTML = "";
+    const seenGroups = [];
+    const byGroup = {};
+
+    Object.keys(PLATFORM_CATALOG).forEach(name => {
+      const cfg = PLATFORM_CATALOG[name];
+      if (!byGroup[cfg.group]) {
+        byGroup[cfg.group] = [];
+        seenGroups.push(cfg.group);
+      }
+      byGroup[cfg.group].push(name);
+    });
+
+    seenGroups.forEach(groupName => {
+      const heading = document.createElement("div");
+      heading.className = "platform-menu-heading";
+      heading.textContent = groupName;
+      platformMenu.appendChild(heading);
+
+      byGroup[groupName].forEach(name => {
+        const cfg = PLATFORM_CATALOG[name];
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "platform-menu-option";
+        option.setAttribute("role", "option");
+        option.dataset.value = name;
+        option.innerHTML =
+          '<span class="platform-menu-icon" style="color:' + cfg.accent + '">' + cfg.icon + '</span>' +
+          '<span class="platform-menu-label">' + escapeHTML(name) + '</span>';
+        option.addEventListener("click", () => selectPlatform(name));
+        platformMenu.appendChild(option);
+      });
+    });
+  }
+
+  function selectPlatform(name){
+    categorySelect.value = name;
+    categorySelect.dispatchEvent(new Event("change", { bubbles: true }));
+    closePlatformMenu();
+  }
+
+  function syncPlatformTrigger(){
+    const cfg = PLATFORM_CATALOG[categorySelect.value];
+    if (!cfg) return;
+    platformTriggerIcon.innerHTML = cfg.icon;
+    platformTriggerIcon.style.color = cfg.accent;
+    platformTriggerLabel.textContent = categorySelect.value;
+    platformMenu.querySelectorAll(".platform-menu-option").forEach(btn => {
+      btn.classList.toggle("is-selected", btn.dataset.value === categorySelect.value);
+    });
+  }
+
+  function openPlatformMenu(){
+    platformMenu.classList.remove("hidden");
+    platformTrigger.classList.add("is-open");
+    platformTrigger.setAttribute("aria-expanded", "true");
+  }
+  function closePlatformMenu(){
+    platformMenu.classList.add("hidden");
+    platformTrigger.classList.remove("is-open");
+    platformTrigger.setAttribute("aria-expanded", "false");
+  }
+
+  platformTrigger.addEventListener("click", () => {
+    if (platformMenu.classList.contains("hidden")) openPlatformMenu();
+    else closePlatformMenu();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!platformPicker.contains(e.target)) closePlatformMenu();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closePlatformMenu();
+  });
+
+  categorySelect.addEventListener("change", syncPlatformTrigger);
+
+  buildPlatformMenu();
+  syncPlatformTrigger();
 
   const paywallModal  = $("paywallModal");
   const buyProBtn     = $("buyProBtn");
@@ -1934,6 +2119,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     keywordInput.value = item.keyword || "";
     categorySelect.value = item.category || categorySelect.value;
+    syncPlatformTrigger();
     audienceSelect.value = item.audience || audienceSelect.value;
     seoGoalSelect.value = item.seoGoal || seoGoalSelect.value;
     wordsToAvoidInput.value = Array.isArray(item.wordsToAvoid)
