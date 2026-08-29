@@ -521,7 +521,7 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 /* ============================================================
    OUTPUT
    ============================================================ */
-#outputSection, #amazonMerchOutputSection, #amazonKdpOutputSection, #amazonHandmadeOutputSection, #tptOutputSection, #creativeMarketOutputSection{ margin-top:26px; }
+#outputSection, #amazonMerchOutputSection, #amazonKdpOutputSection, #amazonHandmadeOutputSection, #tptOutputSection, #creativeMarketOutputSection, #redbubbleOutputSection, #teepublicOutputSection, #zazzleOutputSection{ margin-top:26px; }
 .output-card-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
 .output-card-head h3{ font-size:14px; font-weight:800; display:flex; align-items:center; gap:7px; }
 .output-card-head h3 .num{
@@ -1098,6 +1098,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           <option>Teachers Pay Teachers</option>
           <option>Creative Market</option>
         </optgroup>
+        <optgroup label="POD Alternatives">
+          <option>Redbubble</option>
+          <option>TeePublic</option>
+          <option>Zazzle &amp; Society6</option>
+        </optgroup>
       </select>
     </div>
 
@@ -1361,6 +1366,96 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         <button type="button" class="copy-btn" id="copyCmDescBtn">Copy Description</button>
       </div>
       <p class="desc-output" id="cmDescOutput"></p>
+    </div>
+  </section>
+
+  <!-- ============ REDBUBBLE OUTPUT ============ -->
+  <section id="redbubbleOutputSection" class="hidden">
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">1</span>Listing Title</h3>
+        <button type="button" class="copy-btn" id="copyRedbubbleTitleBtn">Copy Title</button>
+      </div>
+      <p class="title-output" id="redbubbleTitleOutput"></p>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">2</span>Tags</h3>
+        <button type="button" class="copy-btn" id="copyRedbubbleTagsBtn">Copy All Tags</button>
+      </div>
+      <p class="tag-limit-note"><strong>Redbubble:</strong> max 15 tags, 50 characters each</p>
+      <div class="tags-wrap" id="redbubbleTagsWrap"></div>
+      <textarea class="raw-box" id="redbubbleTagsRaw" rows="3" readonly aria-label="Comma-separated tags"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">3</span>Description</h3>
+        <button type="button" class="copy-btn" id="copyRedbubbleDescBtn">Copy Description</button>
+      </div>
+      <p class="desc-output" id="redbubbleDescOutput"></p>
+    </div>
+  </section>
+
+  <!-- ============ TEEPUBLIC OUTPUT ============ -->
+  <section id="teepublicOutputSection" class="hidden">
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">1</span>Title &amp; Main Tag</h3>
+        <button type="button" class="copy-btn" id="copyTeepublicTitleBtn">Copy Title</button>
+      </div>
+      <p class="title-output" id="teepublicTitleOutput"></p>
+      <p class="field-help" style="margin-top:14px;">Main Tag</p>
+      <div class="tags-wrap" id="teepublicMainTagWrap"></div>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">2</span>Secondary Tags</h3>
+        <button type="button" class="copy-btn" id="copyTeepublicTagsBtn">Copy Secondary Tags</button>
+      </div>
+      <p class="tag-limit-note">Up to 14 secondary tags, plus the 1 main tag above (15 total max)</p>
+      <div class="tags-wrap" id="teepublicSecondaryTagsWrap"></div>
+      <textarea class="raw-box" id="teepublicSecondaryTagsRaw" rows="3" readonly aria-label="Comma-separated secondary tags"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">3</span>Description</h3>
+        <button type="button" class="copy-btn" id="copyTeepublicDescBtn">Copy Description</button>
+      </div>
+      <p class="desc-output" id="teepublicDescOutput"></p>
+    </div>
+  </section>
+
+  <!-- ============ ZAZZLE & SOCIETY6 OUTPUT ============ -->
+  <section id="zazzleOutputSection" class="hidden">
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">1</span>Listing Title</h3>
+        <button type="button" class="copy-btn" id="copyZazzleTitleBtn">Copy Title</button>
+      </div>
+      <p class="title-output" id="zazzleTitleOutput"></p>
+      <p class="char-count" id="zazzleTitleCharCount"></p>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">2</span>Tags</h3>
+        <button type="button" class="copy-btn" id="copyZazzleTagsBtn">Copy All Tags</button>
+      </div>
+      <p class="tag-limit-note"><strong>Zazzle:</strong> max 10 tags</p>
+      <div class="tags-wrap" id="zazzleTagsWrap"></div>
+      <textarea class="raw-box" id="zazzleTagsRaw" rows="3" readonly aria-label="Comma-separated tags"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="output-card-head">
+        <h3><span class="num">3</span>Product Storytelling Description</h3>
+        <button type="button" class="copy-btn" id="copyZazzleDescBtn">Copy Description</button>
+      </div>
+      <p class="desc-output" id="zazzleDescOutput"></p>
     </div>
   </section>
   </section>
@@ -1691,6 +1786,38 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const copyCmTagsBtn   = $("copyCmTagsBtn");
   const copyCmDescBtn   = $("copyCmDescBtn");
 
+  // Redbubble output
+  const redbubbleOutputSection = $("redbubbleOutputSection");
+  const redbubbleTitleOutput   = $("redbubbleTitleOutput");
+  const redbubbleTagsWrap      = $("redbubbleTagsWrap");
+  const redbubbleTagsRaw       = $("redbubbleTagsRaw");
+  const redbubbleDescOutput    = $("redbubbleDescOutput");
+  const copyRedbubbleTitleBtn = $("copyRedbubbleTitleBtn");
+  const copyRedbubbleTagsBtn  = $("copyRedbubbleTagsBtn");
+  const copyRedbubbleDescBtn  = $("copyRedbubbleDescBtn");
+
+  // TeePublic output
+  const teepublicOutputSection      = $("teepublicOutputSection");
+  const teepublicTitleOutput        = $("teepublicTitleOutput");
+  const teepublicMainTagWrap        = $("teepublicMainTagWrap");
+  const teepublicSecondaryTagsWrap  = $("teepublicSecondaryTagsWrap");
+  const teepublicSecondaryTagsRaw   = $("teepublicSecondaryTagsRaw");
+  const teepublicDescOutput         = $("teepublicDescOutput");
+  const copyTeepublicTitleBtn = $("copyTeepublicTitleBtn");
+  const copyTeepublicTagsBtn  = $("copyTeepublicTagsBtn");
+  const copyTeepublicDescBtn  = $("copyTeepublicDescBtn");
+
+  // Zazzle & Society6 output
+  const zazzleOutputSection   = $("zazzleOutputSection");
+  const zazzleTitleOutput     = $("zazzleTitleOutput");
+  const zazzleTitleCharCount  = $("zazzleTitleCharCount");
+  const zazzleTagsWrap        = $("zazzleTagsWrap");
+  const zazzleTagsRaw         = $("zazzleTagsRaw");
+  const zazzleDescOutput      = $("zazzleDescOutput");
+  const copyZazzleTitleBtn = $("copyZazzleTitleBtn");
+  const copyZazzleTagsBtn  = $("copyZazzleTagsBtn");
+  const copyZazzleDescBtn  = $("copyZazzleDescBtn");
+
   /* ============================================================
      PLATFORM ICONS
      ------------------------------------------------------------
@@ -1708,7 +1835,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     handmade: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 12.5V6.5a1.4 1.4 0 012.8 0V12m0-5.5a1.4 1.4 0 012.8 0V12m0-4a1.4 1.4 0 012.8 0v4.3m0-1.8a1.4 1.4 0 012.8 0v3.7c0 3-2.2 5.8-6.4 5.8h-.8C7.3 20 5 17.6 5 15.1v-3c0-.9.6-1.5 1.4-1.5S8 11.2 8 12.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     cart: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h2l2.4 12.4a2 2 0 002 1.6h8.6a2 2 0 002-1.8L21 8H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="20" r="1.4" fill="currentColor"/><circle cx="17" cy="20" r="1.4" fill="currentColor"/></svg>',
     gradcap: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4L2 9l10 5 10-5-10-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 11.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M21 9v5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
-    palette: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3a9 8 0 100 16c1.1 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16.5A4.5 4.5 0 0021 8.7C21 5.5 16.9 3 12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor"/><circle cx="9.5" cy="7" r="1.1" fill="currentColor"/><circle cx="14.5" cy="7" r="1.1" fill="currentColor"/></svg>'
+    palette: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3a9 8 0 100 16c1.1 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16.5A4.5 4.5 0 0021 8.7C21 5.5 16.9 3 12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor"/><circle cx="9.5" cy="7" r="1.1" fill="currentColor"/><circle cx="14.5" cy="7" r="1.1" fill="currentColor"/></svg>',
+    bubble: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.6"/><circle cx="15.5" cy="15.5" r="3.5" stroke="currentColor" stroke-width="1.6"/></svg>',
+    frame: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 15.5L8.5 10.5L12.5 14.5L16 11L20.5 15.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/></svg>'
   };
 
   /* ============================================================
@@ -1734,7 +1863,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     "Amazon Handmade":         { outputType: "amazon_handmade", group: "Amazon",      icon: PLATFORM_ICONS.handmade, accent: "#ff9900" },
     "Gumroad / Payhip / Lemon Squeezy": { outputType: "standard",         group: "Digital Marketplaces", icon: PLATFORM_ICONS.cart,    accent: "#6366f1" },
     "Teachers Pay Teachers":            { outputType: "tpt",              group: "Digital Marketplaces", icon: PLATFORM_ICONS.gradcap, accent: "#6366f1" },
-    "Creative Market":                  { outputType: "creative_market",  group: "Digital Marketplaces", icon: PLATFORM_ICONS.palette, accent: "#6366f1" }
+    "Creative Market":                  { outputType: "creative_market",  group: "Digital Marketplaces", icon: PLATFORM_ICONS.palette, accent: "#6366f1" },
+    "Redbubble":            { outputType: "redbubble",  group: "POD Alternatives", icon: PLATFORM_ICONS.bubble, accent: "#8b5cf6" },
+    "TeePublic":             { outputType: "teepublic",  group: "POD Alternatives", icon: PLATFORM_ICONS.shirt,  accent: "#8b5cf6" },
+    "Zazzle & Society6":     { outputType: "zazzle",     group: "POD Alternatives", icon: PLATFORM_ICONS.frame,  accent: "#8b5cf6" }
   };
 
   function getOutputType(category){
@@ -2707,6 +2839,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     if (outputType === "amazon_handmade") return buildAmazonHandmadePrompt(keyword, category, audience, seoGoal, wordsToAvoid);
     if (outputType === "tpt") return buildTptPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
     if (outputType === "creative_market") return buildCreativeMarketPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+    if (outputType === "redbubble") return buildRedbubblePrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+    if (outputType === "teepublic") return buildTeepublicPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+    if (outputType === "zazzle") return buildZazzlePrompt(keyword, category, audience, seoGoal, wordsToAvoid);
     return buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
   }
 
@@ -2857,6 +2992,78 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     ].join("\n");
   }
 
+  function buildRedbubblePrompt(keyword, category, audience, seoGoal, wordsToAvoid){
+    return [
+      "Act as a top 1% Redbubble SEO strategist and print-on-demand listing copywriter.",
+      "",
+      "Analyze the following product inputs:",
+      "- Design Keyword: " + keyword,
+      "- Platform: Redbubble",
+      "- Target Audience: " + audience,
+      "- SEO Goal: " + seoGoal,
+      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
+      "",
+      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
+      "{",
+      '  "title": "A natural-reading Redbubble title packed with searchable keyword phrases, roughly 60-100 characters",',
+      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13","tag14","tag15"],',
+      '  "description": "A short Redbubble listing description reinforcing the design theme and keywords in natural language"',
+      "}",
+      "",
+      "STRICT RULES FOR TAGS: Return EXACTLY 15 tags. Each tag MUST be 50 characters or under. Roughly 60% should be specific multi-word phrases and 40% broader category terms. No duplicate or near-duplicate tags. Never use promotional/spam phrases like 'best selling', 'top selling', or 'most popular'.",
+      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, tags, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
+    ].join("\n");
+  }
+
+  function buildTeepublicPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
+    return [
+      "Act as a top 1% TeePublic SEO strategist and print-on-demand listing copywriter.",
+      "",
+      "Analyze the following product inputs:",
+      "- Design Keyword: " + keyword,
+      "- Platform: TeePublic",
+      "- Target Audience: " + audience,
+      "- SEO Goal: " + seoGoal,
+      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
+      "",
+      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
+      "{",
+      '  "title": "A descriptive, keyword-rich TeePublic title that mirrors how customers search",',
+      '  "mainTag": "The single most important tag — the core theme of the design in a short phrase, matching the TeePublic Main Tag field",',
+      '  "secondaryTags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13","tag14"],',
+      '  "description": "A short TeePublic description elaborating on the design and naturally incorporating relevant keywords"',
+      "}",
+      "",
+      "STRICT RULES FOR MAIN TAG: Exactly one short phrase (2-4 words) that best captures the design's core theme — this is the single most important field for TeePublic's search algorithm.",
+      "STRICT RULES FOR SECONDARY TAGS: Return exactly 14 tags (15 total including the main tag). Must not duplicate the main tag or each other. Reference the design's style, content, and theme.",
+      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, tags, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
+    ].join("\n");
+  }
+
+  function buildZazzlePrompt(keyword, category, audience, seoGoal, wordsToAvoid){
+    return [
+      "Act as a top 1% Zazzle and Society6 SEO strategist and print-on-demand product copywriter.",
+      "",
+      "Analyze the following product inputs:",
+      "- Product Keyword: " + keyword,
+      "- Platform: Zazzle & Society6",
+      "- Target Audience: " + audience,
+      "- SEO Goal: " + seoGoal,
+      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
+      "",
+      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
+      "{",
+      '  "title": "A keyword-rich product title under 70 characters that reads naturally to a shopper",',
+      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10"],',
+      '  "description": "A warm, product-storytelling description that describes the design/artwork, the inspiration behind it, and who it is perfect for, ending with a call-to-action"',
+      "}",
+      "",
+      "STRICT RULES FOR TITLE: 70 characters or under. Use 3-5 descriptive keywords a shopper would actually search for.",
+      "STRICT RULES FOR TAGS: Return EXACTLY 10 tags, the first being the single most important keyword. Never use generic words like 'custom' or 'personalized' as standalone tags. No duplicate or near-duplicate tags.",
+      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, tags, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
+    ].join("\n");
+  }
+
   /* ============================================================
      CLOUDFLARE PAGES FUNCTION CALL
      ============================================================ */
@@ -2989,6 +3196,24 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       }
       return;
     }
+    if (outputType === "redbubble") {
+      if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
+        throw new Error("Received an unexpected response format. Please try again.");
+      }
+      return;
+    }
+    if (outputType === "teepublic") {
+      if (!parsed.title || !parsed.mainTag || !Array.isArray(parsed.secondaryTags) || !parsed.description) {
+        throw new Error("Received an unexpected response format. Please try again.");
+      }
+      return;
+    }
+    if (outputType === "zazzle") {
+      if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
+        throw new Error("Received an unexpected response format. Please try again.");
+      }
+      return;
+    }
     if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
       throw new Error("Received an unexpected response format. Please try again.");
     }
@@ -3001,6 +3226,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     amazonHandmadeOutputSection.classList.add("hidden");
     tptOutputSection.classList.add("hidden");
     creativeMarketOutputSection.classList.add("hidden");
+    redbubbleOutputSection.classList.add("hidden");
+    teepublicOutputSection.classList.add("hidden");
+    zazzleOutputSection.classList.add("hidden");
   }
 
   function renderOutputByType(outputType, parsed, category){
@@ -3024,6 +3252,18 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     if (outputType === "creative_market") {
       renderCreativeMarketOutput(parsed, category);
       return creativeMarketOutputSection;
+    }
+    if (outputType === "redbubble") {
+      renderRedbubbleOutput(parsed, category);
+      return redbubbleOutputSection;
+    }
+    if (outputType === "teepublic") {
+      renderTeepublicOutput(parsed, category);
+      return teepublicOutputSection;
+    }
+    if (outputType === "zazzle") {
+      renderZazzleOutput(parsed, category);
+      return zazzleOutputSection;
     }
     renderOutput(parsed, category);
     return outputSection;
@@ -3174,6 +3414,111 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     creativeMarketOutputSection.classList.remove("hidden");
   }
+
+  function renderRedbubbleOutput(parsed, category){
+    const title = String(parsed.title || "").trim();
+    const tags = Array.isArray(parsed.tags)
+      ? parsed.tags.slice(0, 15).map(t => String(t).trim()).filter(Boolean)
+      : [];
+    const desc = String(parsed.description || "").trim();
+
+    redbubbleTitleOutput.textContent = title;
+
+    redbubbleTagsWrap.innerHTML = "";
+    tags.forEach((tag, i) => {
+      const length = [...tag].length;
+      const overLimit = length > 50;
+      const chip = document.createElement("span");
+      chip.className = "tag-chip" + (overLimit ? " is-over-limit" : "");
+      chip.style.animationDelay = (i * 0.03) + "s";
+      chip.innerHTML = escapeHTML(tag) + '<span class="tag-count" title="Character count">' + length + '/50</span>';
+      redbubbleTagsWrap.appendChild(chip);
+    });
+    redbubbleTagsRaw.value = tags.join(", ");
+
+    redbubbleDescOutput.textContent = desc;
+
+    updateRiskAlert([keywordInput.value, title, tags.join(" ")].join(" "));
+
+    redbubbleOutputSection.classList.remove("hidden");
+  }
+
+  function renderTeepublicOutput(parsed, category){
+    const title = String(parsed.title || "").trim();
+    const mainTag = String(parsed.mainTag || "").trim();
+    const secondaryTags = Array.isArray(parsed.secondaryTags)
+      ? parsed.secondaryTags.slice(0, 14).map(t => String(t).trim()).filter(Boolean)
+      : [];
+    const desc = String(parsed.description || "").trim();
+
+    teepublicTitleOutput.textContent = title;
+
+    teepublicMainTagWrap.innerHTML = "";
+    if (mainTag) {
+      const chip = document.createElement("span");
+      chip.className = "tag-chip";
+      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(mainTag);
+      teepublicMainTagWrap.appendChild(chip);
+    }
+
+    teepublicSecondaryTagsWrap.innerHTML = "";
+    secondaryTags.forEach((tag, i) => {
+      const chip = document.createElement("span");
+      chip.className = "tag-chip";
+      chip.style.animationDelay = (i * 0.03) + "s";
+      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(tag);
+      teepublicSecondaryTagsWrap.appendChild(chip);
+    });
+    teepublicSecondaryTagsRaw.value = secondaryTags.join(", ");
+
+    teepublicDescOutput.textContent = desc;
+
+    updateRiskAlert([keywordInput.value, title, mainTag, secondaryTags.join(" ")].join(" "));
+
+    teepublicOutputSection.classList.remove("hidden");
+  }
+
+  function renderZazzleOutput(parsed, category){
+    const title = String(parsed.title || "").trim();
+    const tags = Array.isArray(parsed.tags)
+      ? parsed.tags.slice(0, 10).map(t => String(t).trim()).filter(Boolean)
+      : [];
+    const desc = String(parsed.description || "").trim();
+
+    zazzleTitleOutput.textContent = title;
+    zazzleTitleCharCount.textContent = title.length + " / 70 characters" + (title.length > 70 ? " — over limit" : "");
+
+    zazzleTagsWrap.innerHTML = "";
+    tags.forEach((tag, i) => {
+      const chip = document.createElement("span");
+      chip.className = "tag-chip";
+      chip.style.animationDelay = (i * 0.03) + "s";
+      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(tag);
+      zazzleTagsWrap.appendChild(chip);
+    });
+    zazzleTagsRaw.value = tags.join(", ");
+
+    zazzleDescOutput.textContent = desc;
+
+    updateRiskAlert([keywordInput.value, title, tags.join(" ")].join(" "));
+
+    zazzleOutputSection.classList.remove("hidden");
+  }
+
+  /* ============================================================
+     COPY BUTTONS — REDBUBBLE / TEEPUBLIC / ZAZZLE & SOCIETY6
+     ============================================================ */
+  copyRedbubbleTitleBtn.addEventListener("click", () => copyText(redbubbleTitleOutput.textContent, copyRedbubbleTitleBtn, "Copy Title"));
+  copyRedbubbleTagsBtn.addEventListener("click", () => copyText(redbubbleTagsRaw.value, copyRedbubbleTagsBtn, "Copy All Tags"));
+  copyRedbubbleDescBtn.addEventListener("click", () => copyText(redbubbleDescOutput.textContent, copyRedbubbleDescBtn, "Copy Description"));
+
+  copyTeepublicTitleBtn.addEventListener("click", () => copyText(teepublicTitleOutput.textContent, copyTeepublicTitleBtn, "Copy Title"));
+  copyTeepublicTagsBtn.addEventListener("click", () => copyText(teepublicSecondaryTagsRaw.value, copyTeepublicTagsBtn, "Copy Secondary Tags"));
+  copyTeepublicDescBtn.addEventListener("click", () => copyText(teepublicDescOutput.textContent, copyTeepublicDescBtn, "Copy Description"));
+
+  copyZazzleTitleBtn.addEventListener("click", () => copyText(zazzleTitleOutput.textContent, copyZazzleTitleBtn, "Copy Title"));
+  copyZazzleTagsBtn.addEventListener("click", () => copyText(zazzleTagsRaw.value, copyZazzleTagsBtn, "Copy All Tags"));
+  copyZazzleDescBtn.addEventListener("click", () => copyText(zazzleDescOutput.textContent, copyZazzleDescBtn, "Copy Description"));
 
   /* ============================================================
      COPY BUTTONS — TPT / CREATIVE MARKET OUTPUTS
