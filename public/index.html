@@ -1108,7 +1108,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     <div class="field">
       <label for="audienceSelect">Who are you targeting?</label>
-      <select id="audienceSelect">
+      <div class="platform-picker" id="audiencePicker">
+        <button type="button" class="platform-trigger" id="audienceTrigger" aria-haspopup="listbox" aria-expanded="false">
+          <span class="platform-trigger-icon" id="audienceTriggerIcon"></span>
+          <span class="platform-trigger-label" id="audienceTriggerLabel">General Consumers</span>
+          <svg class="platform-trigger-chevron" viewBox="0 0 14 9" fill="none"><path d="M1 1l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="platform-menu hidden" id="audienceMenu" role="listbox"></div>
+      </div>
+      <select id="audienceSelect" class="hidden" tabindex="-1" aria-hidden="true">
         <option>General Consumers</option>
         <option>Online Shoppers</option>
         <option>Etsy Shoppers</option>
@@ -1120,6 +1128,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         <option>Bloggers &amp; Content Creators</option>
         <option>B2B / Professionals</option>
         <option>Local Customers</option>
+        <option>Teachers &amp; Educators</option>
+        <option>Book Readers</option>
+        <option>Designers &amp; Creatives</option>
         <option value="custom">Custom</option>
       </select>
       <p class="field-help">We'll tailor tone and keywords to this audience.</p>
@@ -1133,7 +1144,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     <div class="field">
       <label for="seoGoalSelect">What's your SEO goal?</label>
-      <select id="seoGoalSelect">
+      <div class="platform-picker" id="goalPicker">
+        <button type="button" class="platform-trigger" id="goalTrigger" aria-haspopup="listbox" aria-expanded="false">
+          <span class="platform-trigger-icon" id="goalTriggerIcon"></span>
+          <span class="platform-trigger-label" id="goalTriggerLabel">Get More Traffic</span>
+          <svg class="platform-trigger-chevron" viewBox="0 0 14 9" fill="none"><path d="M1 1l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="platform-menu hidden" id="goalMenu" role="listbox"></div>
+      </div>
+      <select id="seoGoalSelect" class="hidden" tabindex="-1" aria-hidden="true">
         <option>Get More Traffic</option>
         <option>Increase Sales</option>
         <option>Drive Product Purchases</option>
@@ -1837,7 +1856,22 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     gradcap: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4L2 9l10 5 10-5-10-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 11.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M21 9v5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
     palette: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3a9 8 0 100 16c1.1 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16.5A4.5 4.5 0 0021 8.7C21 5.5 16.9 3 12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor"/><circle cx="9.5" cy="7" r="1.1" fill="currentColor"/><circle cx="14.5" cy="7" r="1.1" fill="currentColor"/></svg>',
     bubble: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.6"/><circle cx="15.5" cy="15.5" r="3.5" stroke="currentColor" stroke-width="1.6"/></svg>',
-    frame: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 15.5L8.5 10.5L12.5 14.5L16 11L20.5 15.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/></svg>'
+    frame: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 15.5L8.5 10.5L12.5 14.5L16 11L20.5 15.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/></svg>',
+    people: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="17" cy="9" r="2.3" stroke="currentColor" stroke-width="1.5"/><path d="M15 19c0-2.2 1.5-3.8 3.5-3.8s3.5 1.6 3.5 3.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    bag: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 8h12l-1 12H7L6 8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 8V6a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    camera: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 7l1.5-2.5h5L16 7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.3" stroke="currentColor" stroke-width="1.6"/></svg>',
+    music: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 18a3 3 0 100-6 3 3 0 000 6Z" stroke="currentColor" stroke-width="1.6"/><path d="M12 18V4l6 2.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    storefront: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 9l1-4h14l1 4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 9a2.2 2.2 0 004.4 0 2.2 2.2 0 004.4 0 2.2 2.2 0 004.4 0 2.2 2.2 0 004.4 0" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 9.5V19h14V9.5" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 19v-5h5v5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+    rocket: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3c3 1.5 5 5 5 9-1 1-2 1.5-3 1.5H10c-1 0-2-.5-3-1.5 0-4 2-7.5 5-9Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="9" r="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M9 14l-2.5 2.5M15 14l2.5 2.5M10 17.5l-.5 3M14 17.5l.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    pencil: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 20l1-4.2L15.5 5.3a1.5 1.5 0 012.1 0l1.1 1.1a1.5 1.5 0 010 2.1L8.2 19 4 20Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 6.8l3.2 3.2" stroke="currentColor" stroke-width="1.5"/></svg>',
+    briefcase: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="8" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8V6a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" stroke-width="1.6"/><path d="M3 13h18" stroke="currentColor" stroke-width="1.6"/></svg>',
+    house: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11l8-7 8 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9h12v-9" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10 19v-5h4v5" stroke="currentColor" stroke-width="1.6"/></svg>',
+    trendUp: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17l6-6 4 4 8-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    dollar: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v10M14.5 9.3c0-1-1-1.8-2.5-1.8s-2.5.8-2.5 1.8c0 2.4 5 1.2 5 3.6 0 1-1 1.8-2.5 1.8s-2.5-.8-2.5-1.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+    funnel: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5h16l-6 8v6l-4-2v-4L4 5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+    megaphone: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 10v4h3l6 4V6l-6 4H3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15 9a3 3 0 010 6M18 6.5a6.5 6.5 0 010 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    reach: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="2.3" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="6.5" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
   };
 
   /* ============================================================
@@ -1874,6 +1908,51 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   /* ============================================================
+     AUDIENCE CATALOG
+     ------------------------------------------------------------
+     Same idea as PLATFORM_CATALOG, but for the "Who are you
+     targeting?" picker. Icon/accent/group only drive the custom
+     picker UI — the real <select id="audienceSelect"> (hidden) is
+     still the actual source of truth for .value.
+     ============================================================ */
+  const AUDIENCE_CATALOG = {
+    "General Consumers":            { group: "General",                icon: PLATFORM_ICONS.people,     accent: "#f1641e" },
+    "Online Shoppers":               { group: "General",                icon: PLATFORM_ICONS.bag,        accent: "#f1641e" },
+    "Local Customers":               { group: "General",                icon: PLATFORM_ICONS.house,      accent: "#f1641e" },
+    "Etsy Shoppers":                 { group: "Platform Audiences",      icon: PLATFORM_ICONS.tag,        accent: "#f1641e" },
+    "Pinterest Users":               { group: "Platform Audiences",      icon: PLATFORM_ICONS.pin,        accent: "#e60023" },
+    "Instagram Users":               { group: "Platform Audiences",      icon: PLATFORM_ICONS.camera,     accent: "#8b5cf6" },
+    "TikTok Users":                  { group: "Platform Audiences",      icon: PLATFORM_ICONS.music,      accent: "#8b5cf6" },
+    "Small Business Owners":         { group: "Business & Professional", icon: PLATFORM_ICONS.storefront, accent: "#6366f1" },
+    "Entrepreneurs":                 { group: "Business & Professional", icon: PLATFORM_ICONS.rocket,     accent: "#6366f1" },
+    "B2B / Professionals":           { group: "Business & Professional", icon: PLATFORM_ICONS.briefcase,  accent: "#6366f1" },
+    "Bloggers & Content Creators":   { group: "Creative & Niche",        icon: PLATFORM_ICONS.pencil,     accent: "#ff9900" },
+    "Teachers & Educators":          { group: "Creative & Niche",        icon: PLATFORM_ICONS.gradcap,    accent: "#ff9900" },
+    "Book Readers":                  { group: "Creative & Niche",        icon: PLATFORM_ICONS.book,       accent: "#ff9900" },
+    "Designers & Creatives":         { group: "Creative & Niche",        icon: PLATFORM_ICONS.palette,    accent: "#ff9900" },
+    "Custom":                        { group: "Other",                   icon: PLATFORM_ICONS.pencil,     accent: "#8a8f98", value: "custom" }
+  };
+
+  /* ============================================================
+     GOAL CATALOG
+     ------------------------------------------------------------
+     Same idea for the "What's your SEO goal?" picker. Options
+     stay platform-agnostic (a goal like "Increase Sales" applies
+     equally to Etsy or Amazon KDP), so no new goals were added —
+     only the presentation changed.
+     ============================================================ */
+  const GOAL_CATALOG = {
+    "Get More Traffic":          { group: "Visibility & Awareness", icon: PLATFORM_ICONS.trendUp,   accent: "#f1641e" },
+    "Grow Organic Reach":        { group: "Visibility & Awareness", icon: PLATFORM_ICONS.reach,     accent: "#f1641e" },
+    "Improve Search Visibility": { group: "Visibility & Awareness", icon: PLATFORM_ICONS.search,    accent: "#f1641e" },
+    "Build Brand Awareness":     { group: "Visibility & Awareness", icon: PLATFORM_ICONS.megaphone, accent: "#f1641e" },
+    "Increase Sales":            { group: "Sales & Conversion",     icon: PLATFORM_ICONS.dollar,    accent: "#6366f1" },
+    "Drive Product Purchases":   { group: "Sales & Conversion",     icon: PLATFORM_ICONS.cart,      accent: "#6366f1" },
+    "Generate Leads":            { group: "Sales & Conversion",     icon: PLATFORM_ICONS.funnel,    accent: "#6366f1" },
+    "Custom":                    { group: "Other",                  icon: PLATFORM_ICONS.pencil,    accent: "#8a8f98", value: "custom" }
+  };
+
+  /* ============================================================
      CUSTOM PLATFORM PICKER
      ------------------------------------------------------------
      Purely a visual layer over the real (hidden) #categorySelect.
@@ -1887,6 +1966,18 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const platformTriggerIcon = $("platformTriggerIcon");
   const platformTriggerLabel = $("platformTriggerLabel");
   const platformMenu = $("platformMenu");
+
+  const audiencePicker = $("audiencePicker");
+  const audienceTrigger = $("audienceTrigger");
+  const audienceTriggerIcon = $("audienceTriggerIcon");
+  const audienceTriggerLabel = $("audienceTriggerLabel");
+  const audienceMenu = $("audienceMenu");
+
+  const goalPicker = $("goalPicker");
+  const goalTrigger = $("goalTrigger");
+  const goalTriggerIcon = $("goalTriggerIcon");
+  const goalTriggerLabel = $("goalTriggerLabel");
+  const goalMenu = $("goalMenu");
 
   function buildPlatformMenu(){
     platformMenu.innerHTML = "";
@@ -1969,6 +2060,189 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
   buildPlatformMenu();
   syncPlatformTrigger();
+
+  /* ============================================================
+     CUSTOM AUDIENCE PICKER
+     ------------------------------------------------------------
+     Same pattern as the platform picker above: a visual layer over
+     the real (hidden) #audienceSelect. Reads/writes its .value and
+     dispatches "change" on it, so the existing Custom-field-reveal
+     listener on audienceSelect keeps working unchanged.
+     ============================================================ */
+  function buildAudienceMenu(){
+    audienceMenu.innerHTML = "";
+    const seenGroups = [];
+    const byGroup = {};
+
+    Object.keys(AUDIENCE_CATALOG).forEach(name => {
+      const cfg = AUDIENCE_CATALOG[name];
+      if (!byGroup[cfg.group]) {
+        byGroup[cfg.group] = [];
+        seenGroups.push(cfg.group);
+      }
+      byGroup[cfg.group].push(name);
+    });
+
+    seenGroups.forEach(groupName => {
+      const heading = document.createElement("div");
+      heading.className = "platform-menu-heading";
+      heading.textContent = groupName;
+      audienceMenu.appendChild(heading);
+
+      byGroup[groupName].forEach(name => {
+        const cfg = AUDIENCE_CATALOG[name];
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "platform-menu-option";
+        option.setAttribute("role", "option");
+        option.dataset.value = cfg.value || name;
+        option.innerHTML =
+          '<span class="platform-menu-icon" style="color:' + cfg.accent + '">' + cfg.icon + '</span>' +
+          '<span class="platform-menu-label">' + escapeHTML(name) + '</span>';
+        option.addEventListener("click", () => selectAudience(cfg.value || name, name));
+        audienceMenu.appendChild(option);
+      });
+    });
+  }
+
+  function selectAudience(value, label){
+    audienceSelect.value = value;
+    audienceSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    closeAudienceMenu();
+  }
+
+  function syncAudienceTrigger(){
+    const currentValue = audienceSelect.value;
+    const name = Object.keys(AUDIENCE_CATALOG).find(
+      key => (AUDIENCE_CATALOG[key].value || key) === currentValue
+    );
+    const cfg = name ? AUDIENCE_CATALOG[name] : null;
+    if (!cfg) return;
+    audienceTriggerIcon.innerHTML = cfg.icon;
+    audienceTriggerIcon.style.color = cfg.accent;
+    audienceTriggerLabel.textContent = name;
+    audienceMenu.querySelectorAll(".platform-menu-option").forEach(btn => {
+      btn.classList.toggle("is-selected", btn.dataset.value === currentValue);
+    });
+  }
+
+  function openAudienceMenu(){
+    audienceMenu.classList.remove("hidden");
+    audienceTrigger.classList.add("is-open");
+    audienceTrigger.setAttribute("aria-expanded", "true");
+  }
+  function closeAudienceMenu(){
+    audienceMenu.classList.add("hidden");
+    audienceTrigger.classList.remove("is-open");
+    audienceTrigger.setAttribute("aria-expanded", "false");
+  }
+
+  audienceTrigger.addEventListener("click", () => {
+    if (audienceMenu.classList.contains("hidden")) openAudienceMenu();
+    else closeAudienceMenu();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!audiencePicker.contains(e.target)) closeAudienceMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAudienceMenu();
+  });
+
+  audienceSelect.addEventListener("change", syncAudienceTrigger);
+
+  buildAudienceMenu();
+  syncAudienceTrigger();
+
+  /* ============================================================
+     CUSTOM SEO GOAL PICKER
+     ------------------------------------------------------------
+     Same pattern again, over the real (hidden) #seoGoalSelect.
+     ============================================================ */
+  function buildGoalMenu(){
+    goalMenu.innerHTML = "";
+    const seenGroups = [];
+    const byGroup = {};
+
+    Object.keys(GOAL_CATALOG).forEach(name => {
+      const cfg = GOAL_CATALOG[name];
+      if (!byGroup[cfg.group]) {
+        byGroup[cfg.group] = [];
+        seenGroups.push(cfg.group);
+      }
+      byGroup[cfg.group].push(name);
+    });
+
+    seenGroups.forEach(groupName => {
+      const heading = document.createElement("div");
+      heading.className = "platform-menu-heading";
+      heading.textContent = groupName;
+      goalMenu.appendChild(heading);
+
+      byGroup[groupName].forEach(name => {
+        const cfg = GOAL_CATALOG[name];
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "platform-menu-option";
+        option.setAttribute("role", "option");
+        option.dataset.value = cfg.value || name;
+        option.innerHTML =
+          '<span class="platform-menu-icon" style="color:' + cfg.accent + '">' + cfg.icon + '</span>' +
+          '<span class="platform-menu-label">' + escapeHTML(name) + '</span>';
+        option.addEventListener("click", () => selectGoal(cfg.value || name, name));
+        goalMenu.appendChild(option);
+      });
+    });
+  }
+
+  function selectGoal(value, label){
+    seoGoalSelect.value = value;
+    seoGoalSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    closeGoalMenu();
+  }
+
+  function syncGoalTrigger(){
+    const currentValue = seoGoalSelect.value;
+    const name = Object.keys(GOAL_CATALOG).find(
+      key => (GOAL_CATALOG[key].value || key) === currentValue
+    );
+    const cfg = name ? GOAL_CATALOG[name] : null;
+    if (!cfg) return;
+    goalTriggerIcon.innerHTML = cfg.icon;
+    goalTriggerIcon.style.color = cfg.accent;
+    goalTriggerLabel.textContent = name;
+    goalMenu.querySelectorAll(".platform-menu-option").forEach(btn => {
+      btn.classList.toggle("is-selected", btn.dataset.value === currentValue);
+    });
+  }
+
+  function openGoalMenu(){
+    goalMenu.classList.remove("hidden");
+    goalTrigger.classList.add("is-open");
+    goalTrigger.setAttribute("aria-expanded", "true");
+  }
+  function closeGoalMenu(){
+    goalMenu.classList.add("hidden");
+    goalTrigger.classList.remove("is-open");
+    goalTrigger.setAttribute("aria-expanded", "false");
+  }
+
+  goalTrigger.addEventListener("click", () => {
+    if (goalMenu.classList.contains("hidden")) openGoalMenu();
+    else closeGoalMenu();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!goalPicker.contains(e.target)) closeGoalMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeGoalMenu();
+  });
+
+  seoGoalSelect.addEventListener("change", syncGoalTrigger);
+
+  buildGoalMenu();
+  syncGoalTrigger();
 
   const paywallModal  = $("paywallModal");
   const buyProBtn     = $("buyProBtn");
@@ -2342,7 +2616,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     categorySelect.value = item.category || categorySelect.value;
     syncPlatformTrigger();
     audienceSelect.value = item.audience || audienceSelect.value;
+    syncAudienceTrigger();
     seoGoalSelect.value = item.seoGoal || seoGoalSelect.value;
+    syncGoalTrigger();
     wordsToAvoidInput.value = Array.isArray(item.wordsToAvoid)
       ? item.wordsToAvoid.join(", ")
       : (item.wordsToAvoid || "");
