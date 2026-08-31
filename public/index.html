@@ -300,6 +300,43 @@ a{ color:inherit; }
 .demo-description{
   font-size:12px; color:var(--ink-soft); line-height:1.55;
 }
+.demo-input-row{ margin-bottom:12px; }
+.demo-input-label{
+  display:block; font-size:10.5px; font-weight:700; color:var(--muted);
+  margin-bottom:6px;
+}
+.demo-input-box{
+  border:1.5px solid var(--border);
+  border-radius:10px;
+  background:var(--bg);
+  padding:11px 12px;
+  font-size:13.5px; font-weight:600; color:var(--ink);
+  min-height:20px;
+}
+.demo-cursor{
+  display:inline-block;
+  width:2px; height:14px;
+  background:var(--primary);
+  margin-left:2px;
+  vertical-align:middle;
+  animation:demo-blink .8s step-end infinite;
+}
+@keyframes demo-blink{ 50%{ opacity:0; } }
+.demo-generate-btn{
+  display:flex; align-items:center; justify-content:center;
+  width:100%;
+  border:none; border-radius:10px;
+  background:var(--primary);
+  color:#fff;
+  font-weight:800; font-size:13px; font-family:inherit;
+  padding:11px 14px;
+  box-shadow:0 6px 16px rgba(241,100,30,0.32);
+  pointer-events:none;
+  transition:transform .12s ease;
+}
+.demo-generate-btn.is-pressed{ transform:scale(.96); }
+.demo-results{ margin-top:14px; animation:modal-in .35s cubic-bezier(.22,1,.36,1); }
+.demo-results.hidden{ display:none; }
 .generator-page{
   display:none;
 }
@@ -587,6 +624,16 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
   background:var(--danger-tint); color:var(--danger); border-color:#e8aaaa;
 }
 .tag-chip.is-over-limit .tag-count{ background:#fff; color:var(--danger); }
+.tag-copy-icon-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:16px; height:16px; margin-left:1px; padding:0;
+  border:none; background:none; color:currentColor; opacity:.55;
+  cursor:pointer; border-radius:4px;
+  transition:opacity .12s, color .12s;
+}
+.tag-copy-icon-btn:hover{ opacity:1; }
+.tag-copy-icon-btn svg{ width:11px; height:11px; display:block; }
+.tag-copy-icon-btn.is-copied{ opacity:1; color:var(--success); }
 @keyframes chip-in{ from{ opacity:0; transform:translateY(4px) scale(.92);} to{ opacity:1; transform:none;} }
 
 .raw-box{
@@ -991,10 +1038,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 <main id="mainApp">
   <section class="landing-screen" id="landingScreen">
     <div class="landing-hero">
-      <h2>Turn Any Product Idea Into a Search-Ready Listing</h2>
+      <h2>Get Ranking-Ready Etsy, KDP &amp; Amazon Listings in 1-Click.</h2>
       <p>Generate a keyword-rich title, 13 targeted SEO tags, and a ready-to-use description in seconds.</p>
       <button type="button" class="btn btn-primary get-started-btn" id="getStartedBtn">Get Started</button>
-      <p class="landing-note">Free account · 5 lifetime generations · No credit card required</p>
+      <p class="landing-cc-badge">🔓 Get Started Free — No Credit Card, No Strings</p>
     </div>
 
     <section class="compare-section">
@@ -1031,20 +1078,32 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         </div>
         <span class="demo-badge">No credit used</span>
       </div>
-      <div class="landing-demo-card">
-        <div class="demo-product-line">
-          <span class="demo-platform">Etsy</span>
-          <span>Sample listing</span>
+      <div class="landing-demo-card" aria-hidden="true">
+        <div class="demo-input-row">
+          <span class="demo-input-label">Product keyword / title</span>
+          <div class="demo-input-box">
+            <span id="demoTypedText"></span><span class="demo-cursor" id="demoCursor"></span>
+          </div>
         </div>
-        <div class="demo-title">Minimalist Wall Art Printable, Neutral Home Decor, Modern Abstract Download</div>
-        <div class="demo-tags">
-          <span>#minimalist wall</span>
-          <span>#neutral wall art</span>
-          <span>#modern printable</span>
-          <span>#abstract decor</span>
-          <span>+9 more</span>
+        <button type="button" class="demo-generate-btn" id="demoGenerateBtn" tabindex="-1">
+          <span id="demoGenerateBtnLabel">⚡ Generate Optimized Tags</span>
+        </button>
+        <div class="demo-results hidden" id="demoResults">
+          <div class="demo-product-line">
+            <span class="demo-platform">Etsy</span>
+            <span>Sample listing</span>
+          </div>
+          <div class="demo-title">Vintage Leather Journal, Handmade Travel Diary, Personalized Writing Notebook Gift</div>
+          <div class="demo-tags">
+            <span>#vintage leather</span>
+            <span>#leather journal</span>
+            <span>#travel diary gift</span>
+            <span>#handmade notebook</span>
+            <span>#personalized gift</span>
+            <span>+8 more</span>
+          </div>
+          <div class="demo-description">A timeless, hand-stitched leather journal — perfect for daily reflection, travel notes, or a thoughtful gift that gets better with age.</div>
         </div>
-        <div class="demo-description">A clean, modern printable designed to add a calm finishing touch to your space…</div>
       </div>
     </section>
   </section>
@@ -2992,7 +3051,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     if (!authUser || !authSession) {
       openModal(authModal);
       authTitle.textContent = "Get started with TagPulse AI";
-      authMessage.textContent = "Enter your email and we'll send you a secure sign-in link. You’ll get 5 lifetime free generations.";
+      authMessage.textContent = "Enter your email and we'll send you a secure sign-in link. You’ll get 3 lifetime free generations.";
       emailStep.classList.remove("hidden");
       emailSentStep.classList.add("hidden");
       accountStep.classList.add("hidden");
@@ -3416,6 +3475,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       chip.className = "tag-chip" + (overLimit ? " is-over-limit" : "");
       chip.style.animationDelay = (i * 0.03) + "s";
       chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(tag) + '<span class="tag-count" title="Character count">' + length + '/' + tagLimit.maxChars + '</span>';
+      appendTagCopyButton(chip, tag);
       tagsWrap.appendChild(chip);
     });
     tagsRaw.value = tags.join(", ");
@@ -3429,6 +3489,36 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  /* ============================================================
+     INDIVIDUAL TAG COPY BUTTON
+     ------------------------------------------------------------
+     Appends a small copy icon to a tag/keyword chip. The tag text
+     is captured in a closure rather than round-tripped through an
+     HTML attribute, so no escaping edge case can break it.
+     ============================================================ */
+  const TAG_COPY_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15V6a2 2 0 012-2h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+  function appendTagCopyButton(chip, text){
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tag-copy-icon-btn";
+    btn.title = "Copy this tag";
+    btn.setAttribute("aria-label", "Copy tag: " + text);
+    btn.innerHTML = TAG_COPY_ICON_SVG;
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const ok = await copyToClipboard(text);
+      if (ok) {
+        btn.classList.add("is-copied");
+        setTimeout(() => btn.classList.remove("is-copied"), 1200);
+      } else {
+        showToast("Couldn't copy — please select and copy the text manually.", "error");
+      }
+    });
+    chip.appendChild(btn);
   }
 
   /* ============================================================
@@ -3582,6 +3672,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       chip.className = "tag-chip" + (overLimit ? " is-over-limit" : "");
       chip.style.animationDelay = (i * 0.03) + "s";
       chip.innerHTML = escapeHTML(kw) + '<span class="tag-count" title="Character count">' + length + '/50</span>';
+      appendTagCopyButton(chip, kw);
       kdpKeywordsWrap.appendChild(chip);
     });
     kdpKeywordsRaw.value = keywords.join(" ");
@@ -3654,6 +3745,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       chip.className = "tag-chip";
       chip.style.animationDelay = (i * 0.03) + "s";
       chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(kw);
+      appendTagCopyButton(chip, kw);
       tptKeywordsWrap.appendChild(chip);
     });
     tptKeywordsRaw.value = keywords.join(", ");
@@ -3680,6 +3772,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       chip.className = "tag-chip";
       chip.style.animationDelay = (i * 0.03) + "s";
       chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(tag);
+      appendTagCopyButton(chip, tag);
       cmTagsWrap.appendChild(chip);
     });
     cmTagsRaw.value = tags.join(", ");
@@ -3708,6 +3801,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       chip.className = "tag-chip" + (overLimit ? " is-over-limit" : "");
       chip.style.animationDelay = (i * 0.03) + "s";
       chip.innerHTML = escapeHTML(tag) + '<span class="tag-count" title="Character count">' + length + '/50</span>';
+      appendTagCopyButton(chip, tag);
       redbubbleTagsWrap.appendChild(chip);
     });
     redbubbleTagsRaw.value = tags.join(", ");
@@ -3734,6 +3828,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       const chip = document.createElement("span");
       chip.className = "tag-chip";
       chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(mainTag);
+      appendTagCopyButton(chip, mainTag);
       teepublicMainTagWrap.appendChild(chip);
     }
 
@@ -3743,6 +3838,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       chip.className = "tag-chip";
       chip.style.animationDelay = (i * 0.03) + "s";
       chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(tag);
+      appendTagCopyButton(chip, tag);
       teepublicSecondaryTagsWrap.appendChild(chip);
     });
     teepublicSecondaryTagsRaw.value = secondaryTags.join(", ");
@@ -3770,6 +3866,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       chip.className = "tag-chip";
       chip.style.animationDelay = (i * 0.03) + "s";
       chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(tag);
+      appendTagCopyButton(chip, tag);
       zazzleTagsWrap.appendChild(chip);
     });
     zazzleTagsRaw.value = tags.join(", ");
@@ -3909,6 +4006,99 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
 })();
+
+/* ============================================================
+   LANDING DEMO ANIMATION
+   ------------------------------------------------------------
+   Purely decorative: loops a typing → "generate" → results
+   sequence on the landing screen so visitors see the tool in
+   action without a video file. Fully self-contained — does not
+   call any API, use any credit, or touch the real generator or
+   auth state. Pauses itself once the landing screen is hidden
+   (after sign-in) to avoid running forever in the background.
+   ============================================================ */
+(function(){
+  const demoTypedText = document.getElementById("demoTypedText");
+  const demoGenerateBtn = document.getElementById("demoGenerateBtn");
+  const demoGenerateBtnLabel = document.getElementById("demoGenerateBtnLabel");
+  const demoResults = document.getElementById("demoResults");
+
+  if (!demoTypedText || !demoGenerateBtn || !demoGenerateBtnLabel || !demoResults) return;
+
+  const DEMO_KEYWORD = "Vintage Leather Journal";
+  const DEFAULT_BTN_LABEL = "⚡ Generate Optimized Tags";
+  let timers = [];
+  let running = false;
+
+  function clearTimers(){
+    timers.forEach(id => clearTimeout(id));
+    timers = [];
+  }
+
+  function schedule(fn, delay){
+    const id = setTimeout(fn, delay);
+    timers.push(id);
+    return id;
+  }
+
+  function isLandingVisible(){
+    return !document.body.classList.contains("authenticated");
+  }
+
+  function runDemoLoop(){
+    if (!isLandingVisible()) { running = false; return; }
+    running = true;
+    clearTimers();
+    demoTypedText.textContent = "";
+    demoResults.classList.add("hidden");
+    demoGenerateBtn.classList.remove("is-pressed");
+    demoGenerateBtnLabel.textContent = DEFAULT_BTN_LABEL;
+
+    let i = 0;
+    function typeNext(){
+      if (!isLandingVisible()) { running = false; return; }
+      if (i <= DEMO_KEYWORD.length) {
+        demoTypedText.textContent = DEMO_KEYWORD.slice(0, i);
+        i++;
+        schedule(typeNext, 55);
+      } else {
+        schedule(pressButton, 700);
+      }
+    }
+
+    function pressButton(){
+      if (!isLandingVisible()) { running = false; return; }
+      demoGenerateBtn.classList.add("is-pressed");
+      demoGenerateBtnLabel.innerHTML = '<span class="spinner"></span> Generating…';
+      schedule(() => {
+        demoGenerateBtn.classList.remove("is-pressed");
+        showResults();
+      }, 900);
+    }
+
+    function showResults(){
+      if (!isLandingVisible()) { running = false; return; }
+      demoGenerateBtnLabel.textContent = DEFAULT_BTN_LABEL;
+      demoResults.classList.remove("hidden");
+      schedule(runDemoLoop, 4200);
+    }
+
+    schedule(typeNext, 500);
+  }
+
+  runDemoLoop();
+
+  // Body's "authenticated" class is the same signal the CSS already
+  // uses to hide the landing screen. Watching it lets this loop pause
+  // itself after sign-in and resume if the person signs back out,
+  // without modifying any existing auth code.
+  new MutationObserver(() => {
+    if (isLandingVisible() && !running) {
+      runDemoLoop();
+    }
+  }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+})();
+
 </script>
 </body>
 </html>
