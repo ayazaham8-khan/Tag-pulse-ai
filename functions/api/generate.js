@@ -57,7 +57,7 @@ const GROQ_MODEL_FALLBACK =
 
 const GROQ_TIMEOUT_MS = 30000;
 
-const FREE_CREDITS = 5;
+const FREE_CREDITS = 3;
 
 const PAID_CREDITS = 500;
 
