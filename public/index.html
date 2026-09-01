@@ -775,8 +775,8 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
    ============================================================ */
 footer{ border-top:1px solid var(--border); padding:26px 20px 40px; text-align:center; }
 .footer-links{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
-.footer-links button{ background:none; border:none; font-size:12.5px; font-weight:700; color:var(--ink-soft); text-decoration:underline; text-underline-offset:3px; }
-.footer-links button:hover{ color:var(--primary-dark); }
+.footer-links button, .footer-links a{ background:none; border:none; font-size:12.5px; font-weight:700; color:var(--ink-soft); text-decoration:underline; text-underline-offset:3px; }
+.footer-links button:hover, .footer-links a:hover{ color:var(--primary-dark); }
 .footer-dot{ color:var(--border); }
 footer .fine{ font-size:11.5px; color:var(--muted); }
 footer .fine a{ color:var(--muted); text-decoration:underline; }
@@ -1547,6 +1547,8 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     <button type="button" id="aboutLink">About Us</button>
     <span class="footer-dot">·</span>
     <button type="button" id="privacyLink">Privacy Policy</button>
+    <span class="footer-dot">·</span>
+    <a href="https://tagpulseai.lemonsqueezy.com/affiliates" target="_blank" rel="noopener noreferrer" id="affiliateLink">Become an Affiliate</a>
   </div>
   <p class="fine">TagPulse AI · Contact: <a href="mailto:tagpulse.ai@gmail.com">tagpulse.ai@gmail.com</a></p>
 </footer>
