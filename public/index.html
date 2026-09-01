@@ -555,6 +555,38 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 .credits-banner p{ font-size:13px; color:var(--ink); flex:1; min-width:200px; }
 .credits-banner .btn{ width:auto; padding:10px 16px; font-size:13px; }
 
+.affiliate-banner{
+  max-width:var(--container);
+  margin:8px auto 0;
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  background:linear-gradient(135deg, var(--primary-tint), #fff5ec);
+  border:1.5px solid #f8cba9;
+  border-radius:var(--radius-md);
+  padding:16px 20px;
+}
+.affiliate-banner-text{ display:flex; align-items:center; gap:12px; flex:1; min-width:220px; }
+.affiliate-banner-icon{ font-size:26px; flex:0 0 auto; }
+.affiliate-banner-title{ font-size:14px; font-weight:800; color:var(--ink); margin-bottom:2px; }
+.affiliate-banner-sub{ font-size:12px; color:var(--ink-soft); }
+.affiliate-banner-btn{ width:auto; padding:11px 18px; font-size:13.5px; white-space:nowrap; }
+
+.affiliate-steps{ list-style:none; margin:12px 0 16px; }
+.affiliate-steps li{
+  display:flex; align-items:flex-start; gap:10px;
+  font-size:13px; color:var(--ink-soft);
+  margin-bottom:12px; line-height:1.5;
+}
+.affiliate-step-num{
+  width:20px; height:20px; border-radius:50%;
+  background:var(--primary); color:#fff; font-size:11px; font-weight:800;
+  display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+  margin-top:1px;
+}
+.affiliate-signup-link{
+  display:block; text-align:center; text-decoration:none;
+  margin-top:4px;
+}
+
 /* ============================================================
    OUTPUT
    ============================================================ */
@@ -1044,32 +1076,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <p class="landing-cc-badge">🔓 Get Started Free — No Credit Card, No Strings</p>
     </div>
 
-    <section class="compare-section">
-    <h2 class="compare-title">Stop Doing SEO the Hard Way</h2>
-    <div class="compare-grid">
-      <div class="compare-card compare-old">
-        <h3>The Manual Way</h3>
-        <ul>
-          <li>Hours of keyword research</li>
-          <li>Writing tags one by one</li>
-          <li>Copy-pasting errors</li>
-          <li>Repetitive SEO work</li>
-          <li>High effort for every listing</li>
-        </ul>
-      </div>
-      <div class="compare-card compare-new">
-        <h3>The TagPulse Way</h3>
-        <ul>
-          <li>1-click generation</li>
-          <li>13 SEO tags</li>
-          <li>Ready-to-use listing title</li>
-          <li>Ready-to-use description</li>
-          <li>Platform + audience-aware optimization</li>
-        </ul>
-      </div>
-    </div>
-    </section>
-
     <section class="landing-demo" aria-label="Live demo preview">
       <div class="landing-demo-head">
         <div>
@@ -1105,6 +1111,32 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           <div class="demo-description">A timeless, hand-stitched leather journal — perfect for daily reflection, travel notes, or a thoughtful gift that gets better with age.</div>
         </div>
       </div>
+    </section>
+
+    <section class="compare-section">
+    <h2 class="compare-title">Stop Doing SEO the Hard Way</h2>
+    <div class="compare-grid">
+      <div class="compare-card compare-old">
+        <h3>The Manual Way</h3>
+        <ul>
+          <li>Hours of keyword research</li>
+          <li>Writing tags one by one</li>
+          <li>Copy-pasting errors</li>
+          <li>Repetitive SEO work</li>
+          <li>High effort for every listing</li>
+        </ul>
+      </div>
+      <div class="compare-card compare-new">
+        <h3>The TagPulse Way</h3>
+        <ul>
+          <li>1-click generation</li>
+          <li>13 SEO tags</li>
+          <li>Ready-to-use listing title</li>
+          <li>Ready-to-use description</li>
+          <li>Platform + audience-aware optimization</li>
+        </ul>
+      </div>
+    </div>
     </section>
   </section>
 
@@ -1542,13 +1574,22 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 <!-- ============================================================
      FOOTER
      ============================================================ -->
+<div class="affiliate-banner">
+  <div class="affiliate-banner-text">
+    <span class="affiliate-banner-icon">🤝</span>
+    <div>
+      <p class="affiliate-banner-title">Earn 50% commission — every sale, every time</p>
+      <p class="affiliate-banner-sub">Share your link. Get $3.50 for every Pro sale you refer.</p>
+    </div>
+  </div>
+  <button type="button" class="btn btn-primary affiliate-banner-btn" id="affiliateInfoBtn">Become an Affiliate</button>
+</div>
+
 <footer>
   <div class="footer-links">
     <button type="button" id="aboutLink">About Us</button>
     <span class="footer-dot">·</span>
     <button type="button" id="privacyLink">Privacy Policy</button>
-    <span class="footer-dot">·</span>
-    <a href="https://tagpulseai.lemonsqueezy.com/affiliates" target="_blank" rel="noopener noreferrer" id="affiliateLink">Become an Affiliate</a>
   </div>
   <p class="fine">TagPulse AI · Contact: <a href="mailto:tagpulse.ai@gmail.com">tagpulse.ai@gmail.com</a></p>
 </footer>
@@ -1586,6 +1627,31 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <p>When you sign in, we use your email address solely to authenticate your TagPulse AI account and maintain your account session.</p>
       <h4>Contact</h4>
       <p>Questions about this policy can be sent to <a href="mailto:tagpulse.ai@gmail.com">tagpulse.ai@gmail.com</a>.</p>
+    </div>
+  </div>
+</div>
+
+<div id="affiliateModal" class="modal-overlay hidden" data-modal>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3>Become an Affiliate</h3>
+      <button type="button" class="modal-close" data-close>✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Earn <strong>50% commission</strong> — that's <strong>$3.50</strong> for every Pro sale ($7) made through your link. No cap on how many people you refer.</p>
+
+      <h4>How it works</h4>
+      <ol class="affiliate-steps">
+        <li><span class="affiliate-step-num">1</span><span>Tap "Sign Up on Lemon Squeezy" below — it opens TagPulse AI's affiliate page.</span></li>
+        <li><span class="affiliate-step-num">2</span><span>Click "Become an affiliate" there and sign up (or log in) with Lemon Squeezy.</span></li>
+        <li><span class="affiliate-step-num">3</span><span>You'll get your own affiliate dashboard with a unique referral link.</span></li>
+        <li><span class="affiliate-step-num">4</span><span>Share that link anywhere — your blog, social media, YouTube, wherever your audience is.</span></li>
+        <li><span class="affiliate-step-num">5</span><span>Anyone who buys Pro through your link earns you $3.50 — tracked and paid out automatically by Lemon Squeezy.</span></li>
+      </ol>
+
+      <p class="license-safety-note">💡 Payouts are handled directly by Lemon Squeezy on their standard schedule — TagPulse AI doesn't touch or delay your earnings.</p>
+
+      <a href="https://tagpulseai.lemonsqueezy.com/affiliates" target="_blank" rel="noopener noreferrer" class="btn btn-primary affiliate-signup-link">Sign Up on Lemon Squeezy →</a>
     </div>
   </div>
 </div>
@@ -3985,6 +4051,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
   $("aboutLink").addEventListener("click", () => openModal($("aboutModal")));
   $("privacyLink").addEventListener("click", () => openModal($("privacyModal")));
+  $("affiliateInfoBtn").addEventListener("click", () => openModal($("affiliateModal")));
 
   document.querySelectorAll("[data-modal]").forEach(overlay => {
     overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(overlay); });
