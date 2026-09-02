@@ -590,7 +590,7 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 /* ============================================================
    OUTPUT
    ============================================================ */
-#outputSection, #amazonMerchOutputSection, #amazonKdpOutputSection, #amazonHandmadeOutputSection, #tptOutputSection, #creativeMarketOutputSection, #redbubbleOutputSection, #teepublicOutputSection, #zazzleOutputSection{ margin-top:26px; }
+#outputSection{ margin-top:26px; }
 .output-card-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
 .output-card-head h3{ font-size:14px; font-weight:800; display:flex; align-items:center; gap:7px; }
 .output-card-head h3 .num{
@@ -1070,7 +1070,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 <main id="mainApp">
   <section class="landing-screen" id="landingScreen">
     <div class="landing-hero">
-      <h2>Get Ranking-Ready Etsy, KDP &amp; Amazon Listings in 1-Click.</h2>
+      <h2>Get Ranking-Ready Etsy &amp; Pinterest Listings in 1-Click.</h2>
       <p>Generate a keyword-rich title, 13 targeted SEO tags, and a ready-to-use description in seconds.</p>
       <button type="button" class="btn btn-primary get-started-btn" id="getStartedBtn">Get Started</button>
       <p class="landing-cc-badge">🔓 Get Started Free — No Credit Card, No Strings</p>
@@ -1179,21 +1179,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           <option>Print on Demand</option>
           <option>Pinterest</option>
         </optgroup>
-        <optgroup label="Amazon">
-          <option>Amazon Merch on Demand</option>
-          <option>Amazon KDP</option>
-          <option>Amazon Handmade</option>
-        </optgroup>
-        <optgroup label="Digital Marketplaces">
-          <option>Gumroad / Payhip / Lemon Squeezy</option>
-          <option>Teachers Pay Teachers</option>
-          <option>Creative Market</option>
-        </optgroup>
-        <optgroup label="POD Alternatives">
-          <option>Redbubble</option>
-          <option>TeePublic</option>
-          <option>Zazzle &amp; Society6</option>
-        </optgroup>
       </select>
     </div>
 
@@ -1219,9 +1204,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         <option>Bloggers &amp; Content Creators</option>
         <option>B2B / Professionals</option>
         <option>Local Customers</option>
-        <option>Teachers &amp; Educators</option>
-        <option>Book Readers</option>
-        <option>Designers &amp; Creatives</option>
         <option value="custom">Custom</option>
       </select>
       <p class="field-help">We'll tailor tone and keywords to this audience.</p>
@@ -1328,245 +1310,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <p class="desc-output" id="descOutput"></p>
     </div>
 
-  </section>
-
-  <!-- ============ AMAZON MERCH ON DEMAND OUTPUT ============ -->
-  <section id="amazonMerchOutputSection" class="hidden">
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">1</span>Title &amp; Brand</h3>
-        <button type="button" class="copy-btn" id="copyMerchTitleBtn">Copy Title</button>
-      </div>
-      <p class="title-output" id="merchTitleOutput"></p>
-      <p class="char-count" id="merchTitleCharCount"></p>
-      <p class="field-help" style="margin-top:14px;">Brand Name</p>
-      <p class="title-output" style="font-size:14px;" id="merchBrandOutput"></p>
-      <p class="char-count" id="merchBrandCharCount"></p>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">2</span>Bullet Points</h3>
-        <button type="button" class="copy-btn" id="copyMerchBulletsBtn">Copy Both Bullets</button>
-      </div>
-      <p class="desc-output" style="margin-bottom:12px;" id="merchBullet1Output"></p>
-      <p class="desc-output" id="merchBullet2Output"></p>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">3</span>Description</h3>
-        <button type="button" class="copy-btn" id="copyMerchDescBtn">Copy Description</button>
-      </div>
-      <p class="desc-output" id="merchDescOutput"></p>
-    </div>
-  </section>
-
-  <!-- ============ AMAZON KDP OUTPUT ============ -->
-  <section id="amazonKdpOutputSection" class="hidden">
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">1</span>Book Title</h3>
-        <button type="button" class="copy-btn" id="copyKdpTitleBtn">Copy Title</button>
-      </div>
-      <p class="title-output" id="kdpTitleOutput"></p>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">2</span>7 Backend Search Terms</h3>
-        <button type="button" class="copy-btn" id="copyKdpKeywordsBtn">Copy All 7</button>
-      </div>
-      <p class="tag-limit-note"><strong>KDP:</strong> 50 characters max per field · combine with spaces, not commas, when pasting into KDP</p>
-      <div class="tags-wrap" id="kdpKeywordsWrap"></div>
-      <textarea class="raw-box" id="kdpKeywordsRaw" rows="3" readonly aria-label="Space-separated backend keywords"></textarea>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">3</span>Book Description</h3>
-        <button type="button" class="copy-btn" id="copyKdpDescBtn">Copy HTML</button>
-      </div>
-      <p class="char-count" id="kdpDescCharCount"></p>
-      <div class="desc-output" id="kdpDescPreview"></div>
-      <p class="field-help" style="margin-top:10px;">Raw HTML (paste directly into the KDP description field)</p>
-      <textarea class="raw-box" id="kdpDescRaw" rows="4" readonly></textarea>
-    </div>
-  </section>
-
-  <!-- ============ AMAZON HANDMADE OUTPUT ============ -->
-  <section id="amazonHandmadeOutputSection" class="hidden">
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">1</span>Listing Title</h3>
-        <button type="button" class="copy-btn" id="copyHandmadeTitleBtn">Copy Title</button>
-      </div>
-      <p class="title-output" id="handmadeTitleOutput"></p>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">2</span>Search Terms</h3>
-        <button type="button" class="copy-btn" id="copyHandmadeTermsBtn">Copy Search Terms</button>
-      </div>
-      <p class="char-count" id="handmadeTermsCharCount"></p>
-      <textarea class="raw-box" id="handmadeTermsRaw" rows="3" readonly></textarea>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">3</span>Description</h3>
-        <button type="button" class="copy-btn" id="copyHandmadeDescBtn">Copy Description</button>
-      </div>
-      <p class="desc-output" id="handmadeDescOutput"></p>
-    </div>
-  </section>
-
-  <!-- ============ TEACHERS PAY TEACHERS OUTPUT ============ -->
-  <section id="tptOutputSection" class="hidden">
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">1</span>Resource Title</h3>
-        <button type="button" class="copy-btn" id="copyTptTitleBtn">Copy Title</button>
-      </div>
-      <p class="title-output" id="tptTitleOutput"></p>
-      <p class="char-count" id="tptTitleCharCount"></p>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">2</span>Search Keywords</h3>
-        <button type="button" class="copy-btn" id="copyTptKeywordsBtn">Copy All Keywords</button>
-      </div>
-      <div class="tags-wrap" id="tptKeywordsWrap"></div>
-      <textarea class="raw-box" id="tptKeywordsRaw" rows="3" readonly aria-label="Comma-separated search keywords"></textarea>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">3</span>Resource Description</h3>
-        <button type="button" class="copy-btn" id="copyTptDescBtn">Copy Description</button>
-      </div>
-      <p class="desc-output" id="tptDescOutput"></p>
-    </div>
-  </section>
-
-  <!-- ============ CREATIVE MARKET OUTPUT ============ -->
-  <section id="creativeMarketOutputSection" class="hidden">
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">1</span>Listing Title</h3>
-        <button type="button" class="copy-btn" id="copyCmTitleBtn">Copy Title</button>
-      </div>
-      <p class="title-output" id="cmTitleOutput"></p>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">2</span>Tags</h3>
-        <button type="button" class="copy-btn" id="copyCmTagsBtn">Copy All Tags</button>
-      </div>
-      <div class="tags-wrap" id="cmTagsWrap"></div>
-      <textarea class="raw-box" id="cmTagsRaw" rows="3" readonly aria-label="Comma-separated tags"></textarea>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">3</span>Description</h3>
-        <button type="button" class="copy-btn" id="copyCmDescBtn">Copy Description</button>
-      </div>
-      <p class="desc-output" id="cmDescOutput"></p>
-    </div>
-  </section>
-
-  <!-- ============ REDBUBBLE OUTPUT ============ -->
-  <section id="redbubbleOutputSection" class="hidden">
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">1</span>Listing Title</h3>
-        <button type="button" class="copy-btn" id="copyRedbubbleTitleBtn">Copy Title</button>
-      </div>
-      <p class="title-output" id="redbubbleTitleOutput"></p>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">2</span>Tags</h3>
-        <button type="button" class="copy-btn" id="copyRedbubbleTagsBtn">Copy All Tags</button>
-      </div>
-      <p class="tag-limit-note"><strong>Redbubble:</strong> max 15 tags, 50 characters each</p>
-      <div class="tags-wrap" id="redbubbleTagsWrap"></div>
-      <textarea class="raw-box" id="redbubbleTagsRaw" rows="3" readonly aria-label="Comma-separated tags"></textarea>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">3</span>Description</h3>
-        <button type="button" class="copy-btn" id="copyRedbubbleDescBtn">Copy Description</button>
-      </div>
-      <p class="desc-output" id="redbubbleDescOutput"></p>
-    </div>
-  </section>
-
-  <!-- ============ TEEPUBLIC OUTPUT ============ -->
-  <section id="teepublicOutputSection" class="hidden">
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">1</span>Title &amp; Main Tag</h3>
-        <button type="button" class="copy-btn" id="copyTeepublicTitleBtn">Copy Title</button>
-      </div>
-      <p class="title-output" id="teepublicTitleOutput"></p>
-      <p class="field-help" style="margin-top:14px;">Main Tag</p>
-      <div class="tags-wrap" id="teepublicMainTagWrap"></div>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">2</span>Secondary Tags</h3>
-        <button type="button" class="copy-btn" id="copyTeepublicTagsBtn">Copy Secondary Tags</button>
-      </div>
-      <p class="tag-limit-note">Up to 14 secondary tags, plus the 1 main tag above (15 total max)</p>
-      <div class="tags-wrap" id="teepublicSecondaryTagsWrap"></div>
-      <textarea class="raw-box" id="teepublicSecondaryTagsRaw" rows="3" readonly aria-label="Comma-separated secondary tags"></textarea>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">3</span>Description</h3>
-        <button type="button" class="copy-btn" id="copyTeepublicDescBtn">Copy Description</button>
-      </div>
-      <p class="desc-output" id="teepublicDescOutput"></p>
-    </div>
-  </section>
-
-  <!-- ============ ZAZZLE & SOCIETY6 OUTPUT ============ -->
-  <section id="zazzleOutputSection" class="hidden">
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">1</span>Listing Title</h3>
-        <button type="button" class="copy-btn" id="copyZazzleTitleBtn">Copy Title</button>
-      </div>
-      <p class="title-output" id="zazzleTitleOutput"></p>
-      <p class="char-count" id="zazzleTitleCharCount"></p>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">2</span>Tags</h3>
-        <button type="button" class="copy-btn" id="copyZazzleTagsBtn">Copy All Tags</button>
-      </div>
-      <p class="tag-limit-note"><strong>Zazzle:</strong> max 10 tags</p>
-      <div class="tags-wrap" id="zazzleTagsWrap"></div>
-      <textarea class="raw-box" id="zazzleTagsRaw" rows="3" readonly aria-label="Comma-separated tags"></textarea>
-    </div>
-
-    <div class="card">
-      <div class="output-card-head">
-        <h3><span class="num">3</span>Product Storytelling Description</h3>
-        <button type="button" class="copy-btn" id="copyZazzleDescBtn">Copy Description</button>
-      </div>
-      <p class="desc-output" id="zazzleDescOutput"></p>
-    </div>
   </section>
   </section>
 </main>
@@ -1876,94 +1619,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const copyTagsBtn  = $("copyTagsBtn");
   const copyDescBtn  = $("copyDescBtn");
 
-  // Amazon Merch on Demand output
-  const amazonMerchOutputSection = $("amazonMerchOutputSection");
-  const merchTitleOutput     = $("merchTitleOutput");
-  const merchTitleCharCount  = $("merchTitleCharCount");
-  const merchBrandOutput     = $("merchBrandOutput");
-  const merchBrandCharCount  = $("merchBrandCharCount");
-  const merchBullet1Output   = $("merchBullet1Output");
-  const merchBullet2Output   = $("merchBullet2Output");
-  const merchDescOutput      = $("merchDescOutput");
-  const copyMerchTitleBtn    = $("copyMerchTitleBtn");
-  const copyMerchBulletsBtn  = $("copyMerchBulletsBtn");
-  const copyMerchDescBtn     = $("copyMerchDescBtn");
-
-  // Amazon KDP output
-  const amazonKdpOutputSection = $("amazonKdpOutputSection");
-  const kdpTitleOutput    = $("kdpTitleOutput");
-  const kdpKeywordsWrap   = $("kdpKeywordsWrap");
-  const kdpKeywordsRaw    = $("kdpKeywordsRaw");
-  const kdpDescCharCount  = $("kdpDescCharCount");
-  const kdpDescPreview    = $("kdpDescPreview");
-  const kdpDescRaw        = $("kdpDescRaw");
-  const copyKdpTitleBtn    = $("copyKdpTitleBtn");
-  const copyKdpKeywordsBtn = $("copyKdpKeywordsBtn");
-  const copyKdpDescBtn     = $("copyKdpDescBtn");
-
-  // Amazon Handmade output
-  const amazonHandmadeOutputSection = $("amazonHandmadeOutputSection");
-  const handmadeTitleOutput    = $("handmadeTitleOutput");
-  const handmadeTermsCharCount = $("handmadeTermsCharCount");
-  const handmadeTermsRaw       = $("handmadeTermsRaw");
-  const handmadeDescOutput     = $("handmadeDescOutput");
-  const copyHandmadeTitleBtn  = $("copyHandmadeTitleBtn");
-  const copyHandmadeTermsBtn  = $("copyHandmadeTermsBtn");
-  const copyHandmadeDescBtn   = $("copyHandmadeDescBtn");
-
-  // Teachers Pay Teachers output
-  const tptOutputSection    = $("tptOutputSection");
-  const tptTitleOutput      = $("tptTitleOutput");
-  const tptTitleCharCount   = $("tptTitleCharCount");
-  const tptKeywordsWrap     = $("tptKeywordsWrap");
-  const tptKeywordsRaw      = $("tptKeywordsRaw");
-  const tptDescOutput       = $("tptDescOutput");
-  const copyTptTitleBtn     = $("copyTptTitleBtn");
-  const copyTptKeywordsBtn  = $("copyTptKeywordsBtn");
-  const copyTptDescBtn      = $("copyTptDescBtn");
-
-  // Creative Market output
-  const creativeMarketOutputSection = $("creativeMarketOutputSection");
-  const cmTitleOutput   = $("cmTitleOutput");
-  const cmTagsWrap      = $("cmTagsWrap");
-  const cmTagsRaw       = $("cmTagsRaw");
-  const cmDescOutput    = $("cmDescOutput");
-  const copyCmTitleBtn  = $("copyCmTitleBtn");
-  const copyCmTagsBtn   = $("copyCmTagsBtn");
-  const copyCmDescBtn   = $("copyCmDescBtn");
-
-  // Redbubble output
-  const redbubbleOutputSection = $("redbubbleOutputSection");
-  const redbubbleTitleOutput   = $("redbubbleTitleOutput");
-  const redbubbleTagsWrap      = $("redbubbleTagsWrap");
-  const redbubbleTagsRaw       = $("redbubbleTagsRaw");
-  const redbubbleDescOutput    = $("redbubbleDescOutput");
-  const copyRedbubbleTitleBtn = $("copyRedbubbleTitleBtn");
-  const copyRedbubbleTagsBtn  = $("copyRedbubbleTagsBtn");
-  const copyRedbubbleDescBtn  = $("copyRedbubbleDescBtn");
-
-  // TeePublic output
-  const teepublicOutputSection      = $("teepublicOutputSection");
-  const teepublicTitleOutput        = $("teepublicTitleOutput");
-  const teepublicMainTagWrap        = $("teepublicMainTagWrap");
-  const teepublicSecondaryTagsWrap  = $("teepublicSecondaryTagsWrap");
-  const teepublicSecondaryTagsRaw   = $("teepublicSecondaryTagsRaw");
-  const teepublicDescOutput         = $("teepublicDescOutput");
-  const copyTeepublicTitleBtn = $("copyTeepublicTitleBtn");
-  const copyTeepublicTagsBtn  = $("copyTeepublicTagsBtn");
-  const copyTeepublicDescBtn  = $("copyTeepublicDescBtn");
-
-  // Zazzle & Society6 output
-  const zazzleOutputSection   = $("zazzleOutputSection");
-  const zazzleTitleOutput     = $("zazzleTitleOutput");
-  const zazzleTitleCharCount  = $("zazzleTitleCharCount");
-  const zazzleTagsWrap        = $("zazzleTagsWrap");
-  const zazzleTagsRaw         = $("zazzleTagsRaw");
-  const zazzleDescOutput      = $("zazzleDescOutput");
-  const copyZazzleTitleBtn = $("copyZazzleTitleBtn");
-  const copyZazzleTagsBtn  = $("copyZazzleTagsBtn");
-  const copyZazzleDescBtn  = $("copyZazzleDescBtn");
-
   /* ============================================================
      PLATFORM ICONS
      ------------------------------------------------------------
@@ -2004,30 +1659,18 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   /* ============================================================
      PLATFORM CATALOG
      ------------------------------------------------------------
-     Maps each dropdown option to an output type. "standard" is the
-     original Etsy/POD/Pinterest/Digital behavior — untouched. New
-     platform groups each get their own outputType, prompt builder,
-     and render function, so they never share code paths with the
-     original (or each other) and can't affect one another.
+     The original 4 platforms only (Etsy, Digital/Printable, Print
+     on Demand, Pinterest) — all use the "standard" output type.
 
      group/icon/accent below only drive the custom platform picker
      UI — the real <select id="categorySelect"> (hidden, but still
      the actual source of truth for .value) is unaffected by them.
      ============================================================ */
   const PLATFORM_CATALOG = {
-    "Etsy":                    { outputType: "standard",        group: "Marketplace", icon: PLATFORM_ICONS.tag,      accent: "#f1641e" },
-    "Digital / Printable":     { outputType: "standard",        group: "Marketplace", icon: PLATFORM_ICONS.download, accent: "#f1641e" },
-    "Print on Demand":         { outputType: "standard",        group: "Marketplace", icon: PLATFORM_ICONS.shirt,    accent: "#f1641e" },
-    "Pinterest":               { outputType: "standard",        group: "Marketplace", icon: PLATFORM_ICONS.pin,      accent: "#e60023" },
-    "Amazon Merch on Demand":  { outputType: "amazon_merch",    group: "Amazon",      icon: PLATFORM_ICONS.shirt,    accent: "#ff9900" },
-    "Amazon KDP":              { outputType: "amazon_kdp",      group: "Amazon",      icon: PLATFORM_ICONS.book,     accent: "#ff9900" },
-    "Amazon Handmade":         { outputType: "amazon_handmade", group: "Amazon",      icon: PLATFORM_ICONS.handmade, accent: "#ff9900" },
-    "Gumroad / Payhip / Lemon Squeezy": { outputType: "standard",         group: "Digital Marketplaces", icon: PLATFORM_ICONS.cart,    accent: "#6366f1" },
-    "Teachers Pay Teachers":            { outputType: "tpt",              group: "Digital Marketplaces", icon: PLATFORM_ICONS.gradcap, accent: "#6366f1" },
-    "Creative Market":                  { outputType: "creative_market",  group: "Digital Marketplaces", icon: PLATFORM_ICONS.palette, accent: "#6366f1" },
-    "Redbubble":            { outputType: "redbubble",  group: "POD Alternatives", icon: PLATFORM_ICONS.bubble, accent: "#8b5cf6" },
-    "TeePublic":             { outputType: "teepublic",  group: "POD Alternatives", icon: PLATFORM_ICONS.shirt,  accent: "#8b5cf6" },
-    "Zazzle & Society6":     { outputType: "zazzle",     group: "POD Alternatives", icon: PLATFORM_ICONS.frame,  accent: "#8b5cf6" }
+    "Etsy":                    { outputType: "standard", group: "Marketplace", icon: PLATFORM_ICONS.tag,      accent: "#f1641e" },
+    "Digital / Printable":     { outputType: "standard", group: "Marketplace", icon: PLATFORM_ICONS.download, accent: "#f1641e" },
+    "Print on Demand":         { outputType: "standard", group: "Marketplace", icon: PLATFORM_ICONS.shirt,    accent: "#f1641e" },
+    "Pinterest":               { outputType: "standard", group: "Marketplace", icon: PLATFORM_ICONS.pin,      accent: "#e60023" }
   };
 
   function getOutputType(category){
@@ -2054,9 +1697,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     "Entrepreneurs":                 { group: "Business & Professional", icon: PLATFORM_ICONS.rocket,     accent: "#6366f1" },
     "B2B / Professionals":           { group: "Business & Professional", icon: PLATFORM_ICONS.briefcase,  accent: "#6366f1" },
     "Bloggers & Content Creators":   { group: "Creative & Niche",        icon: PLATFORM_ICONS.pencil,     accent: "#ff9900" },
-    "Teachers & Educators":          { group: "Creative & Niche",        icon: PLATFORM_ICONS.gradcap,    accent: "#ff9900" },
-    "Book Readers":                  { group: "Creative & Niche",        icon: PLATFORM_ICONS.book,       accent: "#ff9900" },
-    "Designers & Creatives":         { group: "Creative & Niche",        icon: PLATFORM_ICONS.palette,    accent: "#ff9900" },
     "Custom":                        { group: "Other",                   icon: PLATFORM_ICONS.pencil,     accent: "#8a8f98", value: "custom" }
   };
 
@@ -2065,7 +1705,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      ------------------------------------------------------------
      Same idea for the "What's your SEO goal?" picker. Options
      stay platform-agnostic (a goal like "Increase Sales" applies
-     equally to Etsy or Amazon KDP), so no new goals were added —
+     equally to Etsy or Pinterest), so no new goals were added —
      only the presentation changed.
      ============================================================ */
   const GOAL_CATALOG = {
@@ -3227,24 +2867,13 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   /* ============================================================
-     PROMPT BUILDERS
+     PROMPT BUILDER
      ------------------------------------------------------------
-     buildPrompt() dispatches by platform. buildStandardPrompt() is
-     the ORIGINAL function body, byte-for-byte, still used for
-     Etsy/Digital/POD/Pinterest. Each new platform gets its own
-     dedicated builder below so none of them can affect the
-     original prompt text.
+     buildPrompt() just calls buildStandardPrompt() — the ORIGINAL
+     function body, byte-for-byte, used for all 4 platforms
+     (Etsy/Digital/POD/Pinterest).
      ============================================================ */
   function buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    const outputType = getOutputType(category);
-    if (outputType === "amazon_merch") return buildAmazonMerchPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
-    if (outputType === "amazon_kdp") return buildAmazonKdpPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
-    if (outputType === "amazon_handmade") return buildAmazonHandmadePrompt(keyword, category, audience, seoGoal, wordsToAvoid);
-    if (outputType === "tpt") return buildTptPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
-    if (outputType === "creative_market") return buildCreativeMarketPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
-    if (outputType === "redbubble") return buildRedbubblePrompt(keyword, category, audience, seoGoal, wordsToAvoid);
-    if (outputType === "teepublic") return buildTeepublicPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
-    if (outputType === "zazzle") return buildZazzlePrompt(keyword, category, audience, seoGoal, wordsToAvoid);
     return buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
   }
 
@@ -3275,198 +2904,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       "STRICT RULES FOR TITLE: Under 140 characters, keyword-rich but naturally readable, not a keyword dump, written for the stated Target Audience and SEO Goal above."
     ].join("\n");
   }
-
-  function buildAmazonMerchPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    return [
-      "Act as a top 1% Amazon Merch on Demand (print-on-demand apparel) listing optimizer.",
-      "",
-      "Analyze the following product inputs:",
-      "- Product Keyword/Design Idea: " + keyword,
-      "- Platform: Amazon Merch on Demand",
-      "- Target Audience: " + audience,
-      "- SEO Goal: " + seoGoal,
-      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
-      "",
-      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
-      "{",
-      '  "title": "A high-converting Merch on Demand title, 60 characters or under, front-loaded with the primary keyword, no ALL CAPS words, no emojis, no pipe characters",',
-      '  "brandName": "A niche-relevant, Amazon-compliant brand name, 50 characters or under",',
-      '  "bulletPoint1": "A feature-driven bullet point starting with a short capitalized lead-in, focused on the design or use case",',
-      '  "bulletPoint2": "A second feature-driven bullet point covering a different angle (occasion, audience, or fit/material)",',
-      '  "description": "A compelling product description under 2000 characters covering design details, who it is for, and a closing call-to-action"',
-      "}",
-      "",
-      "STRICT RULES: Title MUST be 60 characters or under. Brand Name MUST be 50 characters or under. No emojis anywhere. No ALL-CAPS words in the title. No pipe (|) characters. Each bullet point should be a single scannable sentence, not a paragraph.",
-      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, brand name, bullets, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
-    ].join("\n");
-  }
-
-  function buildAmazonKdpPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    return [
-      "Act as a top 1% Amazon KDP (Kindle Direct Publishing) book listing optimizer.",
-      "",
-      "Analyze the following product inputs:",
-      "- Book Topic/Keyword: " + keyword,
-      "- Platform: Amazon KDP",
-      "- Target Audience: " + audience,
-      "- SEO Goal: " + seoGoal,
-      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
-      "",
-      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
-      "{",
-      '  "title": "A compelling, keyword-rich book title/subtitle combination",',
-      '  "backendKeywords": ["term1","term2","term3","term4","term5","term6","term7"],',
-      '  "description": "A book description formatted with a small set of Amazon-supported HTML tags only (<b>, <i>, <p>, <br>, <h4>, <ul>, <li>), under 4000 characters including the HTML markup, opening with a strong hook and ending with a call to action"',
-      "}",
-      "",
-      "STRICT RULES FOR BACKEND KEYWORDS: Return EXACTLY 7 keyword phrases. Each phrase MUST be 50 characters or under. Do not repeat any word already used in the title. Do not repeat words across the 7 phrases. No punctuation, no ALL CAPS, no subjective claims (e.g. best, amazing, cheapest). Each phrase should target a distinct angle: reader intent, genre/topic synonyms, format or feature terms, and audience terms.",
-      "STRICT RULES FOR DESCRIPTION: Total length including HTML markup MUST stay under 4000 characters. Only use these HTML tags: <b>, <i>, <p>, <br>, <h4>, <ul>, <li>. Do not use any other HTML tags, inline styles, or attributes.",
-      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, keywords, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
-    ].join("\n");
-  }
-
-  function buildAmazonHandmadePrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    return [
-      "Act as a top 1% Amazon Handmade listing optimizer for artisan/handcrafted goods.",
-      "",
-      "Analyze the following product inputs:",
-      "- Product Keyword: " + keyword,
-      "- Platform: Amazon Handmade",
-      "- Target Audience: " + audience,
-      "- SEO Goal: " + seoGoal,
-      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
-      "",
-      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
-      "{",
-      '  "title": "A keyword-rich, human-readable Amazon Handmade title that leads with the product type and key attributes",',
-      '  "searchTerms": "A single block of backend search terms, space-separated (not comma-separated), all lowercase, no punctuation, no repeated words, no words already used in the title",',
-      '  "description": "A warm, story-driven Amazon Handmade description covering materials, craftsmanship, and use case, ending with a call-to-action"',
-      "}",
-      "",
-      "STRICT RULES FOR SEARCH TERMS: The searchTerms string MUST be 250 characters or under in total. Words must be separated by single spaces only — no commas, no semicolons. Do not repeat any word already used in the title. Do not include the brand name.",
-      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, search terms, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
-    ].join("\n");
-  }
-
-  function buildTptPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    return [
-      "Act as a top 1% Teachers Pay Teachers (TpT) SEO strategist and educational-resource listing copywriter.",
-      "",
-      "Analyze the following product inputs:",
-      "- Resource Topic/Keyword: " + keyword,
-      "- Platform: Teachers Pay Teachers",
-      "- Target Audience: " + audience,
-      "- SEO Goal: " + seoGoal,
-      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
-      "",
-      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
-      "{",
-      '  "title": "A keyword-rich TpT resource title, 80 characters or under, front-loading the grade level/subject and resource type so it reads naturally to a teacher searching",',
-      '  "searchKeywords": ["term1","term2","term3","term4","term5","term6","term7","term8","term9","term10"],',
-      '  "description": "A well-structured TpT resource description using short paragraphs and clear line breaks: what the resource includes, how a teacher would use it, and what is included in the download, ending with a call-to-action"',
-      "}",
-      "",
-      "STRICT RULES FOR TITLE: 80 characters or under, including spaces. Front-load the most important keywords (grade level, subject, resource type) since TpT search weighs the title heavily.",
-      "STRICT RULES FOR SEARCH KEYWORDS: Return exactly 10 keyword phrases teachers would realistically search for. Prefer specific multi-word phrases over single generic words. No duplicate or near-duplicate phrases.",
-      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, keywords, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
-    ].join("\n");
-  }
-
-  function buildCreativeMarketPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    return [
-      "Act as a top 1% Creative Market SEO strategist and design-asset listing copywriter.",
-      "",
-      "Analyze the following product inputs:",
-      "- Design Asset Keyword: " + keyword,
-      "- Platform: Creative Market",
-      "- Target Audience: " + audience,
-      "- SEO Goal: " + seoGoal,
-      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
-      "",
-      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
-      "{",
-      '  "title": "A clear, keyword-rich Creative Market listing title describing the design asset and its style",',
-      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10"],',
-      '  "description": "A design-focused listing description covering file formats included, use cases, and style/aesthetic, ending with a call-to-action"',
-      "}",
-      "",
-      "STRICT RULES FOR TAGS: Return up to 20 specific, relevant search tags (single words or short phrases) covering style, use case, format, and theme. No duplicate or near-duplicate tags. Do not repeat words already in the title unless the tag adds a distinct search angle.",
-      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, tags, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
-    ].join("\n");
-  }
-
-  function buildRedbubblePrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    return [
-      "Act as a top 1% Redbubble SEO strategist and print-on-demand listing copywriter.",
-      "",
-      "Analyze the following product inputs:",
-      "- Design Keyword: " + keyword,
-      "- Platform: Redbubble",
-      "- Target Audience: " + audience,
-      "- SEO Goal: " + seoGoal,
-      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
-      "",
-      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
-      "{",
-      '  "title": "A natural-reading Redbubble title packed with searchable keyword phrases, roughly 60-100 characters",',
-      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13","tag14","tag15"],',
-      '  "description": "A short Redbubble listing description reinforcing the design theme and keywords in natural language"',
-      "}",
-      "",
-      "STRICT RULES FOR TAGS: Return EXACTLY 15 tags. Each tag MUST be 50 characters or under. Roughly 60% should be specific multi-word phrases and 40% broader category terms. No duplicate or near-duplicate tags. Never use promotional/spam phrases like 'best selling', 'top selling', or 'most popular'.",
-      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, tags, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
-    ].join("\n");
-  }
-
-  function buildTeepublicPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    return [
-      "Act as a top 1% TeePublic SEO strategist and print-on-demand listing copywriter.",
-      "",
-      "Analyze the following product inputs:",
-      "- Design Keyword: " + keyword,
-      "- Platform: TeePublic",
-      "- Target Audience: " + audience,
-      "- SEO Goal: " + seoGoal,
-      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
-      "",
-      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
-      "{",
-      '  "title": "A descriptive, keyword-rich TeePublic title that mirrors how customers search",',
-      '  "mainTag": "The single most important tag — the core theme of the design in a short phrase, matching the TeePublic Main Tag field",',
-      '  "secondaryTags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13","tag14"],',
-      '  "description": "A short TeePublic description elaborating on the design and naturally incorporating relevant keywords"',
-      "}",
-      "",
-      "STRICT RULES FOR MAIN TAG: Exactly one short phrase (2-4 words) that best captures the design's core theme — this is the single most important field for TeePublic's search algorithm.",
-      "STRICT RULES FOR SECONDARY TAGS: Return exactly 14 tags (15 total including the main tag). Must not duplicate the main tag or each other. Reference the design's style, content, and theme.",
-      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, tags, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
-    ].join("\n");
-  }
-
-  function buildZazzlePrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    return [
-      "Act as a top 1% Zazzle and Society6 SEO strategist and print-on-demand product copywriter.",
-      "",
-      "Analyze the following product inputs:",
-      "- Product Keyword: " + keyword,
-      "- Platform: Zazzle & Society6",
-      "- Target Audience: " + audience,
-      "- SEO Goal: " + seoGoal,
-      "- Words to Avoid: " + (wordsToAvoid.length ? wordsToAvoid.join(", ") : "None specified"),
-      "",
-      "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
-      "{",
-      '  "title": "A keyword-rich product title under 70 characters that reads naturally to a shopper",',
-      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10"],',
-      '  "description": "A warm, product-storytelling description that describes the design/artwork, the inspiration behind it, and who it is perfect for, ending with a call-to-action"',
-      "}",
-      "",
-      "STRICT RULES FOR TITLE: 70 characters or under. Use 3-5 descriptive keywords a shopper would actually search for.",
-      "STRICT RULES FOR TAGS: Return EXACTLY 10 tags, the first being the single most important keyword. Never use generic words like 'custom' or 'personalized' as standalone tags. No duplicate or near-duplicate tags.",
-      "STRICT RULES FOR WORDS TO AVOID: Do not use any of the specified words or phrases anywhere in the title, tags, or description unless absolutely necessary for factual accuracy. Treat each comma-separated item as a case-insensitive prohibited term."
-    ].join("\n");
-  }
-
   /* ============================================================
      CLOUDFLARE PAGES FUNCTION CALL
      ============================================================ */
@@ -3590,64 +3027,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   /* ============================================================
-     PLATFORM OUTPUT VALIDATION + RENDER DISPATCH
+     OUTPUT VALIDATION + RENDER
      ------------------------------------------------------------
-     validateParsedOutput() and renderOutputByType() route by
-     outputType. The "standard" branch calls the ORIGINAL
-     renderOutput()/validation above, untouched. Each Amazon
-     platform gets its own render function and its own output
-     section, so none of them can affect the standard path or
-     each other.
+     validateParsedOutput() and renderOutputByType() are thin
+     wrappers around the original renderOutput()/validation logic.
+     Multi-platform output types were removed; only the standard
+     Etsy/Digital/POD/Pinterest shape is supported now.
      ============================================================ */
+
   function validateParsedOutput(outputType, parsed){
-    if (outputType === "amazon_merch") {
-      if (!parsed.title || !parsed.brandName || !parsed.bulletPoint1 || !parsed.bulletPoint2 || !parsed.description) {
-        throw new Error("Received an unexpected response format. Please try again.");
-      }
-      return;
-    }
-    if (outputType === "amazon_kdp") {
-      if (!parsed.title || !Array.isArray(parsed.backendKeywords) || !parsed.description) {
-        throw new Error("Received an unexpected response format. Please try again.");
-      }
-      return;
-    }
-    if (outputType === "amazon_handmade") {
-      if (!parsed.title || !parsed.searchTerms || !parsed.description) {
-        throw new Error("Received an unexpected response format. Please try again.");
-      }
-      return;
-    }
-    if (outputType === "tpt") {
-      if (!parsed.title || !Array.isArray(parsed.searchKeywords) || !parsed.description) {
-        throw new Error("Received an unexpected response format. Please try again.");
-      }
-      return;
-    }
-    if (outputType === "creative_market") {
-      if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
-        throw new Error("Received an unexpected response format. Please try again.");
-      }
-      return;
-    }
-    if (outputType === "redbubble") {
-      if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
-        throw new Error("Received an unexpected response format. Please try again.");
-      }
-      return;
-    }
-    if (outputType === "teepublic") {
-      if (!parsed.title || !parsed.mainTag || !Array.isArray(parsed.secondaryTags) || !parsed.description) {
-        throw new Error("Received an unexpected response format. Please try again.");
-      }
-      return;
-    }
-    if (outputType === "zazzle") {
-      if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
-        throw new Error("Received an unexpected response format. Please try again.");
-      }
-      return;
-    }
     if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
       throw new Error("Received an unexpected response format. Please try again.");
     }
@@ -3655,337 +3043,13 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
   function hideAllOutputSections(){
     outputSection.classList.add("hidden");
-    amazonMerchOutputSection.classList.add("hidden");
-    amazonKdpOutputSection.classList.add("hidden");
-    amazonHandmadeOutputSection.classList.add("hidden");
-    tptOutputSection.classList.add("hidden");
-    creativeMarketOutputSection.classList.add("hidden");
-    redbubbleOutputSection.classList.add("hidden");
-    teepublicOutputSection.classList.add("hidden");
-    zazzleOutputSection.classList.add("hidden");
   }
 
   function renderOutputByType(outputType, parsed, category){
     hideAllOutputSections();
-    if (outputType === "amazon_merch") {
-      renderAmazonMerchOutput(parsed, category);
-      return amazonMerchOutputSection;
-    }
-    if (outputType === "amazon_kdp") {
-      renderAmazonKdpOutput(parsed, category);
-      return amazonKdpOutputSection;
-    }
-    if (outputType === "amazon_handmade") {
-      renderAmazonHandmadeOutput(parsed, category);
-      return amazonHandmadeOutputSection;
-    }
-    if (outputType === "tpt") {
-      renderTptOutput(parsed, category);
-      return tptOutputSection;
-    }
-    if (outputType === "creative_market") {
-      renderCreativeMarketOutput(parsed, category);
-      return creativeMarketOutputSection;
-    }
-    if (outputType === "redbubble") {
-      renderRedbubbleOutput(parsed, category);
-      return redbubbleOutputSection;
-    }
-    if (outputType === "teepublic") {
-      renderTeepublicOutput(parsed, category);
-      return teepublicOutputSection;
-    }
-    if (outputType === "zazzle") {
-      renderZazzleOutput(parsed, category);
-      return zazzleOutputSection;
-    }
     renderOutput(parsed, category);
     return outputSection;
   }
-
-  function renderAmazonMerchOutput(parsed, category){
-    const title = String(parsed.title || "").trim();
-    const brand = String(parsed.brandName || "").trim();
-    const b1 = String(parsed.bulletPoint1 || "").trim();
-    const b2 = String(parsed.bulletPoint2 || "").trim();
-    const desc = String(parsed.description || "").trim();
-
-    merchTitleOutput.textContent = title;
-    merchTitleCharCount.textContent = title.length + " / 60 characters" + (title.length > 60 ? " — over limit" : "");
-    merchBrandOutput.textContent = brand;
-    merchBrandCharCount.textContent = brand.length + " / 50 characters" + (brand.length > 50 ? " — over limit" : "");
-    merchBullet1Output.textContent = b1;
-    merchBullet2Output.textContent = b2;
-    merchDescOutput.textContent = desc;
-
-    updateRiskAlert([keywordInput.value, title, brand, b1, b2].join(" "));
-
-    amazonMerchOutputSection.classList.remove("hidden");
-  }
-
-  function renderAmazonKdpOutput(parsed, category){
-    const title = String(parsed.title || "").trim();
-    const keywords = Array.isArray(parsed.backendKeywords)
-      ? parsed.backendKeywords.slice(0, 7).map(k => String(k).trim()).filter(Boolean)
-      : [];
-    const desc = String(parsed.description || "").trim();
-
-    kdpTitleOutput.textContent = title;
-
-    kdpKeywordsWrap.innerHTML = "";
-    keywords.forEach((kw, i) => {
-      const length = [...kw].length;
-      const overLimit = length > 50;
-      const chip = document.createElement("span");
-      chip.className = "tag-chip" + (overLimit ? " is-over-limit" : "");
-      chip.style.animationDelay = (i * 0.03) + "s";
-      chip.innerHTML = escapeHTML(kw) + '<span class="tag-count" title="Character count">' + length + '/50</span>';
-      appendTagCopyButton(chip, kw);
-      kdpKeywordsWrap.appendChild(chip);
-    });
-    kdpKeywordsRaw.value = keywords.join(" ");
-
-    kdpDescCharCount.textContent = desc.length + " / 4000 characters (including HTML)" + (desc.length > 4000 ? " — over limit" : "");
-    kdpDescPreview.innerHTML = sanitizeKdpHTML(desc);
-    kdpDescRaw.value = desc;
-
-    updateRiskAlert([keywordInput.value, title, keywords.join(" ")].join(" "));
-
-    amazonKdpOutputSection.classList.remove("hidden");
-  }
-
-  // Strips any HTML tag not on KDP's supported list before the AI's
-  // description is rendered via innerHTML. Defensive measure so
-  // unexpected AI output (or a mischievous prompt) can never inject
-  // a script, link, or styled/clickable element into the page —
-  // disallowed tags become plain text, and every attribute (style,
-  // onclick, href, etc.) is stripped even from allowed tags.
-  function sanitizeKdpHTML(html){
-    const allowedTags = ["b", "i", "p", "br", "h4", "ul", "li"];
-    const container = document.createElement("div");
-    container.innerHTML = html;
-
-    function clean(node){
-      [...node.childNodes].forEach(child => {
-        if (child.nodeType === 1) {
-          const tag = child.tagName.toLowerCase();
-          if (!allowedTags.includes(tag)) {
-            child.replaceWith(document.createTextNode(child.textContent));
-          } else {
-            [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
-            clean(child);
-          }
-        }
-      });
-    }
-    clean(container);
-    return container.innerHTML;
-  }
-
-  function renderAmazonHandmadeOutput(parsed, category){
-    const title = String(parsed.title || "").trim();
-    const terms = String(parsed.searchTerms || "").trim();
-    const desc = String(parsed.description || "").trim();
-
-    handmadeTitleOutput.textContent = title;
-    handmadeTermsCharCount.textContent = terms.length + " / 250 characters" + (terms.length > 250 ? " — over limit" : "");
-    handmadeTermsRaw.value = terms;
-    handmadeDescOutput.textContent = desc;
-
-    updateRiskAlert([keywordInput.value, title, terms].join(" "));
-
-    amazonHandmadeOutputSection.classList.remove("hidden");
-  }
-
-  function renderTptOutput(parsed, category){
-    const title = String(parsed.title || "").trim();
-    const keywords = Array.isArray(parsed.searchKeywords)
-      ? parsed.searchKeywords.map(k => String(k).trim()).filter(Boolean)
-      : [];
-    const desc = String(parsed.description || "").trim();
-
-    tptTitleOutput.textContent = title;
-    tptTitleCharCount.textContent = title.length + " / 80 characters" + (title.length > 80 ? " — over limit" : "");
-
-    tptKeywordsWrap.innerHTML = "";
-    keywords.forEach((kw, i) => {
-      const chip = document.createElement("span");
-      chip.className = "tag-chip";
-      chip.style.animationDelay = (i * 0.03) + "s";
-      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(kw);
-      appendTagCopyButton(chip, kw);
-      tptKeywordsWrap.appendChild(chip);
-    });
-    tptKeywordsRaw.value = keywords.join(", ");
-
-    tptDescOutput.textContent = desc;
-
-    updateRiskAlert([keywordInput.value, title, keywords.join(" ")].join(" "));
-
-    tptOutputSection.classList.remove("hidden");
-  }
-
-  function renderCreativeMarketOutput(parsed, category){
-    const title = String(parsed.title || "").trim();
-    const tags = Array.isArray(parsed.tags)
-      ? parsed.tags.slice(0, 20).map(t => String(t).trim()).filter(Boolean)
-      : [];
-    const desc = String(parsed.description || "").trim();
-
-    cmTitleOutput.textContent = title;
-
-    cmTagsWrap.innerHTML = "";
-    tags.forEach((tag, i) => {
-      const chip = document.createElement("span");
-      chip.className = "tag-chip";
-      chip.style.animationDelay = (i * 0.03) + "s";
-      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(tag);
-      appendTagCopyButton(chip, tag);
-      cmTagsWrap.appendChild(chip);
-    });
-    cmTagsRaw.value = tags.join(", ");
-
-    cmDescOutput.textContent = desc;
-
-    updateRiskAlert([keywordInput.value, title, tags.join(" ")].join(" "));
-
-    creativeMarketOutputSection.classList.remove("hidden");
-  }
-
-  function renderRedbubbleOutput(parsed, category){
-    const title = String(parsed.title || "").trim();
-    const tags = Array.isArray(parsed.tags)
-      ? parsed.tags.slice(0, 15).map(t => String(t).trim()).filter(Boolean)
-      : [];
-    const desc = String(parsed.description || "").trim();
-
-    redbubbleTitleOutput.textContent = title;
-
-    redbubbleTagsWrap.innerHTML = "";
-    tags.forEach((tag, i) => {
-      const length = [...tag].length;
-      const overLimit = length > 50;
-      const chip = document.createElement("span");
-      chip.className = "tag-chip" + (overLimit ? " is-over-limit" : "");
-      chip.style.animationDelay = (i * 0.03) + "s";
-      chip.innerHTML = escapeHTML(tag) + '<span class="tag-count" title="Character count">' + length + '/50</span>';
-      appendTagCopyButton(chip, tag);
-      redbubbleTagsWrap.appendChild(chip);
-    });
-    redbubbleTagsRaw.value = tags.join(", ");
-
-    redbubbleDescOutput.textContent = desc;
-
-    updateRiskAlert([keywordInput.value, title, tags.join(" ")].join(" "));
-
-    redbubbleOutputSection.classList.remove("hidden");
-  }
-
-  function renderTeepublicOutput(parsed, category){
-    const title = String(parsed.title || "").trim();
-    const mainTag = String(parsed.mainTag || "").trim();
-    const secondaryTags = Array.isArray(parsed.secondaryTags)
-      ? parsed.secondaryTags.slice(0, 14).map(t => String(t).trim()).filter(Boolean)
-      : [];
-    const desc = String(parsed.description || "").trim();
-
-    teepublicTitleOutput.textContent = title;
-
-    teepublicMainTagWrap.innerHTML = "";
-    if (mainTag) {
-      const chip = document.createElement("span");
-      chip.className = "tag-chip";
-      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(mainTag);
-      appendTagCopyButton(chip, mainTag);
-      teepublicMainTagWrap.appendChild(chip);
-    }
-
-    teepublicSecondaryTagsWrap.innerHTML = "";
-    secondaryTags.forEach((tag, i) => {
-      const chip = document.createElement("span");
-      chip.className = "tag-chip";
-      chip.style.animationDelay = (i * 0.03) + "s";
-      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(tag);
-      appendTagCopyButton(chip, tag);
-      teepublicSecondaryTagsWrap.appendChild(chip);
-    });
-    teepublicSecondaryTagsRaw.value = secondaryTags.join(", ");
-
-    teepublicDescOutput.textContent = desc;
-
-    updateRiskAlert([keywordInput.value, title, mainTag, secondaryTags.join(" ")].join(" "));
-
-    teepublicOutputSection.classList.remove("hidden");
-  }
-
-  function renderZazzleOutput(parsed, category){
-    const title = String(parsed.title || "").trim();
-    const tags = Array.isArray(parsed.tags)
-      ? parsed.tags.slice(0, 10).map(t => String(t).trim()).filter(Boolean)
-      : [];
-    const desc = String(parsed.description || "").trim();
-
-    zazzleTitleOutput.textContent = title;
-    zazzleTitleCharCount.textContent = title.length + " / 70 characters" + (title.length > 70 ? " — over limit" : "");
-
-    zazzleTagsWrap.innerHTML = "";
-    tags.forEach((tag, i) => {
-      const chip = document.createElement("span");
-      chip.className = "tag-chip";
-      chip.style.animationDelay = (i * 0.03) + "s";
-      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(tag);
-      appendTagCopyButton(chip, tag);
-      zazzleTagsWrap.appendChild(chip);
-    });
-    zazzleTagsRaw.value = tags.join(", ");
-
-    zazzleDescOutput.textContent = desc;
-
-    updateRiskAlert([keywordInput.value, title, tags.join(" ")].join(" "));
-
-    zazzleOutputSection.classList.remove("hidden");
-  }
-
-  /* ============================================================
-     COPY BUTTONS — REDBUBBLE / TEEPUBLIC / ZAZZLE & SOCIETY6
-     ============================================================ */
-  copyRedbubbleTitleBtn.addEventListener("click", () => copyText(redbubbleTitleOutput.textContent, copyRedbubbleTitleBtn, "Copy Title"));
-  copyRedbubbleTagsBtn.addEventListener("click", () => copyText(redbubbleTagsRaw.value, copyRedbubbleTagsBtn, "Copy All Tags"));
-  copyRedbubbleDescBtn.addEventListener("click", () => copyText(redbubbleDescOutput.textContent, copyRedbubbleDescBtn, "Copy Description"));
-
-  copyTeepublicTitleBtn.addEventListener("click", () => copyText(teepublicTitleOutput.textContent, copyTeepublicTitleBtn, "Copy Title"));
-  copyTeepublicTagsBtn.addEventListener("click", () => copyText(teepublicSecondaryTagsRaw.value, copyTeepublicTagsBtn, "Copy Secondary Tags"));
-  copyTeepublicDescBtn.addEventListener("click", () => copyText(teepublicDescOutput.textContent, copyTeepublicDescBtn, "Copy Description"));
-
-  copyZazzleTitleBtn.addEventListener("click", () => copyText(zazzleTitleOutput.textContent, copyZazzleTitleBtn, "Copy Title"));
-  copyZazzleTagsBtn.addEventListener("click", () => copyText(zazzleTagsRaw.value, copyZazzleTagsBtn, "Copy All Tags"));
-  copyZazzleDescBtn.addEventListener("click", () => copyText(zazzleDescOutput.textContent, copyZazzleDescBtn, "Copy Description"));
-
-  /* ============================================================
-     COPY BUTTONS — TPT / CREATIVE MARKET OUTPUTS
-     ============================================================ */
-  copyTptTitleBtn.addEventListener("click", () => copyText(tptTitleOutput.textContent, copyTptTitleBtn, "Copy Title"));
-  copyTptKeywordsBtn.addEventListener("click", () => copyText(tptKeywordsRaw.value, copyTptKeywordsBtn, "Copy All Keywords"));
-  copyTptDescBtn.addEventListener("click", () => copyText(tptDescOutput.textContent, copyTptDescBtn, "Copy Description"));
-
-  copyCmTitleBtn.addEventListener("click", () => copyText(cmTitleOutput.textContent, copyCmTitleBtn, "Copy Title"));
-  copyCmTagsBtn.addEventListener("click", () => copyText(cmTagsRaw.value, copyCmTagsBtn, "Copy All Tags"));
-  copyCmDescBtn.addEventListener("click", () => copyText(cmDescOutput.textContent, copyCmDescBtn, "Copy Description"));
-
-  /* ============================================================
-     COPY BUTTONS — AMAZON OUTPUTS
-     ============================================================ */
-  copyMerchTitleBtn.addEventListener("click", () => copyText(merchTitleOutput.textContent, copyMerchTitleBtn, "Copy Title"));
-  copyMerchBulletsBtn.addEventListener("click", () => copyText(merchBullet1Output.textContent + "\n" + merchBullet2Output.textContent, copyMerchBulletsBtn, "Copy Both Bullets"));
-  copyMerchDescBtn.addEventListener("click", () => copyText(merchDescOutput.textContent, copyMerchDescBtn, "Copy Description"));
-
-  copyKdpTitleBtn.addEventListener("click", () => copyText(kdpTitleOutput.textContent, copyKdpTitleBtn, "Copy Title"));
-  copyKdpKeywordsBtn.addEventListener("click", () => copyText(kdpKeywordsRaw.value, copyKdpKeywordsBtn, "Copy All 7"));
-  copyKdpDescBtn.addEventListener("click", () => copyText(kdpDescRaw.value, copyKdpDescBtn, "Copy HTML"));
-
-  copyHandmadeTitleBtn.addEventListener("click", () => copyText(handmadeTitleOutput.textContent, copyHandmadeTitleBtn, "Copy Title"));
-  copyHandmadeTermsBtn.addEventListener("click", () => copyText(handmadeTermsRaw.value, copyHandmadeTermsBtn, "Copy Search Terms"));
-  copyHandmadeDescBtn.addEventListener("click", () => copyText(handmadeDescOutput.textContent, copyHandmadeDescBtn, "Copy Description"));
 
   function setGenerating(isLoading){
     generateBtn.disabled = isLoading;
