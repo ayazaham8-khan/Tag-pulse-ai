@@ -12,9 +12,10 @@
  *
  * Purpose:
  *   - Verify Lemon Squeezy webhook signature
- *   - Verify TagPulse product + variant
+ *   - Verify the purchase matches a recognized TagPulse product + variant
  *   - Store the license key as SHA-256 only
- *   - Give the customer 500 Pro generations
+ *   - Give the customer the right number of Pro generations for
+ *     whichever tier they bought
  *   - Link the purchase to the browser user_id when supplied
  *   - Prevent duplicate webhook processing
  *
@@ -23,19 +24,32 @@
  *   DB
  *   LEMON_WEBHOOK_SECRET
  *
- * Lemon Squeezy:
- *   Product ID: 1305746
- *   Variant ID: 2042144
+ * Lemon Squeezy — Live Mode, two Pro tiers:
  *
- * Current environment:
- *   live mode
+ *   Starter:      Product ID 1305746, Variant ID 2042144, 100 credits
+ *   Power Seller: Product ID 1335511, Variant ID 2086845, 700 credits
  * =============================================================
  */
 
-const LEMON_PRODUCT_ID = "1305746";
-const LEMON_VARIANT_ID = "2042144";
-
-const PAID_CREDITS = 500;
+/**
+ * All recognized Pro products/variants and what each one grants.
+ * To add or change a tier, edit this list only — every check and
+ * every credit amount in this file is derived from it.
+ */
+const PRO_TIERS = [
+  {
+    name: "Starter",
+    productId: "1305746",
+    variantId: "2042144",
+    credits: 100
+  },
+  {
+    name: "Power Seller",
+    productId: "1335511",
+    variantId: "2086845",
+    credits: 700
+  }
+];
 
 
 /**
@@ -414,9 +428,16 @@ async function handleLicenseCreated(
     );
 
 
+  const tier =
+    PRO_TIERS.find(
+      (t) =>
+        t.productId === productId &&
+        t.variantId === variantId
+    );
+
+
   if (
-    productId !== LEMON_PRODUCT_ID ||
-    variantId !== LEMON_VARIANT_ID
+    !tier
   ) {
 
     console.error(
@@ -630,7 +651,7 @@ async function handleLicenseCreated(
     )
       .bind(
         licenseHash,
-        PAID_CREDITS,
+        tier.credits,
         userId || null
       )
       .run();
@@ -701,8 +722,10 @@ async function handleLicenseCreated(
     {
       userId:
         userId || null,
+      tier:
+        tier.name,
       credits:
-        PAID_CREDITS
+        tier.credits
     }
   );
 
@@ -712,7 +735,7 @@ async function handleLicenseCreated(
       received: true,
       provisioned: true,
       credits_remaining:
-        PAID_CREDITS
+        tier.credits
     },
     200
   );
