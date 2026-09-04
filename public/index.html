@@ -748,6 +748,49 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 .pricing-box .pro-price{ margin-bottom:0; }
 .price-regular{ font-size:12.5px; color:var(--muted); margin-bottom:2px; }
 .price-regular s{ text-decoration:line-through; }
+
+.pricing-tiers{
+  display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  margin:6px 0 16px;
+}
+@media (max-width:480px){ .pricing-tiers{ grid-template-columns:1fr; } }
+.pricing-tier{
+  position:relative;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-md);
+  padding:18px 14px 16px;
+  text-align:center;
+  background:var(--card);
+}
+.pricing-tier.is-featured{
+  border-color:var(--primary);
+  background:var(--primary-tint);
+}
+.tier-badge{
+  position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+  background:var(--primary); color:#fff;
+  font-size:9.5px; font-weight:800; letter-spacing:0.03em; text-transform:uppercase;
+  padding:3px 10px; border-radius:999px;
+  white-space:nowrap;
+}
+.tier-name{
+  font-size:11.5px; font-weight:800; color:var(--ink-soft);
+  text-transform:uppercase; letter-spacing:0.03em;
+  margin-bottom:8px;
+}
+.pricing-tier .pro-price{ font-size:21px; margin-bottom:0; }
+.pricing-tier .pro-price-note{ display:block; margin-left:0; margin-top:2px; font-size:10px; }
+.tier-features{ list-style:none; margin:14px 0; text-align:left; }
+.tier-features li{
+  font-size:11.5px; color:var(--ink-soft);
+  padding-left:18px; position:relative; margin-bottom:6px; line-height:1.4;
+}
+.tier-features li::before{
+  content:"✓"; position:absolute; left:0; top:0;
+  color:var(--primary); font-weight:800; font-size:11px;
+}
+.pricing-tier .btn{ font-size:12.5px; padding:10px 12px; }
+
 .trust-row{
   text-align:center; font-size:12px; font-weight:600; color:var(--ink-soft);
   margin-bottom:6px;
@@ -1142,7 +1185,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
   <section class="generator-page" id="generatorPage">
   <div class="credits-banner hidden" id="creditsBanner">
-    <p><strong>You're out of free credits.</strong> Upgrade to Pro for up to 500 more generations.</p>
+    <p><strong>You're out of free credits.</strong> Upgrade to Pro for up to 700 more generations.</p>
     <button type="button" class="btn btn-primary" id="creditsBannerBtn">Upgrade to Pro</button>
   </div>
 
@@ -1322,7 +1365,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     <span class="affiliate-banner-icon">🤝</span>
     <div>
       <p class="affiliate-banner-title">Earn 50% commission — every sale, every time</p>
-      <p class="affiliate-banner-sub">Share your link. Get $3.50 for every Pro sale you refer.</p>
+      <p class="affiliate-banner-sub">Share your link. Earn up to $12 per Pro sale you refer.</p>
     </div>
   </div>
   <button type="button" class="btn btn-primary affiliate-banner-btn" id="affiliateInfoBtn">Become an Affiliate</button>
@@ -1381,7 +1424,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <button type="button" class="modal-close" data-close>✕</button>
     </div>
     <div class="modal-body">
-      <p>Earn <strong>50% commission</strong> — that's <strong>$3.50</strong> for every Pro sale ($7) made through your link. No cap on how many people you refer.</p>
+      <p>Earn <strong>50% commission</strong> on every Pro sale made through your link — that's <strong>$3.50</strong> per Starter sale ($7) or <strong>$12</strong> per Power Seller sale ($24). No cap on how many people you refer.</p>
 
       <h4>How it works</h4>
       <ol class="affiliate-steps">
@@ -1406,21 +1449,40 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <button type="button" class="modal-close" data-close>✕</button>
     </div>
     <div class="modal-body">
-      <p>500 SEO generations — use them whenever you want. No monthly reset, no expiration.</p>
-      <ul>
-        <li>500 SEO generations, no expiration</li>
-        <li>All platforms — Etsy, Digital, Print on Demand, Pinterest</li>
-        <li>Priority support</li>
-      </ul>
+      <p>Pick the plan that fits how much you sell. Both are one-time payments — no subscription, no expiration.</p>
+
+      <div class="pricing-tiers">
+        <div class="pricing-tier">
+          <p class="tier-name">Starter</p>
+          <p class="pro-price">$7 <span class="pro-price-note">one-time</span></p>
+          <ul class="tier-features">
+            <li>100 SEO generations</li>
+            <li>All platforms</li>
+            <li>Standard support</li>
+          </ul>
+          <button type="button" class="btn btn-primary" id="buyStarterBtn">
+            <span id="buyStarterBtnLabel">$7 — Buy Starter</span>
+          </button>
+        </div>
+
+        <div class="pricing-tier is-featured">
+          <span class="tier-badge">Best Value</span>
+          <p class="tier-name">Power Seller</p>
+          <p class="pro-price">$24 <span class="pro-price-note">one-time</span></p>
+          <ul class="tier-features">
+            <li>700 SEO generations</li>
+            <li>All platforms</li>
+            <li>Priority support</li>
+          </ul>
+          <button type="button" class="btn btn-primary" id="buyPowerBtn">
+            <span id="buyPowerBtnLabel">$24 — Buy Power Seller</span>
+          </button>
+        </div>
+      </div>
 
       <div class="credit-clarity">
         <span>⚡</span>
         <div><strong>1 credit = 1 complete SEO pack</strong><br>Title + 13 tags + description.</div>
-      </div>
-
-      <div class="pricing-box">
-        <p class="price-regular">Regular Price: <s>$19</s></p>
-        <p class="pro-price">$7 <span class="pro-price-note">one-time — Launch Offer</span></p>
       </div>
 
       <p class="trust-row"><span class="trust-stars">★★★★★</span> <span class="trust-text">Trusted by 200+ Etsy &amp; Pinterest Sellers</span></p>
@@ -1429,10 +1491,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <p class="license-safety-note">🔒 Pro activates automatically after a successful payment. Keep your Lemon Squeezy license key as a backup in case you clear your browser data, switch browsers, or use TagPulse on another device.</p>
 
       <div id="paywallError" class="paywall-error"></div>
-
-      <button type="button" class="btn btn-primary" id="buyProBtn">
-        <span id="buyProBtnLabel">$7 — Buy Pro</span>
-      </button>
 
       <div class="paywall-divider">Already purchased?</div>
       <p class="manual-license-note">You can still enter your Lemon Squeezy license key manually if needed.</p>
@@ -1547,8 +1605,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const LS_PRO = "tagpulse_pro";
   const LS_HISTORY = "tagpulse_generation_history";
 
-  const LEMON_CHECKOUT_URL =
+  const LEMON_CHECKOUT_URL_STARTER =
     "https://tagpulseai.lemonsqueezy.com/checkout/buy/92f18212-ea75-4ed0-81cf-bb0a3b1571e9";
+
+  const LEMON_CHECKOUT_URL_POWER =
+    "https://tagpulseai.lemonsqueezy.com/checkout/buy/8980c044-996b-4fe5-8936-45e2617cba09";
 
   const SUPABASE_URL =
     "https://sjhjoapislwdhtqpbotz.supabase.co";
@@ -2012,8 +2073,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   syncGoalTrigger();
 
   const paywallModal  = $("paywallModal");
-  const buyProBtn     = $("buyProBtn");
-  const buyProBtnLabel= $("buyProBtnLabel");
+  const buyStarterBtn      = $("buyStarterBtn");
+  const buyStarterBtnLabel = $("buyStarterBtnLabel");
+  const buyPowerBtn        = $("buyPowerBtn");
+  const buyPowerBtnLabel   = $("buyPowerBtnLabel");
   const paywallForm   = $("paywallForm");
   const licenseInput  = $("licenseInput");
   const unlockBtn     = $("unlockBtn");
@@ -2522,18 +2585,20 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      ------------------------------------------------------------
      The browser sends the authenticated Supabase user ID as checkout custom
      data. Lemon Squeezy sends that value back in the webhook, where
-     the server provisions the 500-credit license in D1.
+     the server provisions the correct tier's license (100 or 700
+     credits) in D1.
      ============================================================ */
-  buyProBtn.addEventListener("click", startProCheckout);
+  buyStarterBtn.addEventListener("click", () => startProCheckout(LEMON_CHECKOUT_URL_STARTER, buyStarterBtn, buyStarterBtnLabel, "$7 — Buy Starter"));
+  buyPowerBtn.addEventListener("click", () => startProCheckout(LEMON_CHECKOUT_URL_POWER, buyPowerBtn, buyPowerBtnLabel, "$24 — Buy Power Seller"));
 
-  function buildCheckoutUrl(){
-    const url = new URL(LEMON_CHECKOUT_URL);
+  function buildCheckoutUrl(baseUrl){
+    const url = new URL(baseUrl);
     url.searchParams.set("checkout[custom][user_id]", getAuthenticatedUserId());
     url.searchParams.set("embed", "1");
     return url.toString();
   }
 
-  function startProCheckout(){
+  function startProCheckout(baseUrl, btn, btnLabel, defaultLabel){
     if (!authUser) {
       closeModal(paywallModal);
       openModal(authModal);
@@ -2548,10 +2613,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
 
     hidePaywallError();
-    buyProBtn.disabled = true;
-    buyProBtnLabel.innerHTML = '<span class="spinner"></span> Opening checkout…';
+    btn.disabled = true;
+    btnLabel.innerHTML = '<span class="spinner"></span> Opening checkout…';
 
-    const checkoutUrl = buildCheckoutUrl();
+    const checkoutUrl = buildCheckoutUrl(baseUrl);
 
     try {
       if (window.LemonSqueezy && LemonSqueezy.Url && LemonSqueezy.Url.Open) {
@@ -2561,8 +2626,8 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       }
     } catch (err) {
       console.error(err);
-      buyProBtn.disabled = false;
-      buyProBtnLabel.textContent = "$7 — Buy Pro";
+      btn.disabled = false;
+      btnLabel.textContent = defaultLabel;
       showPaywallError("Couldn't open the secure checkout. Please try again.");
     }
   }
@@ -2621,8 +2686,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     LemonSqueezy.Setup({
       eventHandler: async (event) => {
         if (event && event.event === "Checkout.Success") {
-          buyProBtn.disabled = true;
-          buyProBtnLabel.innerHTML = '<span class="spinner"></span> Activating Pro…';
+          buyStarterBtn.disabled = true;
+          buyPowerBtn.disabled = true;
+          buyStarterBtnLabel.innerHTML = '<span class="spinner"></span> Activating Pro…';
+          buyPowerBtnLabel.innerHTML = '<span class="spinner"></span> Activating Pro…';
           showToast("Payment received. Checking Pro activation…", "success");
 
           // Close the checkout overlay so the customer is immediately
@@ -2635,12 +2702,19 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
           const activated = await pollForProActivation();
 
-          buyProBtn.disabled = false;
-          buyProBtnLabel.textContent = "$7 — Buy Pro";
+          buyStarterBtn.disabled = false;
+          buyPowerBtn.disabled = false;
+          buyStarterBtnLabel.textContent = "$7 — Buy Starter";
+          buyPowerBtnLabel.textContent = "$24 — Buy Power Seller";
 
           if (activated) {
             closeModal(paywallModal);
-            showToast("Pro activated! 500 generations are ready.", "success");
+            showToast(
+              "Pro activated! " +
+              (typeof credits === "number" ? credits : "Your") +
+              " generations are ready.",
+              "success"
+            );
           } else {
             showPaywallError(
               "Payment was received, but Pro activation is still pending. Once the Lemon Squeezy webhook provisions your account, refresh or try again."
@@ -2743,7 +2817,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
   function setUnlocking(isLoading){
     unlockBtn.disabled = isLoading;
-    unlockBtnLabel.innerHTML = isLoading ? '<span class="spinner"></span> Verifying…' : '$7 — Unlock Pro';
+    unlockBtnLabel.innerHTML = isLoading ? '<span class="spinner"></span> Verifying…' : 'Unlock with License Key';
   }
   function showPaywallError(msg){ paywallError.textContent = msg; paywallError.classList.add("show"); }
   function hidePaywallError(){ paywallError.classList.remove("show"); }
