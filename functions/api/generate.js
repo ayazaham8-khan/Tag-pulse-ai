@@ -6,14 +6,17 @@
  * Supabase Auth + D1-backed credit enforcement
  *
  * FREE USERS
- * - 5 generations total
+ * - 3 generations total
  *
  * PAID USERS
- * - 500 generations total
+ * - Starter: 100 generations
+ * - Power Seller: 700 generations
+ * - Actual per-license amount is stored on the license row itself
+ *   (initial_credits), not a single fixed number.
  *
  * CREATOR PRO USERS
- * - 500 generations total
- * - Provisioned manually in D1 creator_pro table
+ * - Provisioned manually in D1 creator_pro table with whatever
+ *   amount the site owner grants — not tied to either paid tier
  * - No Lemon Squeezy checkout required
  *
  * AUTHENTICATION
@@ -59,7 +62,10 @@ const GROQ_TIMEOUT_MS = 30000;
 
 const FREE_CREDITS = 3;
 
-const PAID_CREDITS = 500;
+// creator_pro grants are manual and not tied to a Lemon Squeezy tier,
+// so refunds there are capped against a generous fixed ceiling rather
+// than a specific tier amount.
+const CREATOR_PRO_REFUND_CAP = 1000;
 
 
 /**
@@ -602,7 +608,7 @@ export async function onRequestPost(context) {
         return jsonResponse(
           {
             error:
-              "Your 500-generation Pro allowance has been used.",
+              "Your Pro generation allowance has been used.",
             credits_remaining: 0,
             is_pro: true,
             pro_type: "lemon"
@@ -798,7 +804,9 @@ export async function onRequestPost(context) {
       return jsonResponse(
         {
           error:
-            "You've used all 5 free generations. Upgrade to Pro for 500 generations.",
+            "You've used all " +
+            FREE_CREDITS +
+            " free generations. Upgrade to Pro for more generations.",
 
           credits_remaining:
             remaining,
@@ -1117,7 +1125,7 @@ async function refundCreatorCredit(
   )
     .bind(
       userId,
-      PAID_CREDITS
+      CREATOR_PRO_REFUND_CAP
     )
     .run();
 }
@@ -1272,11 +1280,10 @@ async function refundLicenseCredit(
          updated_at =
              CURRENT_TIMESTAMP
      WHERE id = ?1
-       AND credits_remaining < ?2`
+       AND credits_remaining < initial_credits`
   )
     .bind(
-      licenseId,
-      PAID_CREDITS
+      licenseId
     )
     .run();
 }
