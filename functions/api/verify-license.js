@@ -21,8 +21,8 @@
  * {
  *   "valid": true,
  *   "is_pro": true,
- *   "message": "Pro unlocked! 500 generations available.",
- *   "credits_remaining": 500
+ *   "message": "Pro unlocked! 100 generations available.",
+ *   "credits_remaining": 100
  * }
  *
  * D1 binding:
@@ -32,13 +32,17 @@
  *   Publishable key is safe to use for authentication requests.
  *
  * Lemon Squeezy:
- *   Live Mode
+ *   Live Mode — two Pro tiers.
  *
- * Product ID:
- *   1305746
+ * Starter tier:
+ *   Product ID: 1305746
+ *   Variant ID: 2042144
+ *   Credits: 100
  *
- * Variant ID:
- *   2042144
+ * Power Seller tier:
+ *   Product ID: 1335511
+ *   Variant ID: 2086845
+ *   Credits: 700
  * =============================================================
  */
 
@@ -64,16 +68,25 @@ const LEMON_VALIDATE_URL =
   "https://api.lemonsqueezy.com/v1/licenses/validate";
 
 
-const LEMON_PRODUCT_ID =
-  "1305746";
-
-
-const LEMON_VARIANT_ID =
-  "2042144";
-
-
-const PAID_CREDITS =
-  500;
+/**
+ * All recognized Pro products/variants and what each one grants.
+ * To add or change a tier, edit this list only — every check and
+ * every credit amount in this file is derived from it.
+ */
+const PRO_TIERS = [
+  {
+    name: "Starter",
+    productId: "1305746",
+    variantId: "2042144",
+    credits: 100
+  },
+  {
+    name: "Power Seller",
+    productId: "1335511",
+    variantId: "2086845",
+    credits: 700
+  }
+];
 
 
 /**
@@ -304,7 +317,7 @@ export async function onRequestPost(context) {
       // -------------------------------------------------------
 
       if (
-        !matchesOurProduct(
+        !resolveTier(
           validation
         )
       ) {
@@ -524,10 +537,13 @@ export async function onRequestPost(context) {
     // Verify exact TagPulse product + variant.
     // ---------------------------------------------------------
 
-    if (
-      !matchesOurProduct(
+    const tier =
+      resolveTier(
         activation
-      )
+      );
+
+    if (
+      !tier
     ) {
 
       console.error(
@@ -636,7 +652,7 @@ export async function onRequestPost(context) {
       )
         .bind(
           licenseHash,
-          PAID_CREDITS,
+          tier.credits,
           userId,
           instanceId
         )
@@ -743,7 +759,9 @@ export async function onRequestPost(context) {
       "verify-license: new Pro license activated.",
       {
         userId,
-        instanceId
+        instanceId,
+        tier: tier.name,
+        credits: tier.credits
       }
     );
 
@@ -754,10 +772,12 @@ export async function onRequestPost(context) {
         is_pro: true,
 
         message:
-          "Pro unlocked! 500 generations available.",
+          "Pro unlocked! " +
+          tier.credits +
+          " generations available.",
 
         credits_remaining:
-          PAID_CREDITS
+          tier.credits
       },
       200,
       corsHeaders
@@ -1104,9 +1124,11 @@ async function validateLicense(
  * =============================================================
  * PRODUCT + VARIANT SECURITY CHECK
  * =============================================================
+ * Returns the matching entry from PRO_TIERS, or null if the
+ * license doesn't belong to any recognized TagPulse product.
  */
 
-function matchesOurProduct(
+function resolveTier(
   data
 ) {
 
@@ -1115,7 +1137,7 @@ function matchesOurProduct(
     !data.meta
   ) {
 
-    return false;
+    return null;
   }
 
 
@@ -1132,10 +1154,11 @@ function matchesOurProduct(
 
 
   return (
-    productId ===
-      LEMON_PRODUCT_ID &&
-    variantId ===
-      LEMON_VARIANT_ID
+    PRO_TIERS.find(
+      (tier) =>
+        tier.productId === productId &&
+        tier.variantId === variantId
+    ) || null
   );
 }
 
