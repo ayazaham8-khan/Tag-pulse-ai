@@ -586,6 +586,27 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
   display:block; text-align:center; text-decoration:none;
   margin-top:4px;
 }
+.affiliate-no-website-tip{
+  background:var(--bg);
+  border:1px dashed var(--border);
+  border-radius:var(--radius-md);
+  padding:14px 16px;
+  margin:6px 0 16px;
+}
+.affiliate-tip-title{
+  font-size:13px; font-weight:800; color:var(--ink);
+  margin-bottom:6px;
+}
+.affiliate-tip-intro{
+  font-size:12px; color:var(--ink-soft);
+  margin-bottom:10px; line-height:1.5;
+}
+.affiliate-no-website-tip .affiliate-steps{ margin:0; }
+.affiliate-no-website-tip code{
+  background:var(--card); border:1px solid var(--border);
+  border-radius:4px; padding:1px 5px; font-size:11px;
+  word-break:break-all;
+}
 
 /* ============================================================
    OUTPUT
@@ -1432,8 +1453,20 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         <li><span class="affiliate-step-num">2</span><span>Click "Become an affiliate" there and sign up (or log in) with Lemon Squeezy.</span></li>
         <li><span class="affiliate-step-num">3</span><span>You'll get your own affiliate dashboard with a unique referral link.</span></li>
         <li><span class="affiliate-step-num">4</span><span>Share that link anywhere — your blog, social media, YouTube, wherever your audience is.</span></li>
-        <li><span class="affiliate-step-num">5</span><span>Anyone who buys Pro through your link earns you $3.50 — tracked and paid out automatically by Lemon Squeezy.</span></li>
+        <li><span class="affiliate-step-num">5</span><span>Anyone who buys Pro through your link earns you $3.50–$12 — tracked and paid out automatically by Lemon Squeezy.</span></li>
       </ol>
+
+      <div class="affiliate-no-website-tip">
+        <p class="affiliate-tip-title">💡 Don't have a website or social media page? No problem!</p>
+        <p class="affiliate-tip-intro">You don't need your own website or YouTube channel — just fill in these placeholder details and get your unique referral link in under a minute:</p>
+        <ol class="affiliate-steps">
+          <li><span class="affiliate-step-num">1</span><span><strong>Bio field</strong> (minimum 50 characters) — copy and paste this exact line:<br><em>"I am promoting this tool directly to Etsy and POD sellers through word of mouth, direct messaging, and local communities."</em></span></li>
+          <li><span class="affiliate-step-num">2</span><span><strong>Website(s) field</strong> — type: <code>https://tag-pulse-ai.pages.dev</code> (or <code>https://google.com</code>)</span></li>
+          <li><span class="affiliate-step-num">3</span><span><strong>Social Media field</strong> — type: <code>https://facebook.com</code> (or <code>https://whatsapp.com</code>)</span></li>
+          <li><span class="affiliate-step-num">4</span><span><strong>Remove extra empty boxes</strong> — if more empty website or social media boxes appear below, click the Minus (−) button next to them to delete them.</span></li>
+          <li><span class="affiliate-step-num">5</span><span><strong>Submit &amp; Get Link</strong> — click "Submit profile for approval" in the top-right corner. Your account activates instantly and you'll get your referral link.</span></li>
+        </ol>
+      </div>
 
       <p class="license-safety-note">💡 Payouts are handled directly by Lemon Squeezy on their standard schedule — TagPulse AI doesn't touch or delay your earnings.</p>
 
