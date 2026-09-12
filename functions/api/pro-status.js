@@ -107,6 +107,25 @@ export async function onRequestPost(context) {
       authenticatedUser.id;
 
 
+    // ---------------------------------------------------------
+    // 2.5. Creator Pro invitation provisioning
+    //
+    // If this authenticated user's verified email matches a
+    // pending row in creator_invites, this atomically consumes
+    // the invite and provisions creator_pro (500 credits) —
+    // without ever touching an existing creator_pro balance.
+    //
+    // No-op for everyone else (normal users, Lemon users,
+    // already-provisioned creators, already-used invites).
+    // ---------------------------------------------------------
+
+    await provisionCreatorFromInvite(
+      env.DB,
+      userId,
+      authenticatedUser.email
+    );
+
+
     // =========================================================
     // 3. CHECK CREATOR PRO
     // =========================================================
@@ -411,6 +430,153 @@ async function getAuthenticatedSupabaseUser(
     );
 
     return null;
+  }
+}
+
+
+/**
+ * =============================================================
+ * CREATOR PRO INVITATION PROVISIONING
+ * =============================================================
+ *
+ * If the authenticated user's verified email matches a pending
+ * row in creator_invites, atomically:
+ *
+ *   1. Mark that invitation 'used' — only if it is still
+ *      'pending' (prevents a second grant on repeat logins or
+ *      repeated requests).
+ *   2. Create the creator_pro row with 500 credits — only if
+ *      step 1 actually consumed a pending invite for this exact
+ *      user_id, AND only if a creator_pro row does not already
+ *      exist for this user (so an existing Creator Pro balance,
+ *      however it was created, is never reset or overwritten).
+ *
+ * Both statements run inside a single D1 batch(), which executes
+ * as one transaction — either both apply or neither does. That
+ * means a mid-way failure (e.g. the INSERT failing for some
+ * reason) can never leave an invitation permanently consumed
+ * without Creator Pro actually being created; the whole batch
+ * rolls back and the invite remains 'pending' for the next
+ * authenticated request to retry.
+ *
+ * The gating logic (has a pending invite? does creator_pro
+ * already exist?) is expressed entirely inside the SQL itself
+ * via EXISTS / NOT EXISTS, not in application code — this is
+ * what keeps two simultaneous requests for the same invited
+ * creator safe: D1 serializes write transactions against the
+ * same rows, so the second batch to run always sees the first
+ * batch's committed effects before its own statements execute.
+ *
+ * This function never throws to its caller. If provisioning
+ * fails for any reason, it is only logged — normal generation,
+ * free-user, and Lemon flows continue completely unaffected.
+ * =============================================================
+ */
+
+async function provisionCreatorFromInvite(
+  db,
+  userId,
+  email
+) {
+
+  if (
+    !userId ||
+    !email ||
+    typeof email !== "string"
+  ) {
+    return;
+  }
+
+
+  const normalizedEmail =
+    email
+      .trim()
+      .toLowerCase();
+
+
+  if (!normalizedEmail) {
+    return;
+  }
+
+
+  try {
+
+    const results =
+      await db.batch(
+        [
+
+          db.prepare(
+            `UPDATE creator_invites
+             SET status = 'used',
+                 used_at = CURRENT_TIMESTAMP,
+                 user_id = ?1
+             WHERE LOWER(TRIM(email)) = ?2
+               AND status = 'pending'`
+          )
+            .bind(
+              userId,
+              normalizedEmail
+            ),
+
+          db.prepare(
+            `INSERT INTO creator_pro
+               (user_id, credits_remaining)
+             SELECT
+               ?1,
+               500
+             WHERE EXISTS (
+               SELECT 1
+               FROM creator_invites
+               WHERE LOWER(TRIM(email)) = ?2
+                 AND status = 'used'
+                 AND user_id = ?1
+             )
+             AND NOT EXISTS (
+               SELECT 1
+               FROM creator_pro
+               WHERE user_id = ?1
+             )`
+          )
+            .bind(
+              userId,
+              normalizedEmail
+            )
+
+        ]
+      );
+
+
+    // -------------------------------------------------------
+    // Read back the invite UPDATE's actual row-change count
+    // from D1's batch result meta, purely for logging/
+    // confirmation — the correctness of the operation does
+    // NOT depend on this check (that lives in the SQL's
+    // EXISTS / NOT EXISTS conditions above).
+    // -------------------------------------------------------
+
+    const inviteChanges =
+      Number(
+        results?.[0]?.meta?.changes || 0
+      );
+
+
+    if (inviteChanges === 1) {
+
+      console.log(
+        "Creator invite consumed; Creator Pro provisioning attempted.",
+        {
+          userId,
+          email: normalizedEmail
+        }
+      );
+    }
+
+  } catch (err) {
+
+    console.error(
+      "Creator invite provisioning failed (invitation left untouched):",
+      err
+    );
   }
 }
 
