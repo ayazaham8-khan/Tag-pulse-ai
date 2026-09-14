@@ -2974,6 +2974,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       features: productFeaturesInput.value.trim()
     };
 
+    const productContextText = [
+      keyword,
+      productDetails.material,
+      productDetails.color,
+      productDetails.size,
+      productDetails.personalization,
+      productDetails.features
+    ].filter(Boolean).join(" ").toLowerCase();
+
     const prompt = category === "Etsy"
       ? buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
       : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
@@ -3001,7 +3010,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         // result. On failure, retry exactly once with the specific
         // validation failures fed back to the model as a correction
         // instruction.
-        let validation = validateEtsyOutput(parsed, wordsToAvoid);
+        let validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
 
         if (!validation.valid) {
 
@@ -3027,7 +3036,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
           serverState = retryResult.data;
           parsed = extractJSON(retryResult.data.text);
-          validation = validateEtsyOutput(parsed, wordsToAvoid);
+          validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
 
           if (!validation.valid) {
             throw new Error("The AI couldn't produce a valid Etsy listing after a retry. Please try again or adjust your inputs.");
@@ -3125,11 +3134,18 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
          unknown and off-limits, including vague "safe substitute"
          quality language ("premium", "durable", etc.) that isn't
          backed by a known fact.
+       - Targeting/audience is kept OUT of the KNOWN FACTS block on
+         purpose (it used to sit there, which is very likely why it
+         got treated as a fact the model could freely turn into
+         keywords). It now lives in its own AUDIENCE CONTEXT
+         section, explicitly framed as strategic context and not a
+         keyword source, with an explicit ban on mechanically
+         combining the targeting label with a product word.
        - The model is asked to privately reason through which
-         search-intent angles genuinely apply before writing the
-         13 tags, but is explicitly told not to output that
-         reasoning — only the final {title, tags, description}
-         object, per the required output architecture.
+         search-intent clusters genuinely apply before writing the
+         13 tags, with explicit anti-redundancy and anti-filler
+         instructions, but is told not to output that reasoning —
+         only the final {title, tags, description} object.
        - An optional validationErrors array turns this into a
          single-retry correction prompt: when non-empty, it's
          appended as a "fix these exact issues" section so the
@@ -3147,7 +3163,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     if (productDetails.size)            knownFacts.push("- Size / Dimensions: " + productDetails.size);
     if (productDetails.personalization) knownFacts.push("- Personalization: " + productDetails.personalization);
     if (productDetails.features)        knownFacts.push("- Key features: " + productDetails.features);
-    knownFacts.push("- Target audience: " + audience);
     knownFacts.push("- SEO goal: " + seoGoal);
 
     const lines = [
@@ -3157,11 +3172,19 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       ...knownFacts,
       "",
       "=== UNKNOWN FACTS — DO NOT INVENT ===",
-      "Any product attribute NOT listed above as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, shipping details, delivery times, quality claims, packaging, personalization capabilities, quantities, file formats, and measurements.",
+      "Any product attribute NOT listed above as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, garment construction, pockets, shipping details, delivery times, washing instructions, quality claims, packaging, personalization workflow/capabilities, quantities, file formats, DPI, and measurements.",
       'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", "top quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact above. If you have nothing factual to say about a dimension, omit it rather than filling the gap with unsupported language.',
       "",
+      "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
+      "Selected targeting option: " + audience,
+      "This tells you who the likely buyer is, to help you judge tone and genuine buyer intent. It is background context only — it is not a product fact and not a keyword to insert.",
+      'Never create a keyword merely by combining the targeting label with a product word (for example, do not produce "online shopper gift", "etsy dog mom", "pinterest wall art", or similar). Do not insert phrases like "for online shoppers", "for Etsy shoppers", "for Pinterest users", or similar targeting/audience metadata into the title, tags, or description just because that option was selected.',
+      "A term may still be used if it is independently relevant to the actual product or genuine buyer search intent — the rule is only against mechanically converting the UI targeting label into SEO text. SEO phrases must come primarily from the actual product concept, the supplied product details above, genuine buyer intent, and search contexts specific to this product — not from the targeting label itself.",
+      "",
       "=== KEYWORD STRATEGY (internal reasoning — do not output this part) ===",
-      "Before writing the final tags, privately consider which of these search-intent angles genuinely apply to THIS product: core product, product variant, audience, personalization, occasion, gift intent, use case, style, theme, other relevant intent. These are NOT mandatory — only use angles that genuinely fit. Prioritize, in order: (1) direct relevance to the actual product, (2) real buyer/search intent, (3) specificity, (4) diversity across different search-intent angles, (5) natural, readable language. Do not invent an angle just to fill a slot, and do not pad the 13 tags with near-synonyms of each other just to reach the count.",
+      "Before writing the final tags, privately evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product: core product, product type/variant, primary theme/design, personalization/customization, recipient/audience, occasion, gift intent, use case, style/aesthetic, relevant niche/sub-niche. These are reasoning categories, NOT mandatory tags — only use a cluster that is genuinely supported by the product and supplied facts; do not force every cluster to appear.",
+      "Prioritize, in order: (1) direct relevance to the actual product, (2) strong buyer/search intent, (3) specificity, (4) distinct search intent, (5) natural multi-word phrasing, (6) Etsy tag constraints, (7) diversity across the 13 tags.",
+      'Avoid generating several tags that are merely grammatical variations of the same search intent — for example "dog mom gift", "gift for dog mom", and "dog mom present" all express the same intent; select only the strongest one and use the freed-up slots for other genuinely different search intents. Do not fill slots with generic filler such as "unique gift", "special occasion gift", "perfect gift", "cute item", or "great present" unless the phrase carries genuinely useful, product-specific search intent. Do not overcorrect: tags that represent legitimately different product attributes or angles (for example "dog mom sweatshirt" and "personalized dog mom") may coexist.',
       "",
       "=== OUTPUT FORMAT ===",
       "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation, NO keyword-reasoning fields, NO intermediate work. Exactly this shape:",
@@ -3171,9 +3194,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       '  "description": "..."',
       "}",
       "",
-      "TITLE RULES: Maximum 140 characters. Put the primary product phrase naturally near the beginning when it reads well. Natural and readable, not a keyword dump. No repetitive synonym chains. No unsupported product attributes.",
+      'TITLE RULES: Maximum 140 characters. Put the primary product phrase naturally near the beginning when it reads well. Natural and readable, not a keyword dump. No repetitive synonym chains. No unsupported product attributes. Avoid generic filler such as "Perfect Gift", "Great Gift", or "Perfect for..." when a stronger, more product-specific phrase is available. Do not stuff in extra words just to use up the character limit.',
       "TAG RULES: Exactly 13 tags. Every tag must be non-empty, 20 characters or fewer, and a multi-word phrase (no bare single words). Every tag must be relevant to the actual product and must not state an unsupported factual attribute. No exact duplicate tags. Prefer tags that represent genuinely different search-intent angles over near-duplicate phrasing of the same angle — but do not force artificial diversity where it doesn't fit the product.",
-      "DESCRIPTION RULES: Write a useful Etsy description using ONLY the known facts and the stated audience/goal above, plus general non-specific framing (use-case, occasion, gift-worthiness) where it doesn't require inventing a fact. Do not add unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production, or packaging.",
+      'DESCRIPTION RULES: Write a useful Etsy description using ONLY the known facts and the stated SEO goal above, plus general non-specific framing (use-case, occasion, gift-worthiness) where it doesn\'t require inventing a fact. Do not add unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production, or packaging. Do not mention internal targeting/audience metadata (for example "for online shoppers", "for Etsy shoppers", "for Pinterest users") just because that option was selected — speak naturally to the buyer and product without exposing internal targeting labels.',
       "WORDS TO AVOID: " + (
         wordsToAvoid.length
           ? wordsToAvoid.join(", ")
@@ -3371,15 +3394,47 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   /* ------------------------------------------------------------
+     AUDIENCE LEAK CHECK (conservative, narrow)
+     ------------------------------------------------------------
+     Only the targeting options that are purely platform/context
+     metadata (not plausible product-recipient keywords) get a
+     banned-phrase list here — e.g. "Online Shoppers" or "Etsy
+     Shoppers" should never surface as literal SEO text. Audiences
+     that could legitimately double as a real product-recipient
+     keyword (e.g. "Small Business Owners", "Entrepreneurs") are
+     deliberately left unchecked to avoid rejecting a genuinely
+     useful tag — same conservative philosophy as the near-duplicate
+     heuristic above.
+     ------------------------------------------------------------ */
+
+  function getAudienceLeakPhrases(audience){
+    const map = {
+      "Online Shoppers": ["online shopper", "online shoppers"],
+      "Etsy Shoppers": ["etsy shopper", "etsy shoppers", "etsy"],
+      "Pinterest Users": ["pinterest user", "pinterest users", "pinterest"],
+      "Instagram Users": ["instagram user", "instagram users", "instagram"],
+      "TikTok Users": ["tiktok user", "tiktok users", "tiktok"],
+      "Local Customers": ["local customer", "local customers"]
+    };
+    return map[audience] || [];
+  }
+
+  /* ------------------------------------------------------------
      ETSY OUTPUT VALIDATION
      ------------------------------------------------------------
      Real blocking validation — returns { valid, errors }. errors
      are human-readable AND written so they can be fed straight
      back into buildEtsyPrompt()'s validationErrors correction
      section on retry.
+
+     audience and productContext are optional (older call sites
+     still work); when supplied, they enable the audience-leak
+     check above. productContext should be the user's own inputs
+     (keyword + product details) so a phrase already genuinely
+     part of the product is never flagged as a "leak".
      ------------------------------------------------------------ */
 
-  function validateEtsyOutput(parsed, wordsToAvoid){
+  function validateEtsyOutput(parsed, wordsToAvoid, audience, productContext){
     const errors = [];
 
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -3438,14 +3493,28 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       errors.push("The description is missing or empty.");
     }
 
+    const haystack = [title, description].concat(trimmedTags).join(" \n ").toLowerCase();
+
     if (Array.isArray(wordsToAvoid) && wordsToAvoid.length) {
-      const haystack = [title, description].concat(trimmedTags).join(" \n ").toLowerCase();
       wordsToAvoid.forEach(word => {
         const w = String(word || "").trim().toLowerCase();
         if (w && haystack.includes(w)) {
           errors.push('The word "' + String(word).trim() + '" appears in the output but is on your Words to Avoid list.');
         }
       });
+    }
+
+    if (audience) {
+      const contextText = String(productContext || "").toLowerCase();
+      getAudienceLeakPhrases(audience)
+        .filter(phrase => !contextText.includes(phrase))
+        .forEach(phrase => {
+          const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp("\\b" + escaped + "\\b", "i");
+          if (re.test(haystack)) {
+            errors.push('The targeting label "' + audience + '" leaked into the output as "' + phrase + '" — targeting should only be strategic context, not an automatic keyword.');
+          }
+        });
     }
 
     return { valid: errors.length === 0, errors: errors };
