@@ -2990,9 +2990,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       ? buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
       : category === "Pinterest"
         ? buildPinterestPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
-        : category === "Digital / Printable"
-          ? buildDigitalPrintablePrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
-          : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+        : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
 
     try {
       const result = await callGenerate(prompt);
@@ -3085,49 +3083,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
           if (!validation.valid) {
             throw new Error("The AI couldn't produce a valid Pinterest SEO package after a retry. Please try again or adjust your inputs.");
-          }
-        }
-
-      } else if (category === "Digital / Printable") {
-
-        // Same real-validation + single-retry architecture as Etsy
-        // and Pinterest, built as its own parallel branch (not a
-        // shared helper) so neither of those branches is touched
-        // by this addition. Output schema/limits are unchanged
-        // from the generic path (140-char title, 13 tags, 20 chars
-        // per tag), so the existing renderOutputByType/renderOutput
-        // path renders this exactly as before — only the prompt and
-        // validation are Digital/Printable-specific.
-        let validation = validateDigitalPrintableOutput(parsed, wordsToAvoid, audience, productContextText);
-
-        if (!validation.valid) {
-
-          const retryPrompt = buildDigitalPrintablePrompt(
-            keyword,
-            productDetails,
-            audience,
-            seoGoal,
-            wordsToAvoid,
-            validation.errors
-          );
-
-          const retryResult = await callGenerate(retryPrompt);
-
-          if (retryResult.status === 402) {
-            applyServerState(retryResult.data);
-            if (!isPro) {
-              openModal(paywallModal);
-            }
-            showToast(retryResult.data.error || "You're out of credits.", "error");
-            return;
-          }
-
-          serverState = retryResult.data;
-          parsed = extractJSON(retryResult.data.text);
-          validation = validateDigitalPrintableOutput(parsed, wordsToAvoid, audience, productContextText);
-
-          if (!validation.valid) {
-            throw new Error("The AI couldn't produce a valid Digital / Printable listing after a retry. Please try again or adjust your inputs.");
           }
         }
 
@@ -3377,93 +3332,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           ? wordsToAvoid.join(", ")
           : "None specified"
       ) + ". Do not use any of these words or phrases anywhere in the title, keywords, or description."
-    ];
-
-    if (validationErrors.length) {
-      lines.push(
-        "",
-        "=== YOUR PREVIOUS ATTEMPT FAILED VALIDATION — FIX THESE EXACT ISSUES ===",
-        ...validationErrors.map(e => "- " + e),
-        "Return a corrected JSON object that fixes every issue above while still following all the rules stated earlier."
-      );
-    }
-
-    return lines.join("\n");
-  }
-
-  /* ============================================================
-     DIGITAL / PRINTABLE PROMPT BUILDER (dedicated — genuinely
-     Digital/Printable-specific, not the Etsy prompt reused)
-     ------------------------------------------------------------
-     Digital products are especially prone to spec hallucination
-     (file format, DPI, page/file counts, license type, editable
-     status) because the product itself is intangible — there's no
-     physical object to describe around. This prompt makes that
-     the central concern: it explicitly separates PRODUCT IDENTITY
-     (safe to describe from the keyword itself, e.g. "printable"
-     if the user's own product name says "printable") from PRODUCT
-     CONTENTS/SPECIFICATIONS (unsafe unless explicitly supplied).
-     Output schema/limits are unchanged from the generic path (140-
-     char title, 13 tags, 20 chars/tag, {title,tags,description}),
-     so the existing renderer and history payload work unmodified —
-     only the prompt and validation are new.
-     ============================================================ */
-  function buildDigitalPrintablePrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, validationErrors){
-    productDetails = productDetails || {};
-    validationErrors = validationErrors || [];
-
-    const knownFacts = [
-      "- Product idea (as the user typed it): " + keyword
-    ];
-    if (productDetails.material)        knownFacts.push("- Material: " + productDetails.material);
-    if (productDetails.color)           knownFacts.push("- Color: " + productDetails.color);
-    if (productDetails.size)            knownFacts.push("- Size / Dimensions: " + productDetails.size);
-    if (productDetails.personalization) knownFacts.push("- Personalization: " + productDetails.personalization);
-    if (productDetails.features)        knownFacts.push("- Key features (may include file format, number of files, sizes, editable status, template platform, license, included pages, etc. if the seller supplied them): " + productDetails.features);
-    knownFacts.push("- SEO goal: " + seoGoal);
-
-    const lines = [
-      "Act as a senior digital-product and printable-listing SEO strategist and copywriter. This is a strict factual-accuracy task, not a creative-writing task.",
-      "",
-      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
-      ...knownFacts,
-      "",
-      "=== PRODUCT IDENTITY vs. PRODUCT CONTENTS/SPECIFICATIONS — CRITICAL ===",
-      'PRODUCT IDENTITY is what the product fundamentally IS, and it is safe to state exactly as the user described it — for example if the product idea says "printable", it is safe to call it printable; if it says "digital download", it is safe to call it a digital download. Do not add hedging or remove words the user themselves used.',
-      'PRODUCT CONTENTS/SPECIFICATIONS are details about what is actually inside or how it is delivered, and these are UNSAFE to state unless explicitly supplied as a known fact above. This includes (but is not limited to): file format (PDF, JPG, PNG, SVG), resolution/DPI, number of files, page count, paper/print size (A4, US Letter, 8x10, 11x14, or similar), delivery method ("instant download" as a specific claim beyond what the product idea itself already says), license type (commercial use, personal use), editable status, template platform (Canva, Photoshop), layered files, print-at-home suitability, professional printing, or frame inclusion.',
-      "Plausibility is NOT evidence — a detail being common for this type of product does not make it true for THIS listing. If a specification was not supplied, do not guess at a specific value and do not imply one indirectly.",
-      'Do NOT use vague "safe substitute" claims such as "premium", "high quality", "professionally designed" unless directly supported by a known fact above.',
-      "",
-      "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
-      "Selected targeting option: " + audience,
-      "This tells you who the likely buyer is, to help you judge tone and genuine buyer intent. It is background context only — it is not a product fact and not a keyword to insert.",
-      'Never create a keyword merely by combining the targeting label with a product word (for example, do not produce "online shopper printable", "pinterest wall art", or similar). Do not insert phrases like "for online shoppers", "for Pinterest users", or similar targeting/audience metadata into the title, tags, or description just because that option was selected.',
-      "A term may still be used if it is independently relevant to the actual product or genuine buyer search intent. Keyword phrases must come primarily from the actual product concept, the supplied product details above, and genuine buyer search intent — not from the targeting label itself.",
-      "",
-      "=== SEO GOAL ===",
-      'The stated SEO goal is: ' + seoGoal + '. Use this as strategic guidance for how broad or narrow the keyword set should be — not as literal keyword material. Do not generate tags like "get more traffic" merely because that goal was selected.',
-      "",
-      "=== KEYWORD STRATEGY (internal reasoning — do not output this part) ===",
-      "Before writing the final tags, privately evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product: core product, product type, specific format/type (only when supplied), use case, buyer intent, audience, occasion, style, theme, room/home use, organization/planning use, gifting intent, niche, long-tail search intent. These are reasoning categories, NOT mandatory quotas — only use a cluster genuinely supported by the product and supplied facts; do not force every cluster to appear.",
-      "Prioritize: relevance, buyer intent, specificity, semantic diversity, natural search language, product accuracy, and long-tail usefulness. Do not generate weak keywords merely to fill a quota, and do not keyword-stuff.",
-      'Avoid producing many versions of the same phrase — for example "printable wall art", "printable wall decor", "wall art printable", "printable wall artwork", and "wall decor printable" are too redundant together. Some overlap is natural, but the final set should cover genuinely different search intents.',
-      "",
-      "=== OUTPUT FORMAT ===",
-      "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation, NO keyword-reasoning fields, NO intermediate work. Exactly this shape:",
-      "{",
-      '  "title": "...",',
-      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13"],',
-      '  "description": "..."',
-      "}",
-      "",
-      'TITLE RULES: Maximum 140 characters. Put the strongest product phrase early. Natural and readable, not a keyword dump. Clearly describe the actual digital/printable product. Avoid generic filler such as "Perfect for...", "Great Gift...", "Best...", "Ultimate...", "Must-have..." unless genuinely appropriate. Do not force the title to the maximum length. Do not invent specifications.',
-      "TAG RULES: Exactly 13 tags. Every tag must be non-empty, 20 characters or fewer, and a multi-word phrase (no bare single words). Every tag must be relevant to the actual product and must not state an unsupported specification. No exact duplicate tags. Prefer tags that represent genuinely different search intents over near-duplicate phrasing of the same angle.",
-      "DESCRIPTION RULES: Write a useful listing description that explains the actual product, naturally uses relevant search terms, and describes legitimate use cases the product idea itself supports — without keyword-stuffing. Do not claim specific contents, file formats, page/file counts, sizes, delivery methods, or licensing terms unless they are known facts above (for example, a \"Wedding Planning Checklist Printable\" may be described in terms of wedding planning and organization in general, but must not claim to include a budget tracker, vendor contact page, timeline, seating chart, or guest list unless supplied). Do not mention internal targeting/audience metadata (for example \"for online shoppers\", \"for Pinterest users\") just because that option was selected.",
-      "WORDS TO AVOID: " + (
-        wordsToAvoid.length
-          ? wordsToAvoid.join(", ")
-          : "None specified"
-      ) + ". Do not use any of these words or phrases anywhere in the title, tags, or description."
     ];
 
     if (validationErrors.length) {
@@ -3901,113 +3769,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
 
     const haystack = [title, description].concat(trimmedKeywords).join(" \n ").toLowerCase();
-
-    if (Array.isArray(wordsToAvoid) && wordsToAvoid.length) {
-      wordsToAvoid.forEach(word => {
-        const w = String(word || "").trim().toLowerCase();
-        if (w && haystack.includes(w)) {
-          errors.push('The word "' + String(word).trim() + '" appears in the output but is on your Words to Avoid list.');
-        }
-      });
-    }
-
-    if (audience) {
-      const contextText = String(productContext || "").toLowerCase();
-      getAudienceLeakPhrases(audience)
-        .filter(phrase => !contextText.includes(phrase))
-        .forEach(phrase => {
-          const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const re = new RegExp("\\b" + escaped + "\\b", "i");
-          if (re.test(haystack)) {
-            errors.push('The targeting label "' + audience + '" leaked into the output as "' + phrase + '" — targeting should only be strategic context, not an automatic keyword.');
-          }
-        });
-    }
-
-    return { valid: errors.length === 0, errors: errors };
-  }
-
-  /* ------------------------------------------------------------
-     DIGITAL / PRINTABLE OUTPUT VALIDATION
-     ------------------------------------------------------------
-     Same schema and limits as Etsy (140-char title, exactly 13
-     tags, 20 chars/tag, {title,tags,description}) since this
-     platform keeps the existing output format — only the prompt
-     content differs. Reuses findNearDuplicateTagPairs() and
-     getAudienceLeakPhrases() as-is. Does not call or modify
-     validateEtsyOutput() or validatePinterestOutput().
-     ------------------------------------------------------------ */
-
-  function validateDigitalPrintableOutput(parsed, wordsToAvoid, audience, productContext){
-    const errors = [];
-
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { valid: false, errors: ["The response was not a valid JSON object."] };
-    }
-
-    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
-    if (!title) {
-      errors.push("The title is missing or empty.");
-    } else if ([...title].length > 140) {
-      errors.push("The title is " + [...title].length + " characters, which exceeds the 140-character limit.");
-    }
-
-    const tagsIsArray = Array.isArray(parsed.tags);
-    if (!tagsIsArray) {
-      errors.push("The 'tags' field must be an array.");
-    } else if (parsed.tags.length !== 13) {
-      errors.push("Exactly 13 tags are required, but " + parsed.tags.length + " were returned.");
-    }
-
-    const trimmedTags = (tagsIsArray ? parsed.tags : []).map(t => (typeof t === "string" ? t.trim() : ""));
-
-    trimmedTags.forEach((t, i) => {
-      if (!t) {
-        errors.push("Tag #" + (i + 1) + " is empty.");
-        return;
-      }
-      const len = [...t].length;
-      if (len > 20) {
-        errors.push('Tag "' + t + '" is ' + len + ' characters, which exceeds the 20-character limit.');
-      }
-      if (!t.includes(" ")) {
-        errors.push('Tag "' + t + '" is a single word; every tag must be a multi-word phrase.');
-      }
-    });
-
-    const seen = new Map();
-    trimmedTags.forEach(t => {
-      if (!t) return;
-      const key = t.toLowerCase();
-      if (seen.has(key)) {
-        errors.push('Tag "' + t + '" is an exact duplicate of another tag.');
-      } else {
-        seen.set(key, true);
-      }
-    });
-
-    findNearDuplicateTagPairs(trimmedTags.filter(Boolean)).forEach(([a, b]) => {
-      if (a.toLowerCase() !== b.toLowerCase()) {
-        errors.push('Tags "' + a + '" and "' + b + '" look like near-duplicates of each other.');
-      }
-    });
-
-    const description = typeof parsed.description === "string" ? parsed.description.trim() : "";
-    if (!description) {
-      errors.push("The description is missing or empty.");
-    } else {
-      // Conservative keyword-stuffing proxy, same approach as the
-      // Pinterest validator: a real description reads as sentences
-      // (at least one period); a comma-separated keyword dump
-      // typically has neither.
-      const commaCount = (description.match(/,/g) || []).length;
-      const periodCount = (description.match(/\./g) || []).length;
-      if (commaCount >= 4 && periodCount === 0) {
-        errors.push("The description reads like a comma-separated list of keywords rather than a natural sentence — rewrite it as readable prose.");
-      }
-    }
-
-    const haystack = [title, description].concat(trimmedTags).join(" \n ").toLowerCase();
 
     if (Array.isArray(wordsToAvoid) && wordsToAvoid.length) {
       wordsToAvoid.forEach(word => {
