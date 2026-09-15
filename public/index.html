@@ -420,39 +420,6 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 }
 .field-help{ font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.4; }
 
-/* ============================================================
-   PRODUCT DETAILS (optional, collapsed by default)
-   ------------------------------------------------------------
-   Native <details>/<summary> — no extra JS needed for the
-   open/close behavior itself.
-   ============================================================ */
-.product-details-toggle{
-  margin-bottom:18px;
-  border:1.5px solid var(--border);
-  border-radius:var(--radius-sm);
-  background:var(--bg);
-  overflow:hidden;
-}
-.product-details-toggle summary{
-  cursor:pointer;
-  list-style:none;
-  padding:13px 14px;
-  font-size:13px; font-weight:700; color:var(--ink-soft);
-  display:flex; align-items:center; justify-content:space-between; gap:8px;
-}
-.product-details-toggle summary::-webkit-details-marker{ display:none; }
-.product-details-toggle summary::after{
-  content:"+"; font-size:16px; font-weight:800; color:var(--muted);
-  transition:transform .15s ease;
-}
-.product-details-toggle[open] summary::after{ content:"–"; }
-.product-details-toggle .product-details-body{
-  padding:4px 14px 14px;
-  border-top:1.5px solid var(--border);
-}
-.product-details-toggle .field{ margin-top:14px; margin-bottom:0; }
-.product-details-hint{ font-size:11.5px; color:var(--muted); padding:12px 14px 0; line-height:1.4; }
-
 .platform-picker{ position:relative; }
 .platform-trigger{
   width:100%;
@@ -1255,33 +1222,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       </div>
     </div>
 
-    <details class="product-details-toggle" id="productDetailsToggle">
-      <summary>Product details <span style="font-weight:600;color:var(--muted);">(optional — improves accuracy)</span></summary>
-      <p class="product-details-hint">Anything you fill in here is used as a real product fact. Anything left blank is treated as unknown and won't be guessed at.</p>
-      <div class="product-details-body">
-        <div class="field">
-          <label for="productMaterialInput">Material</label>
-          <input type="text" id="productMaterialInput" placeholder="e.g. genuine leather" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="productColorInput">Color</label>
-          <input type="text" id="productColorInput" placeholder="e.g. cognac brown" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="productSizeInput">Size / Dimensions</label>
-          <input type="text" id="productSizeInput" placeholder="e.g. 6 x 8 inches" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="productPersonalizationInput">Personalization</label>
-          <input type="text" id="productPersonalizationInput" placeholder="e.g. name can be embossed on the cover" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="productFeaturesInput">Key Features</label>
-          <input type="text" id="productFeaturesInput" placeholder="e.g. refillable, elastic closure" autocomplete="off">
-        </div>
-      </div>
-    </details>
-
     <div class="field">
       <label for="categorySelect">Platform / category</label>
       <div class="platform-picker" id="platformPicker">
@@ -1729,11 +1669,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const generatorForm  = $("generatorForm");
   const keywordInput   = $("keywordInput");
   const keywordError   = $("keywordError");
-  const productMaterialInput = $("productMaterialInput");
-  const productColorInput = $("productColorInput");
-  const productSizeInput = $("productSizeInput");
-  const productPersonalizationInput = $("productPersonalizationInput");
-  const productFeaturesInput = $("productFeaturesInput");
   const categorySelect = $("categorySelect");
   const audienceSelect = $("audienceSelect");
   const customAudienceField = $("customAudienceField");
@@ -2966,17 +2901,13 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       .map(word => word.trim())
       .filter(Boolean);
 
-    const productDetails = {
-      material: productMaterialInput.value.trim(),
-      color: productColorInput.value.trim(),
-      size: productSizeInput.value.trim(),
-      personalization: productPersonalizationInput.value.trim(),
-      features: productFeaturesInput.value.trim()
-    };
-
-    const prompt = category === "Etsy"
-      ? buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
-      : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+    const prompt = buildPrompt(
+      keyword,
+      category,
+      audience,
+      seoGoal,
+      wordsToAvoid
+    );
 
     try {
       const result = await callGenerate(prompt);
@@ -2991,55 +2922,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       }
 
       const outputType = getOutputType(category);
-      let parsed = extractJSON(result.data.text);
-      let serverState = result.data;
+      const parsed = extractJSON(result.data.text);
 
-      if (category === "Etsy") {
-
-        // Real, blocking validation (format + the mechanical checks
-        // described in the spec) — never render an invalid Etsy
-        // result. On failure, retry exactly once with the specific
-        // validation failures fed back to the model as a correction
-        // instruction.
-        let validation = validateEtsyOutput(parsed, wordsToAvoid);
-
-        if (!validation.valid) {
-
-          const retryPrompt = buildEtsyPrompt(
-            keyword,
-            productDetails,
-            audience,
-            seoGoal,
-            wordsToAvoid,
-            validation.errors
-          );
-
-          const retryResult = await callGenerate(retryPrompt);
-
-          if (retryResult.status === 402) {
-            applyServerState(retryResult.data);
-            if (!isPro) {
-              openModal(paywallModal);
-            }
-            showToast(retryResult.data.error || "You're out of credits.", "error");
-            return;
-          }
-
-          serverState = retryResult.data;
-          parsed = extractJSON(retryResult.data.text);
-          validation = validateEtsyOutput(parsed, wordsToAvoid);
-
-          if (!validation.valid) {
-            throw new Error("The AI couldn't produce a valid Etsy listing after a retry. Please try again or adjust your inputs.");
-          }
-        }
-
-      } else {
-        validateParsedOutput(outputType, parsed);
-      }
+      validateParsedOutput(outputType, parsed);
 
       const activeSection = renderOutputByType(outputType, parsed, category);
-      applyServerState(serverState);
+      applyServerState(result.data);
 
       saveHistoryEntry({
         keyword: keyword,
@@ -3056,8 +2944,8 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
       showToast(
         isPro ? "SEO listing generated!" :
-        (typeof serverState.credits_remaining === "number" && serverState.credits_remaining > 0) ?
-          "SEO listing generated! " + serverState.credits_remaining + (serverState.credits_remaining === 1 ? " credit" : " credits") + " left." :
+        (typeof result.data.credits_remaining === "number" && result.data.credits_remaining > 0) ?
+          "SEO listing generated! " + result.data.credits_remaining + (result.data.credits_remaining === 1 ? " credit" : " credits") + " left." :
         "SEO listing generated!",
         "success"
       );
@@ -3074,11 +2962,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   /* ============================================================
      PROMPT BUILDER
      ------------------------------------------------------------
-     buildPrompt() calls buildStandardPrompt() — the ORIGINAL
-     function body, byte-for-byte, unchanged. It is now used for
-     the 3 non-Etsy platforms only (Digital/Printable, Print on
-     Demand, Pinterest). Etsy has its own buildEtsyPrompt() below;
-     handleGenerate() picks which one to call based on category.
+     buildPrompt() just calls buildStandardPrompt() — the ORIGINAL
+     function body, byte-for-byte, used for all 4 platforms
+     (Etsy/Digital/POD/Pinterest).
      ============================================================ */
   function buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
     return buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
@@ -3111,88 +2997,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       "STRICT RULES FOR TITLE: Under 140 characters, keyword-rich but naturally readable, not a keyword dump, written for the stated Target Audience and SEO Goal above."
     ].join("\n");
   }
-
-  /* ============================================================
-     ETSY PROMPT BUILDER (dedicated — Etsy no longer uses
-     buildStandardPrompt())
-     ------------------------------------------------------------
-     Implements the fact-boundary design from the Etsy SEO engine
-     spec:
-       - Only user-supplied product details are ever asserted as
-         facts (KNOWN FACTS block below, built only from non-empty
-         fields).
-       - Every attribute NOT supplied is explicitly declared
-         unknown and off-limits, including vague "safe substitute"
-         quality language ("premium", "durable", etc.) that isn't
-         backed by a known fact.
-       - The model is asked to privately reason through which
-         search-intent angles genuinely apply before writing the
-         13 tags, but is explicitly told not to output that
-         reasoning — only the final {title, tags, description}
-         object, per the required output architecture.
-       - An optional validationErrors array turns this into a
-         single-retry correction prompt: when non-empty, it's
-         appended as a "fix these exact issues" section so the
-         retry is a targeted correction, not a blind re-roll.
-     ============================================================ */
-  function buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, validationErrors){
-    productDetails = productDetails || {};
-    validationErrors = validationErrors || [];
-
-    const knownFacts = [
-      "- Product idea: " + keyword
-    ];
-    if (productDetails.material)        knownFacts.push("- Material: " + productDetails.material);
-    if (productDetails.color)           knownFacts.push("- Color: " + productDetails.color);
-    if (productDetails.size)            knownFacts.push("- Size / Dimensions: " + productDetails.size);
-    if (productDetails.personalization) knownFacts.push("- Personalization: " + productDetails.personalization);
-    if (productDetails.features)        knownFacts.push("- Key features: " + productDetails.features);
-    knownFacts.push("- Target audience: " + audience);
-    knownFacts.push("- SEO goal: " + seoGoal);
-
-    const lines = [
-      "Act as a senior Etsy SEO strategist and listing copywriter. This is a strict factual-accuracy task, not a creative-writing task.",
-      "",
-      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
-      ...knownFacts,
-      "",
-      "=== UNKNOWN FACTS — DO NOT INVENT ===",
-      "Any product attribute NOT listed above as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, shipping details, delivery times, quality claims, packaging, personalization capabilities, quantities, file formats, and measurements.",
-      'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", "top quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact above. If you have nothing factual to say about a dimension, omit it rather than filling the gap with unsupported language.',
-      "",
-      "=== KEYWORD STRATEGY (internal reasoning — do not output this part) ===",
-      "Before writing the final tags, privately consider which of these search-intent angles genuinely apply to THIS product: core product, product variant, audience, personalization, occasion, gift intent, use case, style, theme, other relevant intent. These are NOT mandatory — only use angles that genuinely fit. Prioritize, in order: (1) direct relevance to the actual product, (2) real buyer/search intent, (3) specificity, (4) diversity across different search-intent angles, (5) natural, readable language. Do not invent an angle just to fill a slot, and do not pad the 13 tags with near-synonyms of each other just to reach the count.",
-      "",
-      "=== OUTPUT FORMAT ===",
-      "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation, NO keyword-reasoning fields, NO intermediate work. Exactly this shape:",
-      "{",
-      '  "title": "...",',
-      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13"],',
-      '  "description": "..."',
-      "}",
-      "",
-      "TITLE RULES: Maximum 140 characters. Put the primary product phrase naturally near the beginning when it reads well. Natural and readable, not a keyword dump. No repetitive synonym chains. No unsupported product attributes.",
-      "TAG RULES: Exactly 13 tags. Every tag must be non-empty, 20 characters or fewer, and a multi-word phrase (no bare single words). Every tag must be relevant to the actual product and must not state an unsupported factual attribute. No exact duplicate tags. Prefer tags that represent genuinely different search-intent angles over near-duplicate phrasing of the same angle — but do not force artificial diversity where it doesn't fit the product.",
-      "DESCRIPTION RULES: Write a useful Etsy description using ONLY the known facts and the stated audience/goal above, plus general non-specific framing (use-case, occasion, gift-worthiness) where it doesn't require inventing a fact. Do not add unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production, or packaging.",
-      "WORDS TO AVOID: " + (
-        wordsToAvoid.length
-          ? wordsToAvoid.join(", ")
-          : "None specified"
-      ) + ". Do not use any of these words or phrases anywhere in the title, tags, or description."
-    ];
-
-    if (validationErrors.length) {
-      lines.push(
-        "",
-        "=== YOUR PREVIOUS ATTEMPT FAILED VALIDATION — FIX THESE EXACT ISSUES ===",
-        ...validationErrors.map(e => "- " + e),
-        "Return a corrected JSON object that fixes every issue above while still following all the rules stated earlier."
-      );
-    }
-
-    return lines.join("\n");
-  }
-
   /* ============================================================
      CLOUDFLARE PAGES FUNCTION CALL
      ============================================================ */
@@ -3318,137 +3122,16 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   /* ============================================================
      OUTPUT VALIDATION + RENDER
      ------------------------------------------------------------
-     validateParsedOutput() is the original thin format check,
-     still used as-is for the 3 non-Etsy platforms. Etsy uses the
-     dedicated validateEtsyOutput() below instead, which performs
-     real blocking validation (exact tag count, per-tag length,
-     duplicates, near-duplicates, words-to-avoid) rather than only
-     checking that the fields exist.
+     validateParsedOutput() and renderOutputByType() are thin
+     wrappers around the original renderOutput()/validation logic.
+     Multi-platform output types were removed; only the standard
+     Etsy/Digital/POD/Pinterest shape is supported now.
      ============================================================ */
 
   function validateParsedOutput(outputType, parsed){
     if (!parsed.title || !Array.isArray(parsed.tags) || !parsed.description) {
       throw new Error("Received an unexpected response format. Please try again.");
     }
-  }
-
-  /* ------------------------------------------------------------
-     ETSY NEAR-DUPLICATE HEURISTIC
-     ------------------------------------------------------------
-     Deliberately conservative: two tags are only flagged if their
-     word sequences are identical once each word is naively
-     singularized (drop a trailing "s" on words longer than 3
-     characters). This catches "dog mom gift" vs "dog mom gifts"
-     (only the last word differs by pluralization) but does NOT
-     flag "dog mom gift" vs "dog mom sweatshirt" (the words differ,
-     not just their plural form) — it will not catch reordered or
-     loosely-related tags, which is intentional to avoid rejecting
-     legitimate tags that merely share important product words.
-     ------------------------------------------------------------ */
-
-  function normalizeTagForDuplicateCheck(tag){
-    return String(tag)
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .split(/\s+/)
-      .filter(Boolean)
-      .map(word => (word.length > 3 && word.endsWith("s")) ? word.slice(0, -1) : word)
-      .join(" ");
-  }
-
-  function findNearDuplicateTagPairs(tags){
-    const normalized = tags.map(normalizeTagForDuplicateCheck);
-    const pairs = [];
-    for (let i = 0; i < normalized.length; i++){
-      for (let j = i + 1; j < normalized.length; j++){
-        if (normalized[i] && normalized[i] === normalized[j]){
-          pairs.push([tags[i], tags[j]]);
-        }
-      }
-    }
-    return pairs;
-  }
-
-  /* ------------------------------------------------------------
-     ETSY OUTPUT VALIDATION
-     ------------------------------------------------------------
-     Real blocking validation — returns { valid, errors }. errors
-     are human-readable AND written so they can be fed straight
-     back into buildEtsyPrompt()'s validationErrors correction
-     section on retry.
-     ------------------------------------------------------------ */
-
-  function validateEtsyOutput(parsed, wordsToAvoid){
-    const errors = [];
-
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { valid: false, errors: ["The response was not a valid JSON object."] };
-    }
-
-    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
-    if (!title) {
-      errors.push("The title is missing or empty.");
-    } else if ([...title].length > 140) {
-      errors.push("The title is " + [...title].length + " characters, which exceeds the 140-character limit.");
-    }
-
-    const tagsIsArray = Array.isArray(parsed.tags);
-    if (!tagsIsArray) {
-      errors.push("The 'tags' field must be an array.");
-    } else if (parsed.tags.length !== 13) {
-      errors.push("Exactly 13 tags are required, but " + parsed.tags.length + " were returned.");
-    }
-
-    const trimmedTags = (tagsIsArray ? parsed.tags : []).map(t => (typeof t === "string" ? t.trim() : ""));
-
-    trimmedTags.forEach((t, i) => {
-      if (!t) {
-        errors.push("Tag #" + (i + 1) + " is empty.");
-        return;
-      }
-      const len = [...t].length;
-      if (len > 20) {
-        errors.push('Tag "' + t + '" is ' + len + ' characters, which exceeds the 20-character limit.');
-      }
-      if (!t.includes(" ")) {
-        errors.push('Tag "' + t + '" is a single word; every tag must be a multi-word phrase.');
-      }
-    });
-
-    const seen = new Map();
-    trimmedTags.forEach(t => {
-      if (!t) return;
-      const key = t.toLowerCase();
-      if (seen.has(key)) {
-        errors.push('Tag "' + t + '" is an exact duplicate of another tag.');
-      } else {
-        seen.set(key, true);
-      }
-    });
-
-    findNearDuplicateTagPairs(trimmedTags.filter(Boolean)).forEach(([a, b]) => {
-      if (a.toLowerCase() !== b.toLowerCase()) {
-        errors.push('Tags "' + a + '" and "' + b + '" look like near-duplicates of each other.');
-      }
-    });
-
-    const description = typeof parsed.description === "string" ? parsed.description.trim() : "";
-    if (!description) {
-      errors.push("The description is missing or empty.");
-    }
-
-    if (Array.isArray(wordsToAvoid) && wordsToAvoid.length) {
-      const haystack = [title, description].concat(trimmedTags).join(" \n ").toLowerCase();
-      wordsToAvoid.forEach(word => {
-        const w = String(word || "").trim().toLowerCase();
-        if (w && haystack.includes(w)) {
-          errors.push('The word "' + String(word).trim() + '" appears in the output but is on your Words to Avoid list.');
-        }
-      });
-    }
-
-    return { valid: errors.length === 0, errors: errors };
   }
 
   function hideAllOutputSections(){
