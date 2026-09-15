@@ -1428,6 +1428,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         <button type="button" class="copy-btn" id="copyDescBtn">Copy Description</button>
       </div>
       <p class="desc-output" id="descOutput"></p>
+      <p class="char-count" id="descCharCount"></p>
     </div>
 
   </section>
@@ -1759,6 +1760,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const tagsWrap       = $("tagsWrap");
   const tagsRaw        = $("tagsRaw");
   const descOutput     = $("descOutput");
+  const descCharCount  = $("descCharCount");
 
   const copyTitleBtn = $("copyTitleBtn");
   const copyTagsBtn  = $("copyTagsBtn");
@@ -2396,21 +2398,22 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   function getTagLimitInfo(category){
     switch (category) {
       case "Etsy":
-        return { heading: "13 Exact SEO Tags", note: "Etsy: 13 tags generated · max 20 characters per tag", maxChars: 20 };
+        return { heading: "13 Exact SEO Tags", note: "Etsy: 13 tags generated · max 20 characters per tag", maxChars: 20, copyLabel: "Copy All 13 Tags" };
       case "Print on Demand":
-        return { heading: "13 SEO Tags", note: "Print on Demand: 13 tags generated · platform limits vary", maxChars: 20 };
+        return { heading: "13 SEO Tags", note: "Print on Demand: 13 tags generated · platform limits vary", maxChars: 20, copyLabel: "Copy All 13 Tags" };
       case "Digital / Printable":
-        return { heading: "13 SEO Tags", note: "Digital / Printable: 13 tags generated · platform limits vary", maxChars: 20 };
+        return { heading: "13 SEO Tags", note: "Digital / Printable: 13 tags generated · platform limits vary", maxChars: 20, copyLabel: "Copy All 13 Tags" };
       case "Pinterest":
-        return { heading: "13 SEO Tags", note: "Pinterest: 13 keywords generated · use platform-appropriate hashtags/keywords", maxChars: 20 };
+        return { heading: "15 SEO Keywords", note: "Pinterest: 15 SEO keyword phrases generated · no official per-keyword limit", maxChars: 20, copyLabel: "Copy All Keywords" };
       default:
-        return { heading: "13 SEO Tags", note: "13 tags generated · max 20 characters per tag", maxChars: 20 };
+        return { heading: "13 SEO Tags", note: "13 tags generated · max 20 characters per tag", maxChars: 20, copyLabel: "Copy All 13 Tags" };
     }
   }
 
   function updateTagLimitUI(category){
     const info = getTagLimitInfo(category);
     tagsHeading.textContent = info.heading;
+    copyTagsBtn.textContent = info.copyLabel;
     const parts = info.note.split(":");
     if (parts.length > 1) {
       tagLimitNote.innerHTML = "<strong>" + escapeHTML(parts[0]) + ":</strong>" + escapeHTML(parts.slice(1).join(":"));
@@ -2985,7 +2988,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     const prompt = category === "Etsy"
       ? buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
-      : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+      : category === "Pinterest"
+        ? buildPinterestPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
+        : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
 
     try {
       const result = await callGenerate(prompt);
@@ -3040,6 +3045,44 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
           if (!validation.valid) {
             throw new Error("The AI couldn't produce a valid Etsy listing after a retry. Please try again or adjust your inputs.");
+          }
+        }
+
+      } else if (category === "Pinterest") {
+
+        // Same real-validation + single-retry architecture as Etsy,
+        // built as its own parallel branch (not a shared helper) so
+        // the Etsy branch above is never touched by this addition.
+        let validation = validatePinterestOutput(parsed, wordsToAvoid, audience, productContextText);
+
+        if (!validation.valid) {
+
+          const retryPrompt = buildPinterestPrompt(
+            keyword,
+            productDetails,
+            audience,
+            seoGoal,
+            wordsToAvoid,
+            validation.errors
+          );
+
+          const retryResult = await callGenerate(retryPrompt);
+
+          if (retryResult.status === 402) {
+            applyServerState(retryResult.data);
+            if (!isPro) {
+              openModal(paywallModal);
+            }
+            showToast(retryResult.data.error || "You're out of credits.", "error");
+            return;
+          }
+
+          serverState = retryResult.data;
+          parsed = extractJSON(retryResult.data.text);
+          validation = validatePinterestOutput(parsed, wordsToAvoid, audience, productContextText);
+
+          if (!validation.valid) {
+            throw new Error("The AI couldn't produce a valid Pinterest SEO package after a retry. Please try again or adjust your inputs.");
           }
         }
 
@@ -3217,6 +3260,93 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   /* ============================================================
+     PINTEREST PROMPT BUILDER (dedicated — genuinely Pinterest-
+     specific, not the Etsy prompt with words swapped)
+     ------------------------------------------------------------
+     Pinterest is a visual discovery/search platform, not an
+     exact-match tag marketplace like Etsy:
+       - 15 SEO keyword phrases (a TagPulse product-format choice,
+         not a claimed Pinterest official rule) instead of Etsy's
+         13-tag / 20-character system — no per-keyword character
+         cap is enforced.
+       - Pin title: 100-character Pinterest limit, front-loaded,
+         not forced to the limit.
+       - Pin description: 500-character Pinterest limit, natural
+         prose that incorporates keywords — not a concatenated
+         keyword list.
+       - Output field is "keywords", not "tags".
+     Shares the same fact-boundary and audience-context philosophy
+     as buildEtsyPrompt (kept consistent on purpose), but every
+     rule below is written for Pinterest specifically.
+     ============================================================ */
+  function buildPinterestPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, validationErrors){
+    productDetails = productDetails || {};
+    validationErrors = validationErrors || [];
+
+    const knownFacts = [
+      "- Product/topic idea: " + keyword
+    ];
+    if (productDetails.material)        knownFacts.push("- Material: " + productDetails.material);
+    if (productDetails.color)           knownFacts.push("- Color: " + productDetails.color);
+    if (productDetails.size)            knownFacts.push("- Size / Dimensions: " + productDetails.size);
+    if (productDetails.personalization) knownFacts.push("- Personalization: " + productDetails.personalization);
+    if (productDetails.features)        knownFacts.push("- Key features: " + productDetails.features);
+
+    const lines = [
+      "Act as a senior Pinterest SEO strategist and Pin copywriter. This is a strict factual-accuracy task, not a creative-writing task. Pinterest is a visual discovery/search platform — treat it differently from an exact-match marketplace tag system.",
+      "",
+      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
+      ...knownFacts,
+      "",
+      "=== UNKNOWN FACTS — DO NOT INVENT ===",
+      "Any product attribute NOT listed above as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, file formats, DPI, resolution, number of files, download status, compatibility, shipping details, pricing, guarantees, personalization workflow, and measurements.",
+      'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact above.',
+      "",
+      "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
+      "Selected targeting option: " + audience,
+      "This tells you who the likely Pinterest searcher is, to help you judge tone and genuine search intent. It is background context only — it is not a keyword to insert.",
+      'Never create a keyword merely by combining the targeting label with a product word (for example, do not produce "pinterest users gift", "online shoppers find", or similar). Do not insert phrases like "for Pinterest users", "for online shoppers", or similar targeting/audience metadata into the title, keywords, or description just because that option was selected.',
+      "A term may still be used if it is independently relevant to the actual product/topic or genuine search intent — the rule is only against mechanically converting the UI targeting label into SEO text. Keyword phrases must come primarily from the actual product/topic concept, the supplied product details above, and genuine Pinterest search/discovery intent — not from the targeting label itself.",
+      "",
+      "=== SEO GOAL ===",
+      'The stated SEO goal is: ' + seoGoal + '. Use this as strategic guidance for keyword breadth and search intent — not as literal keyword material. Do not generate keywords like "get more traffic" or "increase traffic" merely because that goal was selected.',
+      "",
+      "=== KEYWORD STRATEGY (internal reasoning — do not output this part) ===",
+      "Before writing the final 15 keywords, privately evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product/topic: core topic/product, specific product/topic variation, problem or need, use case, audience intent, style/aesthetic, theme, occasion/season (only when genuinely relevant), inspiration/idea intent, related niche, long-tail search phrase. These are reasoning categories, NOT mandatory quotas — only use a cluster that is genuinely supported by the product and supplied facts; do not force every cluster to appear and do not generate random broad keywords just to fill 15 slots.",
+      "Prioritize: relevance, genuine search intent, specificity, natural language, semantic diversity, long-tail usefulness, consistency with the actual product/topic, and genuine Pinterest discovery intent.",
+      'Avoid generating 15 versions of the same phrase — for example "minimalist desk setup", "minimalist desk setup ideas", "minimalist desk setup inspiration", "minimalist desk setup aesthetic", and "minimalist desk setup workspace" are too redundant together. Some overlap is natural, but the set should provide genuinely different search angles. Every keyword must be directly defensible from the user\'s product/topic — do not keyword-stuff and do not pad with random broad keywords just to reach 15.',
+      "",
+      "=== OUTPUT FORMAT ===",
+      "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation, NO keyword-reasoning fields, NO intermediate work. Exactly this shape:",
+      "{",
+      '  "title": "...",',
+      '  "keywords": ["keyword1","keyword2","keyword3","keyword4","keyword5","keyword6","keyword7","keyword8","keyword9","keyword10","keyword11","keyword12","keyword13","keyword14","keyword15"],',
+      '  "description": "..."',
+      "}",
+      "",
+      'PIN TITLE RULES: Maximum 100 characters. Place the strongest primary search phrase early — the first ~40 characters are especially important since they are more likely to be displayed. Clearly communicate what the Pin is about. Natural language, attractive to someone browsing Pinterest. Avoid unnecessary repetition and generic filler such as "Perfect for...", "Great for...", "Best...", "Ultimate...", "Must-have..." unless genuinely appropriate. Do not force the title to 100 characters — a strong 55-character title is better than a stuffed 100-character title. No unsupported product attributes.',
+      "KEYWORD RULES: Exactly 15 keyword phrases. Every keyword must be a non-empty, reasonably concise phrase directly defensible from the actual product/topic. No exact duplicate keywords. Avoid near-duplicate keywords that are just grammatical variations of the same phrase (for example \"dog mom gift\" and \"dog mom gifts\") — prefer genuinely different search angles instead; genuinely different angles that happen to share words (for example \"dog mom gift\" and \"dog mom ideas\") are fine together. Do not state an unsupported factual attribute in any keyword.",
+      'PIN DESCRIPTION RULES: Maximum 500 characters. Explain what the Pin offers and naturally weave relevant keywords into readable sentences — do NOT simply concatenate a list of keywords like "keyword one, keyword two, keyword three". Match Pinterest discovery intent, remain human-readable, and encourage a relevant action when appropriate. Do not add unsupported claims about materials, dimensions, colors, file formats, download status, number of files, resolution, printing specifications, shipping, pricing, product features, personalization workflow, compatibility, or guarantees. Do not mention internal targeting/audience metadata (for example "for online shoppers", "for Pinterest users") just because that option was selected.',
+      "WORDS TO AVOID: " + (
+        wordsToAvoid.length
+          ? wordsToAvoid.join(", ")
+          : "None specified"
+      ) + ". Do not use any of these words or phrases anywhere in the title, keywords, or description."
+    ];
+
+    if (validationErrors.length) {
+      lines.push(
+        "",
+        "=== YOUR PREVIOUS ATTEMPT FAILED VALIDATION — FIX THESE EXACT ISSUES ===",
+        ...validationErrors.map(e => "- " + e),
+        "Return a corrected JSON object that fixes every issue above while still following all the rules stated earlier."
+      );
+    }
+
+    return lines.join("\n");
+  }
+
+  /* ============================================================
      CLOUDFLARE PAGES FUNCTION CALL
      ============================================================ */
   async function callGenerate(prompt){
@@ -3298,6 +3428,46 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     tagsRaw.value = tags.join(", ");
 
     descOutput.textContent = String(parsed.description).trim();
+
+    outputSection.classList.remove("hidden");
+  }
+
+  /* ============================================================
+     PINTEREST OUTPUT RENDERER
+     ------------------------------------------------------------
+     Reuses the same three-card DOM/visual language as renderOutput
+     (per "reuse existing visual language, don't redesign the
+     interface"), but reads parsed.keywords (not .tags), uses
+     Pinterest's own character limits, doesn't apply Etsy's 20-char
+     "over limit" flag (Pinterest has no such official limit), and
+     labels the section "SEO Keywords" instead of "SEO Tags". Does
+     not call or modify renderOutput().
+     ============================================================ */
+  function renderPinterestOutput(parsed, category){
+    const title = String(parsed.title).trim();
+    titleOutput.textContent = title;
+    titleCharCount.textContent = title.length + " / 100 characters";
+    previewTitle.textContent = title;
+    previewCategory.textContent = category;
+    updateRiskAlert([keywordInput.value, title, (parsed.keywords || []).join(" ")].join(" "));
+    updateTagLimitUI(category);
+
+    tagsWrap.innerHTML = "";
+    const keywords = parsed.keywords.slice(0, 15).map(k => String(k).trim()).filter(Boolean);
+    keywords.forEach((kw, i) => {
+      const chip = document.createElement("span");
+      const length = [...kw].length;
+      chip.className = "tag-chip";
+      chip.style.animationDelay = (i * 0.03) + "s";
+      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(kw) + '<span class="tag-count" title="Character count">' + length + '</span>';
+      appendTagCopyButton(chip, kw);
+      tagsWrap.appendChild(chip);
+    });
+    tagsRaw.value = keywords.join(", ");
+
+    const description = String(parsed.description).trim();
+    descOutput.textContent = description;
+    descCharCount.textContent = [...description].length + " / 500 characters";
 
     outputSection.classList.remove("hidden");
   }
@@ -3520,13 +3690,123 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     return { valid: errors.length === 0, errors: errors };
   }
 
+  /* ------------------------------------------------------------
+     PINTEREST OUTPUT VALIDATION
+     ------------------------------------------------------------
+     Dedicated Pinterest validator — a 15-keyword, 100-char-title,
+     500-char-description schema, not Etsy's. Deliberately reuses
+     findNearDuplicateTagPairs() and getAudienceLeakPhrases() as-is
+     (both are already generic string-array helpers, not Etsy-
+     specific) rather than duplicating that logic. Does not call
+     or modify validateEtsyOutput().
+     ------------------------------------------------------------ */
+
+  function validatePinterestOutput(parsed, wordsToAvoid, audience, productContext){
+    const errors = [];
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { valid: false, errors: ["The response was not a valid JSON object."] };
+    }
+
+    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
+    if (!title) {
+      errors.push("The title is missing or empty.");
+    } else if ([...title].length > 100) {
+      errors.push("The title is " + [...title].length + " characters, which exceeds Pinterest's 100-character limit.");
+    }
+
+    const keywordsIsArray = Array.isArray(parsed.keywords);
+    if (!keywordsIsArray) {
+      errors.push("The 'keywords' field must be an array.");
+    } else if (parsed.keywords.length !== 15) {
+      errors.push("Exactly 15 keywords are required, but " + parsed.keywords.length + " were returned.");
+    }
+
+    const trimmedKeywords = (keywordsIsArray ? parsed.keywords : []).map(k => (typeof k === "string" ? k.trim() : ""));
+
+    trimmedKeywords.forEach((k, i) => {
+      if (!k) {
+        errors.push("Keyword #" + (i + 1) + " is empty.");
+        return;
+      }
+      const len = [...k].length;
+      if (len > 60) {
+        errors.push('Keyword "' + k + '" is ' + len + ' characters, which is too long to be a reasonably concise keyword phrase.');
+      }
+    });
+
+    const seen = new Map();
+    trimmedKeywords.forEach(k => {
+      if (!k) return;
+      const key = k.toLowerCase();
+      if (seen.has(key)) {
+        errors.push('Keyword "' + k + '" is an exact duplicate of another keyword.');
+      } else {
+        seen.set(key, true);
+      }
+    });
+
+    findNearDuplicateTagPairs(trimmedKeywords.filter(Boolean)).forEach(([a, b]) => {
+      if (a.toLowerCase() !== b.toLowerCase()) {
+        errors.push('Keywords "' + a + '" and "' + b + '" look like near-duplicates of each other.');
+      }
+    });
+
+    const description = typeof parsed.description === "string" ? parsed.description.trim() : "";
+    if (!description) {
+      errors.push("The description is missing or empty.");
+    } else if ([...description].length > 500) {
+      errors.push("The description is " + [...description].length + " characters, which exceeds Pinterest's 500-character limit.");
+    } else {
+      // Conservative keyword-stuffing proxy: a real description is
+      // written in sentences (has at least one period); a comma-
+      // separated keyword dump typically has neither.
+      const commaCount = (description.match(/,/g) || []).length;
+      const periodCount = (description.match(/\./g) || []).length;
+      if (commaCount >= 4 && periodCount === 0) {
+        errors.push("The description reads like a comma-separated list of keywords rather than a natural sentence — rewrite it as readable prose.");
+      }
+    }
+
+    const haystack = [title, description].concat(trimmedKeywords).join(" \n ").toLowerCase();
+
+    if (Array.isArray(wordsToAvoid) && wordsToAvoid.length) {
+      wordsToAvoid.forEach(word => {
+        const w = String(word || "").trim().toLowerCase();
+        if (w && haystack.includes(w)) {
+          errors.push('The word "' + String(word).trim() + '" appears in the output but is on your Words to Avoid list.');
+        }
+      });
+    }
+
+    if (audience) {
+      const contextText = String(productContext || "").toLowerCase();
+      getAudienceLeakPhrases(audience)
+        .filter(phrase => !contextText.includes(phrase))
+        .forEach(phrase => {
+          const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp("\\b" + escaped + "\\b", "i");
+          if (re.test(haystack)) {
+            errors.push('The targeting label "' + audience + '" leaked into the output as "' + phrase + '" — targeting should only be strategic context, not an automatic keyword.');
+          }
+        });
+    }
+
+    return { valid: errors.length === 0, errors: errors };
+  }
+
   function hideAllOutputSections(){
     outputSection.classList.add("hidden");
   }
 
   function renderOutputByType(outputType, parsed, category){
     hideAllOutputSections();
-    renderOutput(parsed, category);
+    descCharCount.textContent = "";
+    if (category === "Pinterest") {
+      renderPinterestOutput(parsed, category);
+    } else {
+      renderOutput(parsed, category);
+    }
     return outputSection;
   }
 
@@ -3541,7 +3821,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      COPY TO CLIPBOARD (with mobile/webview fallback)
      ============================================================ */
   copyTitleBtn.addEventListener("click", () => copyText(titleOutput.textContent, copyTitleBtn, "Copy Title"));
-  copyTagsBtn.addEventListener("click", () => copyText(tagsRaw.value, copyTagsBtn, "Copy All 13 Tags"));
+  copyTagsBtn.addEventListener("click", () => copyText(tagsRaw.value, copyTagsBtn, copyTagsBtn.textContent));
   copyDescBtn.addEventListener("click", () => copyText(descOutput.textContent, copyDescBtn, "Copy Description"));
 
   async function copyText(text, btn, originalLabel){
