@@ -2994,8 +2994,33 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           ? buildDigitalPrintablePrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
           : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
 
+    // -----------------------------------------------------------
+    // DIAGNOSTIC LOGGING ONLY (Etsy) — tracks which network stage
+    // is in flight so a failure can be attributed to request #1
+    // vs the validation retry. Does not affect any generation
+    // behavior. Never logs the prompt, product detail values,
+    // tokens, or keys — only a boolean and HTTP-level facts.
+    // -----------------------------------------------------------
+    const hasProductDetails = !!(
+      productDetails.material ||
+      productDetails.color ||
+      productDetails.size ||
+      productDetails.personalization ||
+      productDetails.features
+    );
+    let etsyStage = null;
+
+    if (category === "Etsy") {
+      etsyStage = "request-1";
+      console.log("[TagPulse][Etsy] request #1 starting", { hasProductDetails: hasProductDetails });
+    }
+
     try {
       const result = await callGenerate(prompt);
+
+      if (category === "Etsy") {
+        console.log("[TagPulse][Etsy] request #1 completed", { status: result.status });
+      }
 
       if (result.status === 402) {
         applyServerState(result.data);
@@ -3019,6 +3044,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         // instruction.
         let validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
 
+        console.log(
+          "[TagPulse][Etsy] first validation " + (validation.valid ? "passed" : "failed"),
+          validation.valid ? undefined : validation.errors
+        );
+
         if (!validation.valid) {
 
           const retryPrompt = buildEtsyPrompt(
@@ -3030,7 +3060,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
             validation.errors
           );
 
+          etsyStage = "request-2-retry";
+          console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: hasProductDetails });
+
           const retryResult = await callGenerate(retryPrompt);
+
+          console.log("[TagPulse][Etsy] retry (request #2) completed", { status: retryResult.status });
 
           if (retryResult.status === 402) {
             applyServerState(retryResult.data);
@@ -3044,6 +3079,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           serverState = retryResult.data;
           parsed = extractJSON(retryResult.data.text);
           validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
+
+          console.log(
+            "[TagPulse][Etsy] retry validation " + (validation.valid ? "passed" : "failed"),
+            validation.valid ? undefined : validation.errors
+          );
 
           if (!validation.valid) {
             throw new Error("The AI couldn't produce a valid Etsy listing after a retry. Please try again or adjust your inputs.");
@@ -3161,7 +3201,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       activeSection.scrollIntoView({ behavior: "smooth", block: "start" });
 
     } catch (err) {
-      console.error(err);
+      if (etsyStage) {
+        console.error(
+          "[TagPulse][Etsy] generation failed during " + etsyStage +
+          " — " + (err instanceof TypeError ? "network-level fetch rejection" : "handled error"),
+          err
+        );
+      } else {
+        console.error(err);
+      }
       showToast(err.message || "Something went wrong. Please try again.", "error");
     } finally {
       setGenerating(false);
