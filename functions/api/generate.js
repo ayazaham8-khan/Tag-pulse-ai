@@ -939,13 +939,15 @@ export async function onRequestPost(context) {
 
     if (
       err &&
-      err.message === "GROQ_TIMEOUT"
+      err.category === "timeout"
     ) {
 
       return jsonResponse(
         {
           error:
-            "The AI took too long to respond. Please try again."
+            "The AI took too long to respond (model: " +
+            (err.groqModel || GROQ_MODEL_PRIMARY) +
+            "). Please try again."
         },
         504,
         corsHeaders
@@ -959,7 +961,13 @@ export async function onRequestPost(context) {
 
     console.error(
       "Unhandled /api/generate error:",
-      err
+      err && err.bothFailed
+        ? {
+            primary: err.primary,
+            fallback: err.fallback,
+            availability: err.availability
+          }
+        : (describeGroqError(err) || (err && err.message) || err)
     );
 
 
@@ -970,7 +978,9 @@ export async function onRequestPost(context) {
             ? err.message
             : "Something went wrong generating your SEO listing."
       },
-      502,
+      (err && typeof err.groqStatus === "number")
+        ? err.groqStatus
+        : 502,
       corsHeaders
     );
   }
@@ -1499,6 +1509,8 @@ async function callGroq(
   apiKey
 ) {
 
+  let primaryErr;
+
   try {
 
     return await callGroqModel(
@@ -1509,28 +1521,78 @@ async function callGroq(
 
   } catch (err) {
 
+    primaryErr = err;
+
     if (
-      err &&
-      err.message === "GROQ_TIMEOUT"
+      primaryErr &&
+      primaryErr.category === "timeout"
     ) {
 
-      throw err;
+      // Unchanged behavior: a primary timeout does not attempt
+      // the fallback model.
+      throw primaryErr;
     }
 
 
     console.error(
-      GROQ_MODEL_PRIMARY +
-        " failed, falling back to " +
-        GROQ_MODEL_FALLBACK +
-        ":",
-      err
+      "Groq primary model failed, falling back:",
+      describeGroqError(primaryErr)
+    );
+  }
+
+
+  try {
+
+    const text =
+      await callGroqModel(
+        GROQ_MODEL_FALLBACK,
+        prompt,
+        apiKey
+      );
+
+
+    console.error(
+      "Groq primary model failed but fallback succeeded:",
+      describeGroqError(primaryErr)
+    );
+
+    return text;
+
+  } catch (fallbackErr) {
+
+    console.error(
+      "Groq primary AND fallback both failed:",
+      {
+        primary: describeGroqError(primaryErr),
+        fallback: describeGroqError(fallbackErr)
+      }
     );
 
 
-    return await callGroqModel(
-      GROQ_MODEL_FALLBACK,
-      prompt,
-      apiKey
+    const availability =
+      await checkGroqModelAvailability(
+        apiKey,
+        [
+          GROQ_MODEL_PRIMARY,
+          GROQ_MODEL_FALLBACK,
+          "qwen/qwen3.8-27b",
+          "openai/gpt-oss-20b"
+        ]
+      );
+
+    if (availability) {
+
+      console.error(
+        "Live Groq model availability check:",
+        availability
+      );
+    }
+
+
+    throw buildBothFailedError(
+      primaryErr,
+      fallbackErr,
+      availability
     );
   }
 }
@@ -1613,14 +1675,21 @@ async function callGroqModel(
       err.name === "AbortError"
     ) {
 
-      throw new Error(
-        "GROQ_TIMEOUT"
+      throw makeGroqError(
+        "timeout",
+        model,
+        null,
+        "The AI took too long to respond."
       );
     }
 
 
-    throw new Error(
-      "Couldn't reach the AI service. Please try again."
+    throw makeGroqError(
+      "network",
+      model,
+      null,
+      (err && err.message) ||
+        "Couldn't reach the AI service."
     );
 
   } finally {
@@ -1656,7 +1725,21 @@ async function callGroqModel(
     } catch (_) {}
 
 
-    throw new Error(
+    let category = "http";
+
+    if (res.status === 429) {
+      category = "rate_limit";
+    } else if (res.status >= 500) {
+      category = "server_error";
+    } else if (res.status >= 400) {
+      category = "client_error";
+    }
+
+
+    throw makeGroqError(
+      category,
+      model,
+      res.status,
       message
     );
   }
@@ -1672,7 +1755,10 @@ async function callGroqModel(
 
   } catch (_) {
 
-    throw new Error(
+    throw makeGroqError(
+      "malformed",
+      model,
+      res.status,
       "Received a malformed response from the AI service."
     );
   }
@@ -1688,7 +1774,10 @@ async function callGroqModel(
       "content_filter"
   ) {
 
-    throw new Error(
+    throw makeGroqError(
+      "content_filter",
+      model,
+      res.status,
       "The AI couldn't generate a result for this input. Try rephrasing your product keyword."
     );
   }
@@ -1700,13 +1789,230 @@ async function callGroqModel(
 
   if (!text) {
 
-    throw new Error(
+    throw makeGroqError(
+      "empty",
+      model,
+      res.status,
       "The AI didn't return a usable result. Please try again."
     );
   }
 
 
   return text;
+}
+
+
+/**
+ * =============================================================
+ * GROQ ERROR DIAGNOSTICS
+ * -------------------------------------------------------------
+ * Everything below is diagnostic-only additions: they change what
+ * information an error carries and how it's logged, not when a
+ * failure happens or how a success is produced. None of this
+ * touches prompt construction, credits, or the success-path
+ * response shape.
+ * =============================================================
+ */
+
+/**
+ * Builds an Error carrying structured diagnostic fields, so the
+ * caller can distinguish timeout / network / rate-limit / client
+ * error / server error / malformed / content-filter / empty
+ * without re-parsing a message string.
+ */
+function makeGroqError(
+  category,
+  model,
+  status,
+  message
+) {
+
+  const err =
+    new Error(
+      message ||
+        ("Groq request failed" +
+          (status ? " (" + status + ")" : "") +
+          ".")
+    );
+
+  err.category = category;
+  err.groqModel = model;
+  err.groqStatus = status || null;
+  err.groqMessage = message || null;
+
+  return err;
+}
+
+/**
+ * Caps a string for safe logging — Groq error messages are
+ * ordinary API error text (never the API key, a token, or a
+ * license key), but this keeps logs bounded regardless.
+ */
+function truncateForLog(
+  text,
+  max
+) {
+
+  max = max || 300;
+  text = String(text || "");
+
+  return text.length > max
+    ? text.slice(0, max) + "…"
+    : text;
+}
+
+/**
+ * Reduces a Groq error (structured or not) to a small, safe-to-log
+ * object: model, category, status, message. Never includes the
+ * API key, an Authorization header, or any user/credit data —
+ * those are never attached to these error objects in the first
+ * place.
+ */
+function describeGroqError(err) {
+
+  if (!err) {
+    return null;
+  }
+
+  return {
+    model: err.groqModel || null,
+    category: err.category || "unknown",
+    status: err.groqStatus || null,
+    message: truncateForLog(
+      err.groqMessage || err.message || ""
+    )
+  };
+}
+
+/**
+ * Best-effort, read-only check against Groq's own model list,
+ * using the server-side GROQ_API_KEY only (never sent to or
+ * logged for the frontend). Only called when both the primary and
+ * fallback model attempts have already failed, so it never adds
+ * latency to a normal successful request. Bounded to a short 5s
+ * timeout and never throws — a failure here must never hide or
+ * replace the real underlying error.
+ */
+async function checkGroqModelAvailability(
+  apiKey,
+  modelIds
+) {
+
+  const controller =
+    new AbortController();
+
+  const timeoutId =
+    setTimeout(
+      () => controller.abort(),
+      5000
+    );
+
+  try {
+
+    const res =
+      await fetch(
+        "https://api.groq.com/openai/v1/models",
+        {
+          method: "GET",
+          headers: {
+            "Authorization": "Bearer " + apiKey
+          },
+          signal: controller.signal
+        }
+      );
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const data =
+      await res.json();
+
+    const availableIds =
+      new Set(
+        (data?.data || []).map(m => m.id)
+      );
+
+    const result = {};
+
+    modelIds.forEach(id => {
+      result[id] = availableIds.has(id);
+    });
+
+    return result;
+
+  } catch (_) {
+
+    // Diagnostic-only — never let this check itself fail the
+    // actual error response.
+    return null;
+
+  } finally {
+
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Builds the single Error thrown when BOTH the primary and
+ * fallback model attempts fail, with both models' real status
+ * codes and messages folded into one human-readable message
+ * (surfaced verbatim to the frontend toast — no frontend change
+ * needed) plus the same detail preserved as structured fields for
+ * logging.
+ */
+function buildBothFailedError(
+  primaryErr,
+  fallbackErr,
+  availability
+) {
+
+  const p = describeGroqError(primaryErr) || {};
+  const f = describeGroqError(fallbackErr) || {};
+
+  const parts = [
+    "Both Groq models failed.",
+
+    'Primary "' + (p.model || GROQ_MODEL_PRIMARY) + '": ' +
+      (p.status ? "HTTP " + p.status + " — " : "") +
+      (p.message || "unknown error") + ".",
+
+    'Fallback "' + (f.model || GROQ_MODEL_FALLBACK) + '": ' +
+      (f.status ? "HTTP " + f.status + " — " : "") +
+      (f.message || "unknown error") + "."
+  ];
+
+  if (availability) {
+
+    parts.push(
+      "Live check — primary available: " +
+        (availability[GROQ_MODEL_PRIMARY] ? "yes" : "no") +
+        ", fallback available: " +
+        (availability[GROQ_MODEL_FALLBACK] ? "yes" : "no") +
+        "."
+    );
+  }
+
+  const err =
+    new Error(
+      parts.join(" ")
+    );
+
+  err.bothFailed = true;
+  err.primary = p;
+  err.fallback = f;
+  err.availability = availability || null;
+
+  // Preserve a real HTTP status where we have one — prefer the
+  // fallback's (the more recent attempt), then the primary's,
+  // and only default to 502 if neither call produced a usable
+  // numeric status (e.g. both were network-level failures).
+  err.groqStatus =
+    (typeof f.status === "number" && f.status) ||
+    (typeof p.status === "number" && p.status) ||
+    502;
+
+  return err;
 }
 
 
