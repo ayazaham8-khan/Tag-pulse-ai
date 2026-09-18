@@ -1632,6 +1632,111 @@ async function callGroq(
 
 /**
  * =============================================================
+ * STRUCTURED OUTPUT SCHEMAS
+ * -------------------------------------------------------------
+ * Two shapes only, matching the two output contracts that
+ * actually exist in public/index.html today:
+ *
+ *   - TAGS_OUTPUT_SCHEMA    -> { title, tags, description }
+ *     Read by validateParsedOutput() (POD/generic), and by the
+ *     dedicated validateEtsyOutput() and
+ *     validateDigitalPrintableOutput() — all three only ever
+ *     read parsed.title / parsed.tags / parsed.description.
+ *
+ *   - KEYWORDS_OUTPUT_SCHEMA -> { title, keywords, description }
+ *     Read by validatePinterestOutput(), which only ever reads
+ *     parsed.title / parsed.keywords / parsed.description.
+ *
+ * No other field is read by any validator or renderer in the
+ * frontend, so no other field is declared here.
+ *
+ * Exact tag/keyword COUNT (13 vs 15) and per-item/title/
+ * description character limits are intentionally NOT expressed
+ * here: Groq's strict-mode Structured Outputs does not support
+ * minItems/maxItems or string length constraints (they are
+ * silently unsupported / can cause the schema to be rejected).
+ * Those exact counts and lengths continue to be enforced exactly
+ * as before, by the existing, unmodified frontend validators —
+ * strict mode's job here is only to guarantee a syntactically and
+ * structurally valid {title, tags|keywords, description} object
+ * every time, eliminating the "Failed to validate JSON" failure
+ * class this was added to fix.
+ * =============================================================
+ */
+
+const TAGS_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    tags: {
+      type: "array",
+      items: { type: "string" }
+    },
+    description: { type: "string" }
+  },
+  required: ["title", "tags", "description"],
+  additionalProperties: false
+};
+
+const KEYWORDS_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    keywords: {
+      type: "array",
+      items: { type: "string" }
+    },
+    description: { type: "string" }
+  },
+  required: ["title", "keywords", "description"],
+  additionalProperties: false
+};
+
+/**
+ * The backend never receives the selected platform/category —
+ * the frontend only ever sends the finished prompt string. Each
+ * prompt builder embeds its own literal example output shape in
+ * its "OUTPUT FORMAT" section, and exactly one of them
+ * (buildPinterestPrompt) declares a `"keywords":` field; the
+ * other three (buildStandardPrompt/buildEtsyPrompt/
+ * buildDigitalPrintablePrompt) all declare `"tags":`. That literal
+ * substring is therefore a reliable, already-unique signal for
+ * which schema this specific request needs — verified against the
+ * current prompt builders, which are unmodified by this change.
+ */
+function selectResponseFormat(
+  prompt
+) {
+
+  const isKeywordsShape =
+    typeof prompt === "string" &&
+    prompt.includes('"keywords":');
+
+  if (isKeywordsShape) {
+
+    return {
+      type: "json_schema",
+      json_schema: {
+        name: "seo_listing_keywords",
+        strict: true,
+        schema: KEYWORDS_OUTPUT_SCHEMA
+      }
+    };
+  }
+
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "seo_listing_tags",
+      strict: true,
+      schema: TAGS_OUTPUT_SCHEMA
+    }
+  };
+}
+
+
+/**
+ * =============================================================
  * SINGLE GROQ MODEL REQUEST
  * =============================================================
  */
@@ -1691,9 +1796,8 @@ async function callGroqModel(
                 max_completion_tokens:
                   GROQ_MAX_COMPLETION_TOKENS,
 
-                response_format: {
-                  type: "json_object"
-                }
+                response_format:
+                  selectResponseFormat(prompt)
               }
             ),
 
