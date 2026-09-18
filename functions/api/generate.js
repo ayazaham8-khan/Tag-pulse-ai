@@ -58,6 +58,21 @@ const GROQ_MODEL_PRIMARY =
 const GROQ_MODEL_FALLBACK =
   "qwen/qwen3.6-27b";
 
+// TEMPORARY: confirmed returning HTTP 404 for our account in
+// production (see the "Groq primary AND fallback both failed"
+// diagnostic capture). Attempting it currently guarantees a
+// second failed request for no benefit, so it's bypassed for now.
+// Re-enable only after confirming a working model via the
+// existing checkGroqModelAvailability() live-check output.
+const GROQ_FALLBACK_ENABLED = false;
+
+// Explicit output-token ceiling — previously unset. Sized for the
+// longest realistic listing JSON (140-char title + 15 keywords/
+// tags + a multi-sentence description + JSON structural overhead
+// is comfortably under 600 tokens) plus generous headroom for
+// gpt-oss-120b's reasoning-token usage, without being unbounded.
+const GROQ_MAX_COMPLETION_TOKENS = 2048;
+
 const GROQ_TIMEOUT_MS = 30000;
 
 const FREE_CREDITS = 3;
@@ -1534,6 +1549,23 @@ async function callGroq(
     }
 
 
+    if (!GROQ_FALLBACK_ENABLED) {
+
+      // Fallback is temporarily disabled (see GROQ_FALLBACK_ENABLED
+      // above) — do not attempt it, and do not report this as a
+      // "both models failed" event, since only the primary was
+      // actually attempted.
+      console.error(
+        "Groq primary model failed (fallback disabled):",
+        describeGroqError(primaryErr)
+      );
+
+      throw buildFallbackDisabledError(
+        primaryErr
+      );
+    }
+
+
     console.error(
       "Groq primary model failed, falling back:",
       describeGroqError(primaryErr)
@@ -1655,6 +1687,9 @@ async function callGroqModel(
                 ],
 
                 temperature: 0.9,
+
+                max_completion_tokens:
+                  GROQ_MAX_COMPLETION_TOKENS,
 
                 response_format: {
                   type: "json_object"
@@ -1951,6 +1986,38 @@ async function checkGroqModelAvailability(
 
     clearTimeout(timeoutId);
   }
+}
+
+/**
+ * Builds the Error thrown when the primary model fails and the
+ * fallback is currently disabled (GROQ_FALLBACK_ENABLED = false).
+ * Deliberately separate from buildBothFailedError() below — this
+ * error must never claim two models were attempted when only one
+ * was, per the diagnostics-accuracy requirement.
+ */
+function buildFallbackDisabledError(
+  primaryErr
+) {
+
+  const p = describeGroqError(primaryErr) || {};
+
+  const err =
+    new Error(
+      'The AI model "' + (p.model || GROQ_MODEL_PRIMARY) + '" failed: ' +
+      (p.status ? "HTTP " + p.status + " — " : "") +
+      (p.message || "unknown error") +
+      ". (Fallback model is currently disabled.)"
+    );
+
+  err.category = primaryErr && primaryErr.category;
+  err.groqModel = p.model || GROQ_MODEL_PRIMARY;
+  err.groqStatus =
+    (typeof p.status === "number" && p.status) ||
+    502;
+  err.fallbackDisabled = true;
+  err.primary = p;
+
+  return err;
 }
 
 /**
