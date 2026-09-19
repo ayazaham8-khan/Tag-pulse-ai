@@ -976,13 +976,10 @@ export async function onRequestPost(context) {
 
     console.error(
       "Unhandled /api/generate error:",
-      err && err.bothFailed
-        ? {
-            primary: err.primary,
-            fallback: err.fallback,
-            availability: err.availability
-          }
-        : (describeGroqError(err) || (err && err.message) || err)
+      (err && err.errorDetail) ||
+        describeGroqError(err) ||
+        (err && err.message) ||
+        err
     );
 
 
@@ -991,7 +988,9 @@ export async function onRequestPost(context) {
         error:
           err && err.message
             ? err.message
-            : "Something went wrong generating your SEO listing."
+            : "Something went wrong generating your SEO listing.",
+        error_detail:
+          (err && err.errorDetail) || undefined
       },
       (err && typeof err.groqStatus === "number")
         ? err.groqStatus
@@ -1846,6 +1845,10 @@ async function callGroqModel(
       res.status +
       ").";
 
+    let errType = null;
+    let errCode = null;
+    let failedGeneration = null;
+
 
     try {
 
@@ -1859,6 +1862,27 @@ async function callGroqModel(
 
         message =
           errBody.error.message;
+      }
+
+      if (errBody?.error?.type) {
+        errType = errBody.error.type;
+      }
+
+      if (errBody?.error?.code) {
+        errCode = errBody.error.code;
+      }
+
+      if (errBody?.error?.failed_generation) {
+        // Bounded generously (not the standard 300-char log cap) —
+        // this is the single most diagnostic field for a strict-
+        // mode schema failure (it's the model's actual raw output
+        // that failed validation), so we want enough of it to see
+        // whether/where it was truncated or malformed.
+        failedGeneration =
+          truncateForLog(
+            errBody.error.failed_generation,
+            4000
+          );
       }
 
     } catch (_) {}
@@ -1879,7 +1903,12 @@ async function callGroqModel(
       category,
       model,
       res.status,
-      message
+      message,
+      {
+        type: errType,
+        code: errCode,
+        failedGeneration: failedGeneration
+      }
     );
   }
 
@@ -1958,12 +1987,20 @@ async function callGroqModel(
  * caller can distinguish timeout / network / rate-limit / client
  * error / server error / malformed / content-filter / empty
  * without re-parsing a message string.
+ *
+ * `extra` is optional and only ever passed by the !res.ok branch
+ * above, which is the only place Groq's own error body (with a
+ * possible type/code/failed_generation) is available. Every other
+ * call site (timeout, network, malformed, content_filter, empty)
+ * omits it, so those errors are completely unaffected by this
+ * addition.
  */
 function makeGroqError(
   category,
   model,
   status,
-  message
+  message,
+  extra
 ) {
 
   const err =
@@ -1978,6 +2015,9 @@ function makeGroqError(
   err.groqModel = model;
   err.groqStatus = status || null;
   err.groqMessage = message || null;
+  err.groqType = (extra && extra.type) || null;
+  err.groqCode = (extra && extra.code) || null;
+  err.groqFailedGeneration = (extra && extra.failedGeneration) || null;
 
   return err;
 }
@@ -2002,10 +2042,12 @@ function truncateForLog(
 
 /**
  * Reduces a Groq error (structured or not) to a small, safe-to-log
- * object: model, category, status, message. Never includes the
- * API key, an Authorization header, or any user/credit data —
- * those are never attached to these error objects in the first
- * place.
+ * object: model, category, status, message, and — when Groq's own
+ * error body included them — type, code, and failed_generation
+ * (the model's raw output that failed strict-mode validation).
+ * Never includes the API key, an Authorization header, the user's
+ * prompt/Product Details, or any user/credit data — none of those
+ * are ever attached to these error objects in the first place.
  */
 function describeGroqError(err) {
 
@@ -2019,7 +2061,10 @@ function describeGroqError(err) {
     status: err.groqStatus || null,
     message: truncateForLog(
       err.groqMessage || err.message || ""
-    )
+    ),
+    type: err.groqType || null,
+    code: err.groqCode || null,
+    failed_generation: err.groqFailedGeneration || null
   };
 }
 
@@ -2120,6 +2165,7 @@ function buildFallbackDisabledError(
     502;
   err.fallbackDisabled = true;
   err.primary = p;
+  err.errorDetail = p;
 
   return err;
 }
@@ -2173,6 +2219,7 @@ function buildBothFailedError(
   err.primary = p;
   err.fallback = f;
   err.availability = availability || null;
+  err.errorDetail = { primary: p, fallback: f, availability: availability || null };
 
   // Preserve a real HTTP status where we have one — prefer the
   // fallback's (the more recent attempt), then the primary's,
