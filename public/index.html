@@ -3009,6 +3009,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       productDetails.features
     );
     let etsyStage = null;
+    const generationId = generateDiagnosticRequestId();
 
     if (category === "Etsy") {
       etsyStage = "request-1";
@@ -3016,7 +3017,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
 
     try {
-      const result = await callGenerate(prompt);
+      const result = await callGenerate(prompt, generationId + "-1", hasProductDetails);
 
       if (category === "Etsy") {
         console.log("[TagPulse][Etsy] request #1 completed", { status: result.status });
@@ -3063,7 +3064,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           etsyStage = "request-2-retry";
           console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: hasProductDetails });
 
-          const retryResult = await callGenerate(retryPrompt);
+          const retryResult = await callGenerate(retryPrompt, generationId + "-2", hasProductDetails);
 
           console.log("[TagPulse][Etsy] retry (request #2) completed", { status: retryResult.status });
 
@@ -3204,13 +3205,22 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       if (etsyStage) {
         console.error(
           "[TagPulse][Etsy] generation failed during " + etsyStage +
-          " — " + (err instanceof TypeError ? "network-level fetch rejection" : "handled error"),
-          err
+          " — " + (err.networkLevelFailure ? "network-level fetch rejection" : "handled error"),
+          { requestId: err.requestId, elapsedMs: err.elapsedMs, message: err.message }
         );
       } else {
-        console.error(err);
+        console.error(
+          "[TagPulse] generation failed",
+          { requestId: err.requestId, elapsedMs: err.elapsedMs, networkLevelFailure: !!err.networkLevelFailure, message: err.message }
+        );
       }
-      showToast(err.message || "Something went wrong. Please try again.", "error");
+
+      const baseMessage = err.message || "Something went wrong. Please try again.";
+      const diagSuffix = (err.networkLevelFailure && err.requestId)
+        ? (" [id: " + err.requestId + (typeof err.elapsedMs === "number" ? ", " + err.elapsedMs + "ms" : "") + "]")
+        : "";
+
+      showToast(baseMessage + diagSuffix, "error");
     } finally {
       setGenerating(false);
     }
@@ -3529,43 +3539,93 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   /* ============================================================
      CLOUDFLARE PAGES FUNCTION CALL
      ============================================================ */
-  async function callGenerate(prompt){
+  async function callGenerate(prompt, requestId, hasProductDetails){
     if (!authSession || !authUser) {
       throw new Error("Please sign in before generating.");
     }
 
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + getAccessToken()
-      },
-      body: JSON.stringify({ prompt: prompt, license_key: licenseKey })
-    });
+    requestId = requestId || generateDiagnosticRequestId();
+    const clientStart = Date.now();
+
+    console.log("[TagPulse] request starting", { requestId: requestId, hasProductDetails: !!hasProductDetails });
+
+    let res;
+    try {
+      res = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + getAccessToken()
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          license_key: licenseKey,
+          request_id: requestId,
+          has_product_details: !!hasProductDetails
+        })
+      });
+    } catch (networkErr) {
+      // A genuine browser/network-level fetch rejection — nothing
+      // in this app produced or caught this. Diagnostic fields are
+      // attached directly to the original error object (not a new
+      // one) so its type (TypeError) and message are preserved
+      // exactly as the browser produced them.
+      const elapsedMs = Date.now() - clientStart;
+      networkErr.requestId = requestId;
+      networkErr.elapsedMs = elapsedMs;
+      networkErr.networkLevelFailure = true;
+      console.error("[TagPulse] request failed before receiving any response", { requestId: requestId, elapsedMs: elapsedMs, message: networkErr.message });
+      throw networkErr;
+    }
+
+    const elapsedMs = Date.now() - clientStart;
+    console.log("[TagPulse] response received", { requestId: requestId, elapsedMs: elapsedMs, status: res.status });
 
     let data = {};
     try {
       data = await res.json();
     } catch (_) {
-      throw new Error("The server returned an invalid response.");
+      const err = new Error("The server returned an invalid response.");
+      err.requestId = requestId;
+      err.elapsedMs = elapsedMs;
+      throw err;
     }
 
     // 402 is a structured "out of credits" response, not a generic
     // failure — it carries its own credits_remaining/is_pro/error
     // fields that the caller needs, so it's returned rather than thrown.
     if (res.status === 402) {
-      return { status: 402, data: data };
+      return { status: 402, data: data, requestId: requestId, elapsedMs: elapsedMs };
     }
 
     if (!res.ok) {
-      throw new Error(data.error || "AI generation failed (" + res.status + ").");
+      const err = new Error(data.error || "AI generation failed (" + res.status + ").");
+      err.requestId = requestId;
+      err.elapsedMs = elapsedMs;
+      throw err;
     }
 
     if (!data.text || typeof data.text !== "string") {
-      throw new Error("The AI didn't return a usable result. Please try again.");
+      const err = new Error("The AI didn't return a usable result. Please try again.");
+      err.requestId = requestId;
+      err.elapsedMs = elapsedMs;
+      throw err;
     }
 
-    return { status: 200, data: data };
+    return { status: 200, data: data, requestId: requestId, elapsedMs: elapsedMs };
+  }
+
+  /**
+   * Diagnostics-only request ID generator (not used for anything
+   * functional — purely for correlating a browser-side attempt with
+   * the matching Cloudflare Function log line, especially useful
+   * when the fetch itself never receives a response at all).
+   */
+  function generateDiagnosticRequestId(){
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return "req-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
   }
 
   function extractJSON(text){
