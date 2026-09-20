@@ -101,6 +101,17 @@ export async function onRequestPost(context) {
 
   const { request, env } = context;
 
+  // Diagnostics-only: the earliest possible timestamp inside this
+  // Function's execution — the best available proxy for "the
+  // Function was reached", since anything before this line is
+  // Cloudflare's own routing/dispatch, which this code cannot see.
+  const requestStartTime = Date.now();
+
+  // Declared here (function scope, not inside the try) so the
+  // outer catch below can still log it even if something fails
+  // before or while it would otherwise be assigned.
+  let requestId = "server-" + requestStartTime.toString(36);
+
   const corsHeaders =
     buildCorsHeaders();
 
@@ -213,6 +224,22 @@ export async function onRequestPost(context) {
     const licenseKey =
       body && body.license_key;
 
+    // Diagnostics-only — never used for any generation/auth/credit
+    // decision. request_id is opaque, client-generated, and safe to
+    // log (it carries no user data). has_product_details is a
+    // boolean the frontend already computes for its own logging;
+    // reading it here never exposes the actual field values.
+    if (
+      body &&
+      typeof body.request_id === "string" &&
+      body.request_id
+    ) {
+      requestId = body.request_id;
+    }
+
+    const hasProductDetailsFlag =
+      !!(body && body.has_product_details);
+
 
     // ---------------------------------------------------------
     // 5. Validate prompt
@@ -233,6 +260,17 @@ export async function onRequestPost(context) {
         corsHeaders
       );
     }
+
+
+    console.log(
+      "[TagPulse][generate] request received",
+      {
+        requestId: requestId,
+        hasProductDetails: hasProductDetailsFlag,
+        promptLength: prompt.length,
+        elapsedMs: Date.now() - requestStartTime
+      }
+    );
 
 
     // ---------------------------------------------------------
@@ -369,7 +407,8 @@ export async function onRequestPost(context) {
         const text =
           await callGroq(
             prompt,
-            env.GROQ_API_KEY
+            env.GROQ_API_KEY,
+            requestId
           );
 
 
@@ -416,6 +455,12 @@ export async function onRequestPost(context) {
             env.DB,
             normalizedUserId
           );
+
+
+        console.log(
+          "[TagPulse][generate] success response ready to send",
+          { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200 }
+        );
 
 
         return jsonResponse(
@@ -691,7 +736,8 @@ export async function onRequestPost(context) {
         const text =
           await callGroq(
             prompt,
-            env.GROQ_API_KEY
+            env.GROQ_API_KEY,
+            requestId
           );
 
 
@@ -736,6 +782,12 @@ export async function onRequestPost(context) {
             env.DB,
             license.id
           );
+
+
+        console.log(
+          "[TagPulse][generate] success response ready to send",
+          { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200 }
+        );
 
 
         return jsonResponse(
@@ -859,7 +911,8 @@ export async function onRequestPost(context) {
       const text =
         await callGroq(
           prompt,
-          env.GROQ_API_KEY
+          env.GROQ_API_KEY,
+          requestId
         );
 
 
@@ -911,6 +964,12 @@ export async function onRequestPost(context) {
           .first();
 
 
+      console.log(
+        "[TagPulse][generate] success response ready to send",
+        { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200 }
+      );
+
+
       return jsonResponse(
         {
           text,
@@ -957,6 +1016,11 @@ export async function onRequestPost(context) {
       err.category === "timeout"
     ) {
 
+      console.log(
+        "[TagPulse][generate] timeout response ready to send",
+        { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 504 }
+      );
+
       return jsonResponse(
         {
           error:
@@ -976,10 +1040,15 @@ export async function onRequestPost(context) {
 
     console.error(
       "Unhandled /api/generate error:",
-      (err && err.errorDetail) ||
-        describeGroqError(err) ||
-        (err && err.message) ||
-        err
+      {
+        requestId: requestId,
+        elapsedMs: Date.now() - requestStartTime,
+        detail:
+          (err && err.errorDetail) ||
+          describeGroqError(err) ||
+          (err && err.message) ||
+          err
+      }
     );
 
 
@@ -1520,7 +1589,8 @@ async function getLicenseCredits(
 
 async function callGroq(
   prompt,
-  apiKey
+  apiKey,
+  requestId
 ) {
 
   let primaryErr;
@@ -1530,7 +1600,8 @@ async function callGroq(
     return await callGroqModel(
       GROQ_MODEL_PRIMARY,
       prompt,
-      apiKey
+      apiKey,
+      requestId
     );
 
   } catch (err) {
@@ -1578,7 +1649,8 @@ async function callGroq(
       await callGroqModel(
         GROQ_MODEL_FALLBACK,
         prompt,
-        apiKey
+        apiKey,
+        requestId
       );
 
 
@@ -1743,7 +1815,8 @@ function selectResponseFormat(
 async function callGroqModel(
   model,
   prompt,
-  apiKey
+  apiKey,
+  requestId
 ) {
 
   const controller =
@@ -1759,6 +1832,12 @@ async function callGroqModel(
 
 
   let res;
+  const groqStart = Date.now();
+
+  console.log(
+    "[TagPulse][generate] groq request starting",
+    { requestId: requestId, model: model }
+  );
 
 
   try {
@@ -1813,6 +1892,11 @@ async function callGroqModel(
       err.name === "AbortError"
     ) {
 
+      console.log(
+        "[TagPulse][generate] groq request timed out",
+        { requestId: requestId, model: model, elapsedMs: Date.now() - groqStart }
+      );
+
       throw makeGroqError(
         "timeout",
         model,
@@ -1821,6 +1905,11 @@ async function callGroqModel(
       );
     }
 
+
+    console.log(
+      "[TagPulse][generate] groq request failed before any response",
+      { requestId: requestId, model: model, elapsedMs: Date.now() - groqStart, message: err && err.message }
+    );
 
     throw makeGroqError(
       "network",
@@ -1836,6 +1925,12 @@ async function callGroqModel(
       timeoutId
     );
   }
+
+
+  console.log(
+    "[TagPulse][generate] groq response received",
+    { requestId: requestId, model: model, status: res.status, elapsedMs: Date.now() - groqStart }
+  );
 
 
   if (!res.ok) {
@@ -1923,6 +2018,11 @@ async function callGroqModel(
 
   } catch (_) {
 
+    console.log(
+      "[TagPulse][generate] groq response failed to parse as JSON",
+      { requestId: requestId, model: model }
+    );
+
     throw makeGroqError(
       "malformed",
       model,
@@ -1930,6 +2030,12 @@ async function callGroqModel(
       "Received a malformed response from the AI service."
     );
   }
+
+
+  console.log(
+    "[TagPulse][generate] groq response parsed successfully",
+    { requestId: requestId, model: model }
+  );
 
 
   const choice =
