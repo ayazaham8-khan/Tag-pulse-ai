@@ -3017,7 +3017,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
 
     try {
-      const result = await callGenerate(prompt, generationId + "-1", hasProductDetails);
+      const result = await callGenerateWithNetworkRetry(prompt, generationId + "-1", hasProductDetails);
 
       if (category === "Etsy") {
         console.log("[TagPulse][Etsy] request #1 completed", { status: result.status });
@@ -3064,7 +3064,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           etsyStage = "request-2-retry";
           console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: hasProductDetails });
 
-          const retryResult = await callGenerate(retryPrompt, generationId + "-2", hasProductDetails);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, generationId + "-2", hasProductDetails);
 
           console.log("[TagPulse][Etsy] retry (request #2) completed", { status: retryResult.status });
 
@@ -3109,7 +3109,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
             validation.errors
           );
 
-          const retryResult = await callGenerate(retryPrompt);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt);
 
           if (retryResult.status === 402) {
             applyServerState(retryResult.data);
@@ -3152,7 +3152,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
             validation.errors
           );
 
-          const retryResult = await callGenerate(retryPrompt);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt);
 
           if (retryResult.status === 402) {
             applyServerState(retryResult.data);
@@ -3206,21 +3206,22 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         console.error(
           "[TagPulse][Etsy] generation failed during " + etsyStage +
           " — " + (err.networkLevelFailure ? "network-level fetch rejection" : "handled error"),
-          { requestId: err.requestId, elapsedMs: err.elapsedMs, message: err.message }
+          { requestId: err.requestId, elapsedMs: err.elapsedMs, networkRetryExhausted: !!err.networkRetryExhausted, message: err.message }
         );
       } else {
         console.error(
           "[TagPulse] generation failed",
-          { requestId: err.requestId, elapsedMs: err.elapsedMs, networkLevelFailure: !!err.networkLevelFailure, message: err.message }
+          { requestId: err.requestId, elapsedMs: err.elapsedMs, networkLevelFailure: !!err.networkLevelFailure, networkRetryExhausted: !!err.networkRetryExhausted, message: err.message }
         );
       }
 
       const baseMessage = err.message || "Something went wrong. Please try again.";
+      const retrySuffix = err.networkRetryExhausted ? " (automatic retry also failed)" : "";
       const diagSuffix = (err.networkLevelFailure && err.requestId)
         ? (" [id: " + err.requestId + (typeof err.elapsedMs === "number" ? ", " + err.elapsedMs + "ms" : "") + "]")
         : "";
 
-      showToast(baseMessage + diagSuffix, "error");
+      showToast(baseMessage + retrySuffix + diagSuffix, "error");
     } finally {
       setGenerating(false);
     }
@@ -3616,16 +3617,64 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   /**
-   * Diagnostics-only request ID generator (not used for anything
-   * functional — purely for correlating a browser-side attempt with
-   * the matching Cloudflare Function log line, especially useful
-   * when the fetch itself never receives a response at all).
+   * Request ID generator. Originally diagnostics-only; now also
+   * functional — this same ID is sent to the backend and used as
+   * an idempotency key, and is reused verbatim by
+   * callGenerateWithNetworkRetry()'s one automatic retry so the
+   * backend can recognize a retried request as the same logical
+   * generation rather than a new one.
    */
   function generateDiagnosticRequestId(){
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID();
     }
     return "req-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+  }
+
+  /**
+   * Wraps callGenerate() with exactly one automatic retry, and only
+   * for a genuine network-level failure (err.networkLevelFailure —
+   * a real browser "Failed to fetch"/connection error, never an
+   * HTTP 400/401/402/429/5xx, which callGenerate() never marks
+   * this way). The retry reuses the SAME request ID as the first
+   * attempt — resolved once, here, so both the original call and
+   * the retry share it — which is what lets the backend's
+   * idempotency check recognize them as one logical generation and
+   * avoid a duplicate credit charge or a duplicate Groq call.
+   *
+   * This is a transport-level concern only: it knows nothing about
+   * Etsy's SEO-validation retry (that's a separate, higher-level
+   * mechanism in handleGenerate that decides to build a *different*
+   * corrective prompt and call this function again with a *new*
+   * request ID for that attempt). The two retry mechanisms are
+   * independent and don't compound — each callGenerateWithNetworkRetry()
+   * call is bounded to at most one extra attempt of its own,
+   * regardless of how many times it's invoked overall.
+   */
+  async function callGenerateWithNetworkRetry(prompt, requestId, hasProductDetails){
+    requestId = requestId || generateDiagnosticRequestId();
+
+    try {
+      return await callGenerate(prompt, requestId, hasProductDetails);
+
+    } catch (err) {
+      if (!err.networkLevelFailure) {
+        throw err;
+      }
+
+      console.log("[TagPulse] network-level failure — retrying once with the same request ID", { requestId: requestId, elapsedMs: err.elapsedMs });
+      generateBtnLabel.innerHTML = '<span class="spinner"></span> Connection interrupted — retrying…';
+
+      try {
+        const result = await callGenerate(prompt, requestId, hasProductDetails);
+        generateBtnLabel.innerHTML = '<span class="spinner"></span> Generating…';
+        return result;
+
+      } catch (retryErr) {
+        retryErr.networkRetryExhausted = true;
+        throw retryErr;
+      }
+    }
   }
 
   function extractJSON(text){
