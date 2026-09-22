@@ -294,6 +294,73 @@ export async function onRequestPost(context) {
     }
 
 
+    // ---------------------------------------------------------
+    // 6.5. Idempotency check
+    // -----------------------------------------------------------
+    // Must run before ANY credit reservation or Groq call, per the
+    // idempotent-generation-requests design (see
+    // claimOrReplayGeneration() below). If this fails for any
+    // reason (e.g. the generation_requests table doesn't exist yet
+    // because the D1 migration hasn't been run), it degrades to
+    // "proceed as a normal new request" rather than breaking
+    // generation entirely — the missing protection is a regression
+    // to today's existing behavior, never worse than it.
+    // ---------------------------------------------------------
+
+    const idempotency =
+      await claimOrReplayGeneration(
+        env.DB,
+        requestId,
+        normalizedUserId
+      );
+
+    if (idempotency.outcome === "invalid") {
+
+      return jsonResponse(
+        {
+          error:
+            "This request could not be verified. Please try generating again."
+        },
+        409,
+        corsHeaders
+      );
+    }
+
+    if (idempotency.outcome === "replay") {
+
+      console.log(
+        "[TagPulse][generate] idempotent replay — returning cached result, no new credit reservation or Groq call",
+        { requestId: requestId, elapsedMs: Date.now() - requestStartTime }
+      );
+
+      return jsonResponse(
+        {
+          text: idempotency.result.result_text,
+          credits_remaining: idempotency.result.credits_remaining,
+          is_pro: !!idempotency.result.is_pro,
+          pro_type: idempotency.result.pro_type
+        },
+        200,
+        corsHeaders
+      );
+    }
+
+    if (idempotency.outcome === "still_in_progress") {
+
+      return jsonResponse(
+        {
+          error:
+            "Your previous request for this generation is still processing. Please wait a moment and try again."
+        },
+        409,
+        corsHeaders
+      );
+    }
+
+    // idempotency.outcome === "new" (or "degraded") — proceed
+    // exactly as before.
+
+
     // =========================================================
     // CREATOR PRO RESOLUTION
     // =========================================================
@@ -460,6 +527,12 @@ export async function onRequestPost(context) {
         console.log(
           "[TagPulse][generate] success response ready to send",
           { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200 }
+        );
+
+        await markGenerationCompleted(
+          env.DB,
+          requestId,
+          { text: text, credits_remaining: remaining, is_pro: true, pro_type: "creator" }
         );
 
 
@@ -789,6 +862,12 @@ export async function onRequestPost(context) {
           { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200 }
         );
 
+        await markGenerationCompleted(
+          env.DB,
+          requestId,
+          { text: text, credits_remaining: remaining, is_pro: true, pro_type: "lemon" }
+        );
+
 
         return jsonResponse(
           {
@@ -969,6 +1048,17 @@ export async function onRequestPost(context) {
         { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200 }
       );
 
+      await markGenerationCompleted(
+        env.DB,
+        requestId,
+        {
+          text: text,
+          credits_remaining: row ? Number(row.credits_remaining) : 0,
+          is_pro: false,
+          pro_type: null
+        }
+      );
+
 
       return jsonResponse(
         {
@@ -1021,6 +1111,8 @@ export async function onRequestPost(context) {
         { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 504 }
       );
 
+      await deleteGenerationRequestRow(env.DB, requestId);
+
       return jsonResponse(
         {
           error:
@@ -1051,6 +1143,8 @@ export async function onRequestPost(context) {
       }
     );
 
+    await deleteGenerationRequestRow(env.DB, requestId);
+
 
     return jsonResponse(
       {
@@ -1065,6 +1159,131 @@ export async function onRequestPost(context) {
         ? err.groqStatus
         : 502,
       corsHeaders
+    );
+  }
+}
+
+
+/**
+ * =============================================================
+ * IDEMPOTENT GENERATION REQUESTS
+ * =============================================================
+ */
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function claimOrReplayGeneration(db, requestId, userId) {
+
+  try {
+
+    const claim = await db.prepare(
+      `INSERT OR IGNORE INTO generation_requests (request_id, user_id, status) VALUES (?1, ?2, 'in_progress')`
+    ).bind(requestId, userId).run();
+
+    if (claim.meta && claim.meta.changes === 1) {
+      return { outcome: "new" };
+    }
+
+    let existing = await db.prepare(
+      `SELECT user_id, status, result_text, credits_remaining, is_pro, pro_type FROM generation_requests WHERE request_id = ?1`
+    ).bind(requestId).first();
+
+    if (!existing) {
+      const reClaim = await db.prepare(
+        `INSERT OR IGNORE INTO generation_requests (request_id, user_id, status) VALUES (?1, ?2, 'in_progress')`
+      ).bind(requestId, userId).run();
+      return (reClaim.meta && reClaim.meta.changes === 1) ? { outcome: "new" } : { outcome: "still_in_progress" };
+    }
+
+    if (existing.user_id !== userId) {
+      return { outcome: "invalid" };
+    }
+
+    if (existing.status === "completed") {
+      return { outcome: "replay", result: existing };
+    }
+
+    const reclaim = await db.prepare(
+      `UPDATE generation_requests SET updated_at = CURRENT_TIMESTAMP WHERE request_id = ?1 AND status = 'in_progress' AND created_at < datetime('now', '-60 seconds')`
+    ).bind(requestId).run();
+
+    if (reclaim.meta && reclaim.meta.changes === 1) {
+      return { outcome: "new" };
+    }
+
+    for (let i = 0; i < 6; i++) {
+
+      await sleep(1000);
+
+      existing = await db.prepare(
+        `SELECT status, result_text, credits_remaining, is_pro, pro_type FROM generation_requests WHERE request_id = ?1`
+      ).bind(requestId).first();
+
+      if (existing && existing.status === "completed") {
+        return { outcome: "replay", result: existing };
+      }
+
+      if (!existing) {
+        const reClaim = await db.prepare(
+          `INSERT OR IGNORE INTO generation_requests (request_id, user_id, status) VALUES (?1, ?2, 'in_progress')`
+        ).bind(requestId, userId).run();
+        if (reClaim.meta && reClaim.meta.changes === 1) {
+          return { outcome: "new" };
+        }
+      }
+    }
+
+    return { outcome: "still_in_progress" };
+
+  } catch (err) {
+
+    console.error(
+      "[TagPulse][generate] idempotency check failed - proceeding without it for this request:",
+      { requestId: requestId, message: err && err.message }
+    );
+
+    return { outcome: "new", degraded: true };
+  }
+}
+
+async function markGenerationCompleted(db, requestId, result) {
+
+  try {
+
+    await db.prepare(
+      `UPDATE generation_requests SET status = 'completed', result_text = ?2, credits_remaining = ?3, is_pro = ?4, pro_type = ?5, updated_at = CURRENT_TIMESTAMP WHERE request_id = ?1`
+    ).bind(
+      requestId,
+      result.text,
+      result.credits_remaining,
+      result.is_pro ? 1 : 0,
+      result.pro_type || null
+    ).run();
+
+  } catch (err) {
+
+    console.error(
+      "[TagPulse][generate] failed to record idempotent completion:",
+      { requestId: requestId, message: err && err.message }
+    );
+  }
+}
+
+async function deleteGenerationRequestRow(db, requestId) {
+
+  try {
+
+    await db.prepare(
+      `DELETE FROM generation_requests WHERE request_id = ?1`
+    ).bind(requestId).run();
+
+  } catch (err) {
+
+    console.error(
+      "[TagPulse][generate] failed to clean up idempotency row after failure:",
+      { requestId: requestId, message: err && err.message }
     );
   }
 }
