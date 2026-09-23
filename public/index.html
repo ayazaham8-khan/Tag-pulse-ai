@@ -420,6 +420,39 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 }
 .field-help{ font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.4; }
 
+/* ============================================================
+   PRODUCT DETAILS (optional, collapsed by default)
+   ------------------------------------------------------------
+   Native <details>/<summary> — no extra JS needed for the
+   open/close behavior itself.
+   ============================================================ */
+.product-details-toggle{
+  margin-bottom:18px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--bg);
+  overflow:hidden;
+}
+.product-details-toggle summary{
+  cursor:pointer;
+  list-style:none;
+  padding:13px 14px;
+  font-size:13px; font-weight:700; color:var(--ink-soft);
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.product-details-toggle summary::-webkit-details-marker{ display:none; }
+.product-details-toggle summary::after{
+  content:"+"; font-size:16px; font-weight:800; color:var(--muted);
+  transition:transform .15s ease;
+}
+.product-details-toggle[open] summary::after{ content:"–"; }
+.product-details-toggle .product-details-body{
+  padding:4px 14px 14px;
+  border-top:1.5px solid var(--border);
+}
+.product-details-toggle .field{ margin-top:14px; margin-bottom:0; }
+.product-details-hint{ font-size:11.5px; color:var(--muted); padding:12px 14px 0; line-height:1.4; }
+
 .platform-picker{ position:relative; }
 .platform-trigger{
   width:100%;
@@ -1222,6 +1255,33 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       </div>
     </div>
 
+    <details class="product-details-toggle" id="productDetailsToggle">
+      <summary>Product details <span style="font-weight:600;color:var(--muted);">(optional — improves accuracy)</span></summary>
+      <p class="product-details-hint">Anything you fill in here is used as a real product fact. Anything left blank is treated as unknown and won't be guessed at.</p>
+      <div class="product-details-body">
+        <div class="field">
+          <label for="productMaterialInput">Material</label>
+          <input type="text" id="productMaterialInput" placeholder="e.g. genuine leather" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="productColorInput">Color</label>
+          <input type="text" id="productColorInput" placeholder="e.g. cognac brown" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="productSizeInput">Size / Dimensions</label>
+          <input type="text" id="productSizeInput" placeholder="e.g. 6 x 8 inches" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="productPersonalizationInput">Personalization</label>
+          <input type="text" id="productPersonalizationInput" placeholder="e.g. name can be embossed on the cover" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="productFeaturesInput">Key Features</label>
+          <input type="text" id="productFeaturesInput" placeholder="e.g. refillable, elastic closure" autocomplete="off">
+        </div>
+      </div>
+    </details>
+
     <div class="field">
       <label for="categorySelect">Platform / category</label>
       <div class="platform-picker" id="platformPicker">
@@ -1368,6 +1428,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         <button type="button" class="copy-btn" id="copyDescBtn">Copy Description</button>
       </div>
       <p class="desc-output" id="descOutput"></p>
+      <p class="char-count" id="descCharCount"></p>
     </div>
 
   </section>
@@ -1669,6 +1730,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const generatorForm  = $("generatorForm");
   const keywordInput   = $("keywordInput");
   const keywordError   = $("keywordError");
+  const productMaterialInput = $("productMaterialInput");
+  const productColorInput = $("productColorInput");
+  const productSizeInput = $("productSizeInput");
+  const productPersonalizationInput = $("productPersonalizationInput");
+  const productFeaturesInput = $("productFeaturesInput");
   const categorySelect = $("categorySelect");
   const audienceSelect = $("audienceSelect");
   const customAudienceField = $("customAudienceField");
@@ -1694,6 +1760,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const tagsWrap       = $("tagsWrap");
   const tagsRaw        = $("tagsRaw");
   const descOutput     = $("descOutput");
+  const descCharCount  = $("descCharCount");
 
   const copyTitleBtn = $("copyTitleBtn");
   const copyTagsBtn  = $("copyTagsBtn");
@@ -2331,21 +2398,22 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   function getTagLimitInfo(category){
     switch (category) {
       case "Etsy":
-        return { heading: "13 Exact SEO Tags", note: "Etsy: 13 tags generated · max 20 characters per tag", maxChars: 20 };
+        return { heading: "13 Exact SEO Tags", note: "Etsy: 13 tags generated · max 20 characters per tag", maxChars: 20, copyLabel: "Copy All 13 Tags" };
       case "Print on Demand":
-        return { heading: "13 SEO Tags", note: "Print on Demand: 13 tags generated · platform limits vary", maxChars: 20 };
+        return { heading: "13 SEO Tags", note: "Print on Demand: 13 tags generated · platform limits vary", maxChars: 20, copyLabel: "Copy All 13 Tags" };
       case "Digital / Printable":
-        return { heading: "13 SEO Tags", note: "Digital / Printable: 13 tags generated · platform limits vary", maxChars: 20 };
+        return { heading: "13 SEO Tags", note: "Digital / Printable: 13 tags generated · platform limits vary", maxChars: 20, copyLabel: "Copy All 13 Tags" };
       case "Pinterest":
-        return { heading: "13 SEO Tags", note: "Pinterest: 13 keywords generated · use platform-appropriate hashtags/keywords", maxChars: 20 };
+        return { heading: "15 SEO Keywords", note: "Pinterest: 15 SEO keyword phrases generated · no official per-keyword limit", maxChars: 20, copyLabel: "Copy All Keywords" };
       default:
-        return { heading: "13 SEO Tags", note: "13 tags generated · max 20 characters per tag", maxChars: 20 };
+        return { heading: "13 SEO Tags", note: "13 tags generated · max 20 characters per tag", maxChars: 20, copyLabel: "Copy All 13 Tags" };
     }
   }
 
   function updateTagLimitUI(category){
     const info = getTagLimitInfo(category);
     tagsHeading.textContent = info.heading;
+    copyTagsBtn.textContent = info.copyLabel;
     const parts = info.note.split(":");
     if (parts.length > 1) {
       tagLimitNote.innerHTML = "<strong>" + escapeHTML(parts[0]) + ":</strong>" + escapeHTML(parts.slice(1).join(":"));
@@ -2901,16 +2969,59 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       .map(word => word.trim())
       .filter(Boolean);
 
-    const prompt = buildPrompt(
+    const productDetails = {
+      material: productMaterialInput.value.trim(),
+      color: productColorInput.value.trim(),
+      size: productSizeInput.value.trim(),
+      personalization: productPersonalizationInput.value.trim(),
+      features: productFeaturesInput.value.trim()
+    };
+
+    const productContextText = [
       keyword,
-      category,
-      audience,
-      seoGoal,
-      wordsToAvoid
+      productDetails.material,
+      productDetails.color,
+      productDetails.size,
+      productDetails.personalization,
+      productDetails.features
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    const prompt = category === "Etsy"
+      ? buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
+      : category === "Pinterest"
+        ? buildPinterestPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
+        : category === "Digital / Printable"
+          ? buildDigitalPrintablePrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
+          : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+
+    // -----------------------------------------------------------
+    // DIAGNOSTIC LOGGING ONLY (Etsy) — tracks which network stage
+    // is in flight so a failure can be attributed to request #1
+    // vs the validation retry. Does not affect any generation
+    // behavior. Never logs the prompt, product detail values,
+    // tokens, or keys — only a boolean and HTTP-level facts.
+    // -----------------------------------------------------------
+    const hasProductDetails = !!(
+      productDetails.material ||
+      productDetails.color ||
+      productDetails.size ||
+      productDetails.personalization ||
+      productDetails.features
     );
+    let etsyStage = null;
+    const generationId = generateDiagnosticRequestId();
+
+    if (category === "Etsy") {
+      etsyStage = "request-1";
+      console.log("[TagPulse][Etsy] request #1 starting", { hasProductDetails: hasProductDetails });
+    }
 
     try {
-      const result = await callGenerate(prompt);
+      const result = await callGenerateWithNetworkRetry(prompt, generationId + "-1", hasProductDetails);
+
+      if (category === "Etsy") {
+        console.log("[TagPulse][Etsy] request #1 completed", { status: result.status });
+      }
 
       if (result.status === 402) {
         applyServerState(result.data);
@@ -2922,12 +3033,151 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       }
 
       const outputType = getOutputType(category);
-      const parsed = extractJSON(result.data.text);
+      let parsed = extractJSON(result.data.text);
+      let serverState = result.data;
 
-      validateParsedOutput(outputType, parsed);
+      if (category === "Etsy") {
+
+        // Real, blocking validation (format + the mechanical checks
+        // described in the spec) — never render an invalid Etsy
+        // result. On failure, retry exactly once with the specific
+        // validation failures fed back to the model as a correction
+        // instruction.
+        let validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
+
+        console.log(
+          "[TagPulse][Etsy] first validation " + (validation.valid ? "passed" : "failed"),
+          validation.valid ? undefined : validation.errors
+        );
+
+        if (!validation.valid) {
+
+          const retryPrompt = buildEtsyPrompt(
+            keyword,
+            productDetails,
+            audience,
+            seoGoal,
+            wordsToAvoid,
+            validation.errors
+          );
+
+          etsyStage = "request-2-retry";
+          console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: hasProductDetails });
+
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, generationId + "-2", hasProductDetails);
+
+          console.log("[TagPulse][Etsy] retry (request #2) completed", { status: retryResult.status });
+
+          if (retryResult.status === 402) {
+            applyServerState(retryResult.data);
+            if (!isPro) {
+              openModal(paywallModal);
+            }
+            showToast(retryResult.data.error || "You're out of credits.", "error");
+            return;
+          }
+
+          serverState = retryResult.data;
+          parsed = extractJSON(retryResult.data.text);
+          validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
+
+          console.log(
+            "[TagPulse][Etsy] retry validation " + (validation.valid ? "passed" : "failed"),
+            validation.valid ? undefined : validation.errors
+          );
+
+          if (!validation.valid) {
+            throw new Error("The AI couldn't produce a valid Etsy listing after a retry. Please try again or adjust your inputs.");
+          }
+        }
+
+      } else if (category === "Pinterest") {
+
+        // Same real-validation + single-retry architecture as Etsy,
+        // built as its own parallel branch (not a shared helper) so
+        // the Etsy branch above is never touched by this addition.
+        let validation = validatePinterestOutput(parsed, wordsToAvoid, audience, productContextText);
+
+        if (!validation.valid) {
+
+          const retryPrompt = buildPinterestPrompt(
+            keyword,
+            productDetails,
+            audience,
+            seoGoal,
+            wordsToAvoid,
+            validation.errors
+          );
+
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt);
+
+          if (retryResult.status === 402) {
+            applyServerState(retryResult.data);
+            if (!isPro) {
+              openModal(paywallModal);
+            }
+            showToast(retryResult.data.error || "You're out of credits.", "error");
+            return;
+          }
+
+          serverState = retryResult.data;
+          parsed = extractJSON(retryResult.data.text);
+          validation = validatePinterestOutput(parsed, wordsToAvoid, audience, productContextText);
+
+          if (!validation.valid) {
+            throw new Error("The AI couldn't produce a valid Pinterest SEO package after a retry. Please try again or adjust your inputs.");
+          }
+        }
+
+      } else if (category === "Digital / Printable") {
+
+        // Same real-validation + single-retry architecture as Etsy
+        // and Pinterest, built as its own parallel branch (not a
+        // shared helper) so neither of those branches is touched
+        // by this addition. Output schema/limits are unchanged
+        // from the generic path (140-char title, 13 tags, 20 chars
+        // per tag), so the existing renderOutputByType/renderOutput
+        // path renders this exactly as before — only the prompt and
+        // validation are Digital/Printable-specific.
+        let validation = validateDigitalPrintableOutput(parsed, wordsToAvoid, audience, productContextText);
+
+        if (!validation.valid) {
+
+          const retryPrompt = buildDigitalPrintablePrompt(
+            keyword,
+            productDetails,
+            audience,
+            seoGoal,
+            wordsToAvoid,
+            validation.errors
+          );
+
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt);
+
+          if (retryResult.status === 402) {
+            applyServerState(retryResult.data);
+            if (!isPro) {
+              openModal(paywallModal);
+            }
+            showToast(retryResult.data.error || "You're out of credits.", "error");
+            return;
+          }
+
+          serverState = retryResult.data;
+          parsed = extractJSON(retryResult.data.text);
+          validation = validateDigitalPrintableOutput(parsed, wordsToAvoid, audience, productContextText);
+
+          if (!validation.valid) {
+            throw new Error("The AI couldn't produce a valid Digital / Printable listing after a retry. Please try again or adjust your inputs.");
+          }
+        }
+
+      } else {
+        validateParsedOutput(outputType, parsed);
+      }
 
       const activeSection = renderOutputByType(outputType, parsed, category);
-      applyServerState(result.data);
+      applyServerState(serverState);
 
       saveHistoryEntry({
         keyword: keyword,
@@ -2944,16 +3194,34 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
       showToast(
         isPro ? "SEO listing generated!" :
-        (typeof result.data.credits_remaining === "number" && result.data.credits_remaining > 0) ?
-          "SEO listing generated! " + result.data.credits_remaining + (result.data.credits_remaining === 1 ? " credit" : " credits") + " left." :
+        (typeof serverState.credits_remaining === "number" && serverState.credits_remaining > 0) ?
+          "SEO listing generated! " + serverState.credits_remaining + (serverState.credits_remaining === 1 ? " credit" : " credits") + " left." :
         "SEO listing generated!",
         "success"
       );
       activeSection.scrollIntoView({ behavior: "smooth", block: "start" });
 
     } catch (err) {
-      console.error(err);
-      showToast(err.message || "Something went wrong. Please try again.", "error");
+      if (etsyStage) {
+        console.error(
+          "[TagPulse][Etsy] generation failed during " + etsyStage +
+          " — " + (err.networkLevelFailure ? "network-level fetch rejection" : "handled error"),
+          { requestId: err.requestId, elapsedMs: err.elapsedMs, networkRetryExhausted: !!err.networkRetryExhausted, message: err.message }
+        );
+      } else {
+        console.error(
+          "[TagPulse] generation failed",
+          { requestId: err.requestId, elapsedMs: err.elapsedMs, networkLevelFailure: !!err.networkLevelFailure, networkRetryExhausted: !!err.networkRetryExhausted, message: err.message }
+        );
+      }
+
+      const baseMessage = err.message || "Something went wrong. Please try again.";
+      const retrySuffix = err.networkRetryExhausted ? " (automatic retry also failed)" : "";
+      const diagSuffix = (err.networkLevelFailure && err.requestId)
+        ? (" [id: " + err.requestId + (typeof err.elapsedMs === "number" ? ", " + err.elapsedMs + "ms" : "") + "]")
+        : "";
+
+      showToast(baseMessage + retrySuffix + diagSuffix, "error");
     } finally {
       setGenerating(false);
     }
@@ -2962,9 +3230,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   /* ============================================================
      PROMPT BUILDER
      ------------------------------------------------------------
-     buildPrompt() just calls buildStandardPrompt() — the ORIGINAL
-     function body, byte-for-byte, used for all 4 platforms
-     (Etsy/Digital/POD/Pinterest).
+     buildPrompt() calls buildStandardPrompt() — the ORIGINAL
+     function body, byte-for-byte, unchanged. It is now used for
+     the 3 non-Etsy platforms only (Digital/Printable, Print on
+     Demand, Pinterest). Etsy has its own buildEtsyPrompt() below;
+     handleGenerate() picks which one to call based on category.
      ============================================================ */
   function buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
     return buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
@@ -2997,46 +3267,414 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       "STRICT RULES FOR TITLE: Under 140 characters, keyword-rich but naturally readable, not a keyword dump, written for the stated Target Audience and SEO Goal above."
     ].join("\n");
   }
+
+  /* ============================================================
+     ETSY PROMPT BUILDER (dedicated — Etsy no longer uses
+     buildStandardPrompt())
+     ------------------------------------------------------------
+     Implements the fact-boundary design from the Etsy SEO engine
+     spec:
+       - Only user-supplied product details are ever asserted as
+         facts (KNOWN FACTS block below, built only from non-empty
+         fields).
+       - Every attribute NOT supplied is explicitly declared
+         unknown and off-limits, including vague "safe substitute"
+         quality language ("premium", "durable", etc.) that isn't
+         backed by a known fact.
+       - Targeting/audience is kept OUT of the KNOWN FACTS block on
+         purpose (it used to sit there, which is very likely why it
+         got treated as a fact the model could freely turn into
+         keywords). It now lives in its own AUDIENCE CONTEXT
+         section, explicitly framed as strategic context and not a
+         keyword source, with an explicit ban on mechanically
+         combining the targeting label with a product word.
+       - The model is asked to privately reason through which
+         search-intent clusters genuinely apply before writing the
+         13 tags, with explicit anti-redundancy and anti-filler
+         instructions, but is told not to output that reasoning —
+         only the final {title, tags, description} object.
+       - An optional validationErrors array turns this into a
+         single-retry correction prompt: when non-empty, it's
+         appended as a "fix these exact issues" section so the
+         retry is a targeted correction, not a blind re-roll.
+     ============================================================ */
+  function buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, validationErrors){
+    productDetails = productDetails || {};
+    validationErrors = validationErrors || [];
+
+    const knownFacts = [
+      "- Product idea: " + keyword
+    ];
+    if (productDetails.material)        knownFacts.push("- Material: " + productDetails.material);
+    if (productDetails.color)           knownFacts.push("- Color: " + productDetails.color);
+    if (productDetails.size)            knownFacts.push("- Size / Dimensions: " + productDetails.size);
+    if (productDetails.personalization) knownFacts.push("- Personalization: " + productDetails.personalization);
+    if (productDetails.features)        knownFacts.push("- Key features: " + productDetails.features);
+    knownFacts.push("- SEO goal: " + seoGoal);
+
+    const lines = [
+      "Act as a senior Etsy SEO strategist and listing copywriter. This is a strict factual-accuracy task, not a creative-writing task.",
+      "",
+      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
+      ...knownFacts,
+      "",
+      "=== UNKNOWN FACTS — DO NOT INVENT ===",
+      "Any product attribute NOT listed above as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, garment construction, pockets, shipping details, delivery times, washing instructions, quality claims, packaging, personalization workflow/capabilities, quantities, file formats, DPI, and measurements.",
+      'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", "top quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact above. If you have nothing factual to say about a dimension, omit it rather than filling the gap with unsupported language.',
+      "",
+      "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
+      "Selected targeting option: " + audience,
+      "This tells you who the likely buyer is, to help you judge tone and genuine buyer intent. It is background context only — it is not a product fact and not a keyword to insert.",
+      'Never create a keyword merely by combining the targeting label with a product word (for example, do not produce "online shopper gift", "etsy dog mom", "pinterest wall art", or similar). Do not insert phrases like "for online shoppers", "for Etsy shoppers", "for Pinterest users", or similar targeting/audience metadata into the title, tags, or description just because that option was selected.',
+      "A term may still be used if it is independently relevant to the actual product or genuine buyer search intent — the rule is only against mechanically converting the UI targeting label into SEO text. SEO phrases must come primarily from the actual product concept, the supplied product details above, genuine buyer intent, and search contexts specific to this product — not from the targeting label itself.",
+      "",
+      "=== KEYWORD STRATEGY (internal reasoning — do not output this part) ===",
+      "Before writing the final tags, privately evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product: core product, product type/variant, primary theme/design, personalization/customization, recipient/audience, occasion, gift intent, use case, style/aesthetic, relevant niche/sub-niche. These are reasoning categories, NOT mandatory tags — only use a cluster that is genuinely supported by the product and supplied facts; do not force every cluster to appear.",
+      "Prioritize, in order: (1) direct relevance to the actual product, (2) strong buyer/search intent, (3) specificity, (4) distinct search intent, (5) natural multi-word phrasing, (6) Etsy tag constraints, (7) diversity across the 13 tags.",
+      'Avoid generating several tags that are merely grammatical variations of the same search intent — for example "dog mom gift", "gift for dog mom", and "dog mom present" all express the same intent; select only the strongest one and use the freed-up slots for other genuinely different search intents. Do not fill slots with generic filler such as "unique gift", "special occasion gift", "perfect gift", "cute item", or "great present" unless the phrase carries genuinely useful, product-specific search intent. Do not overcorrect: tags that represent legitimately different product attributes or angles (for example "dog mom sweatshirt" and "personalized dog mom") may coexist.',
+      "",
+      "=== OUTPUT FORMAT ===",
+      "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation, NO keyword-reasoning fields, NO intermediate work. Exactly this shape:",
+      "{",
+      '  "title": "...",',
+      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13"],',
+      '  "description": "..."',
+      "}",
+      "",
+      'TITLE RULES: Maximum 140 characters. Put the primary product phrase naturally near the beginning when it reads well. Natural and readable, not a keyword dump. No repetitive synonym chains. No unsupported product attributes. Avoid generic filler such as "Perfect Gift", "Great Gift", or "Perfect for..." when a stronger, more product-specific phrase is available. Do not stuff in extra words just to use up the character limit.',
+      "TAG RULES: Exactly 13 tags. Every tag must be non-empty, 20 characters or fewer, and a multi-word phrase (no bare single words). Every tag must be relevant to the actual product and must not state an unsupported factual attribute. No exact duplicate tags. Prefer tags that represent genuinely different search-intent angles over near-duplicate phrasing of the same angle — but do not force artificial diversity where it doesn't fit the product.",
+      'DESCRIPTION RULES: Write a useful Etsy description using ONLY the known facts and the stated SEO goal above, plus general non-specific framing (use-case, occasion, gift-worthiness) where it doesn\'t require inventing a fact. Do not add unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production, or packaging. Do not mention internal targeting/audience metadata (for example "for online shoppers", "for Etsy shoppers", "for Pinterest users") just because that option was selected — speak naturally to the buyer and product without exposing internal targeting labels.',
+      "WORDS TO AVOID: " + (
+        wordsToAvoid.length
+          ? wordsToAvoid.join(", ")
+          : "None specified"
+      ) + ". Do not use any of these words or phrases anywhere in the title, tags, or description."
+    ];
+
+    if (validationErrors.length) {
+      lines.push(
+        "",
+        "=== YOUR PREVIOUS ATTEMPT FAILED VALIDATION — FIX THESE EXACT ISSUES ===",
+        ...validationErrors.map(e => "- " + e),
+        "Return a corrected JSON object that fixes every issue above while still following all the rules stated earlier."
+      );
+    }
+
+    return lines.join("\n");
+  }
+
+  /* ============================================================
+     PINTEREST PROMPT BUILDER (dedicated — genuinely Pinterest-
+     specific, not the Etsy prompt with words swapped)
+     ------------------------------------------------------------
+     Pinterest is a visual discovery/search platform, not an
+     exact-match tag marketplace like Etsy:
+       - 15 SEO keyword phrases (a TagPulse product-format choice,
+         not a claimed Pinterest official rule) instead of Etsy's
+         13-tag / 20-character system — no per-keyword character
+         cap is enforced.
+       - Pin title: 100-character Pinterest limit, front-loaded,
+         not forced to the limit.
+       - Pin description: 500-character Pinterest limit, natural
+         prose that incorporates keywords — not a concatenated
+         keyword list.
+       - Output field is "keywords", not "tags".
+     Shares the same fact-boundary and audience-context philosophy
+     as buildEtsyPrompt (kept consistent on purpose), but every
+     rule below is written for Pinterest specifically.
+     ============================================================ */
+  function buildPinterestPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, validationErrors){
+    productDetails = productDetails || {};
+    validationErrors = validationErrors || [];
+
+    const knownFacts = [
+      "- Product/topic idea: " + keyword
+    ];
+    if (productDetails.material)        knownFacts.push("- Material: " + productDetails.material);
+    if (productDetails.color)           knownFacts.push("- Color: " + productDetails.color);
+    if (productDetails.size)            knownFacts.push("- Size / Dimensions: " + productDetails.size);
+    if (productDetails.personalization) knownFacts.push("- Personalization: " + productDetails.personalization);
+    if (productDetails.features)        knownFacts.push("- Key features: " + productDetails.features);
+
+    const lines = [
+      "Act as a senior Pinterest SEO strategist and Pin copywriter. This is a strict factual-accuracy task, not a creative-writing task. Pinterest is a visual discovery/search platform — treat it differently from an exact-match marketplace tag system.",
+      "",
+      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
+      ...knownFacts,
+      "",
+      "=== UNKNOWN FACTS — DO NOT INVENT ===",
+      "Any product attribute NOT listed above as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, file formats, DPI, resolution, number of files, download status, compatibility, shipping details, pricing, guarantees, personalization workflow, and measurements.",
+      'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact above.',
+      "",
+      "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
+      "Selected targeting option: " + audience,
+      "This tells you who the likely Pinterest searcher is, to help you judge tone and genuine search intent. It is background context only — it is not a keyword to insert.",
+      'Never create a keyword merely by combining the targeting label with a product word (for example, do not produce "pinterest users gift", "online shoppers find", or similar). Do not insert phrases like "for Pinterest users", "for online shoppers", or similar targeting/audience metadata into the title, keywords, or description just because that option was selected.',
+      "A term may still be used if it is independently relevant to the actual product/topic or genuine search intent — the rule is only against mechanically converting the UI targeting label into SEO text. Keyword phrases must come primarily from the actual product/topic concept, the supplied product details above, and genuine Pinterest search/discovery intent — not from the targeting label itself.",
+      "",
+      "=== SEO GOAL ===",
+      'The stated SEO goal is: ' + seoGoal + '. Use this as strategic guidance for keyword breadth and search intent — not as literal keyword material. Do not generate keywords like "get more traffic" or "increase traffic" merely because that goal was selected.',
+      "",
+      "=== KEYWORD STRATEGY (internal reasoning — do not output this part) ===",
+      "Before writing the final 15 keywords, privately evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product/topic: core topic/product, specific product/topic variation, problem or need, use case, audience intent, style/aesthetic, theme, occasion/season (only when genuinely relevant), inspiration/idea intent, related niche, long-tail search phrase. These are reasoning categories, NOT mandatory quotas — only use a cluster that is genuinely supported by the product and supplied facts; do not force every cluster to appear and do not generate random broad keywords just to fill 15 slots.",
+      "Prioritize: relevance, genuine search intent, specificity, natural language, semantic diversity, long-tail usefulness, consistency with the actual product/topic, and genuine Pinterest discovery intent.",
+      'Avoid generating 15 versions of the same phrase — for example "minimalist desk setup", "minimalist desk setup ideas", "minimalist desk setup inspiration", "minimalist desk setup aesthetic", and "minimalist desk setup workspace" are too redundant together. Some overlap is natural, but the set should provide genuinely different search angles. Every keyword must be directly defensible from the user\'s product/topic — do not keyword-stuff and do not pad with random broad keywords just to reach 15.',
+      "",
+      "=== OUTPUT FORMAT ===",
+      "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation, NO keyword-reasoning fields, NO intermediate work. Exactly this shape:",
+      "{",
+      '  "title": "...",',
+      '  "keywords": ["keyword1","keyword2","keyword3","keyword4","keyword5","keyword6","keyword7","keyword8","keyword9","keyword10","keyword11","keyword12","keyword13","keyword14","keyword15"],',
+      '  "description": "..."',
+      "}",
+      "",
+      'PIN TITLE RULES: Maximum 100 characters. Place the strongest primary search phrase early — the first ~40 characters are especially important since they are more likely to be displayed. Clearly communicate what the Pin is about. Natural language, attractive to someone browsing Pinterest. Avoid unnecessary repetition and generic filler such as "Perfect for...", "Great for...", "Best...", "Ultimate...", "Must-have..." unless genuinely appropriate. Do not force the title to 100 characters — a strong 55-character title is better than a stuffed 100-character title. No unsupported product attributes.',
+      "KEYWORD RULES: Exactly 15 keyword phrases. Every keyword must be a non-empty, reasonably concise phrase directly defensible from the actual product/topic. No exact duplicate keywords. Avoid near-duplicate keywords that are just grammatical variations of the same phrase (for example \"dog mom gift\" and \"dog mom gifts\") — prefer genuinely different search angles instead; genuinely different angles that happen to share words (for example \"dog mom gift\" and \"dog mom ideas\") are fine together. Do not state an unsupported factual attribute in any keyword.",
+      'PIN DESCRIPTION RULES: Maximum 500 characters. Explain what the Pin offers and naturally weave relevant keywords into readable sentences — do NOT simply concatenate a list of keywords like "keyword one, keyword two, keyword three". Match Pinterest discovery intent, remain human-readable, and encourage a relevant action when appropriate. Do not add unsupported claims about materials, dimensions, colors, file formats, download status, number of files, resolution, printing specifications, shipping, pricing, product features, personalization workflow, compatibility, or guarantees. Do not mention internal targeting/audience metadata (for example "for online shoppers", "for Pinterest users") just because that option was selected.',
+      "WORDS TO AVOID: " + (
+        wordsToAvoid.length
+          ? wordsToAvoid.join(", ")
+          : "None specified"
+      ) + ". Do not use any of these words or phrases anywhere in the title, keywords, or description."
+    ];
+
+    if (validationErrors.length) {
+      lines.push(
+        "",
+        "=== YOUR PREVIOUS ATTEMPT FAILED VALIDATION — FIX THESE EXACT ISSUES ===",
+        ...validationErrors.map(e => "- " + e),
+        "Return a corrected JSON object that fixes every issue above while still following all the rules stated earlier."
+      );
+    }
+
+    return lines.join("\n");
+  }
+
+  /* ============================================================
+     DIGITAL / PRINTABLE PROMPT BUILDER (dedicated — genuinely
+     Digital/Printable-specific, not the Etsy prompt reused)
+     ------------------------------------------------------------
+     Digital products are especially prone to spec hallucination
+     (file format, DPI, page/file counts, license type, editable
+     status) because the product itself is intangible — there's no
+     physical object to describe around. This prompt makes that
+     the central concern: it explicitly separates PRODUCT IDENTITY
+     (safe to describe from the keyword itself, e.g. "printable"
+     if the user's own product name says "printable") from PRODUCT
+     CONTENTS/SPECIFICATIONS (unsafe unless explicitly supplied).
+     Output schema/limits are unchanged from the generic path (140-
+     char title, 13 tags, 20 chars/tag, {title,tags,description}),
+     so the existing renderer and history payload work unmodified —
+     only the prompt and validation are new.
+     ============================================================ */
+  function buildDigitalPrintablePrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, validationErrors){
+    productDetails = productDetails || {};
+    validationErrors = validationErrors || [];
+
+    const knownFacts = [
+      "- Product idea (as the user typed it): " + keyword
+    ];
+    if (productDetails.material)        knownFacts.push("- Material: " + productDetails.material);
+    if (productDetails.color)           knownFacts.push("- Color: " + productDetails.color);
+    if (productDetails.size)            knownFacts.push("- Size / Dimensions: " + productDetails.size);
+    if (productDetails.personalization) knownFacts.push("- Personalization: " + productDetails.personalization);
+    if (productDetails.features)        knownFacts.push("- Key features (may include file format, number of files, sizes, editable status, template platform, license, included pages, etc. if the seller supplied them): " + productDetails.features);
+    knownFacts.push("- SEO goal: " + seoGoal);
+
+    const lines = [
+      "Act as a senior digital-product and printable-listing SEO strategist and copywriter. This is a strict factual-accuracy task, not a creative-writing task.",
+      "",
+      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
+      ...knownFacts,
+      "",
+      "=== PRODUCT IDENTITY vs. PRODUCT CONTENTS/SPECIFICATIONS — CRITICAL ===",
+      'PRODUCT IDENTITY is what the product fundamentally IS, and it is safe to state exactly as the user described it — for example if the product idea says "printable", it is safe to call it printable; if it says "digital download", it is safe to call it a digital download. Do not add hedging or remove words the user themselves used.',
+      'PRODUCT CONTENTS/SPECIFICATIONS are details about what is actually inside or how it is delivered, and these are UNSAFE to state unless explicitly supplied as a known fact above. This includes (but is not limited to): file format (PDF, JPG, PNG, SVG), resolution/DPI, number of files, page count, paper/print size (A4, US Letter, 8x10, 11x14, or similar), delivery method ("instant download" as a specific claim beyond what the product idea itself already says), license type (commercial use, personal use), editable status, template platform (Canva, Photoshop), layered files, print-at-home suitability, professional printing, or frame inclusion.',
+      "Plausibility is NOT evidence — a detail being common for this type of product does not make it true for THIS listing. If a specification was not supplied, do not guess at a specific value and do not imply one indirectly.",
+      'Do NOT use vague "safe substitute" claims such as "premium", "high quality", "professionally designed" unless directly supported by a known fact above.',
+      "",
+      "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
+      "Selected targeting option: " + audience,
+      "This tells you who the likely buyer is, to help you judge tone and genuine buyer intent. It is background context only — it is not a product fact and not a keyword to insert.",
+      'Never create a keyword merely by combining the targeting label with a product word (for example, do not produce "online shopper printable", "pinterest wall art", or similar). Do not insert phrases like "for online shoppers", "for Pinterest users", or similar targeting/audience metadata into the title, tags, or description just because that option was selected.',
+      "A term may still be used if it is independently relevant to the actual product or genuine buyer search intent. Keyword phrases must come primarily from the actual product concept, the supplied product details above, and genuine buyer search intent — not from the targeting label itself.",
+      "",
+      "=== SEO GOAL ===",
+      'The stated SEO goal is: ' + seoGoal + '. Use this as strategic guidance for how broad or narrow the keyword set should be — not as literal keyword material. Do not generate tags like "get more traffic" merely because that goal was selected.',
+      "",
+      "=== KEYWORD STRATEGY (internal reasoning — do not output this part) ===",
+      "Before writing the final tags, privately evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product: core product, product type, specific format/type (only when supplied), use case, buyer intent, audience, occasion, style, theme, room/home use, organization/planning use, gifting intent, niche, long-tail search intent. These are reasoning categories, NOT mandatory quotas — only use a cluster genuinely supported by the product and supplied facts; do not force every cluster to appear.",
+      "Prioritize: relevance, buyer intent, specificity, semantic diversity, natural search language, product accuracy, and long-tail usefulness. Do not generate weak keywords merely to fill a quota, and do not keyword-stuff.",
+      'Avoid producing many versions of the same phrase — for example "printable wall art", "printable wall decor", "wall art printable", "printable wall artwork", and "wall decor printable" are too redundant together. Some overlap is natural, but the final set should cover genuinely different search intents.',
+      "",
+      "=== OUTPUT FORMAT ===",
+      "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation, NO keyword-reasoning fields, NO intermediate work. Exactly this shape:",
+      "{",
+      '  "title": "...",',
+      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13"],',
+      '  "description": "..."',
+      "}",
+      "",
+      'TITLE RULES: Maximum 140 characters. Put the strongest product phrase early. Natural and readable, not a keyword dump. Clearly describe the actual digital/printable product. Avoid generic filler such as "Perfect for...", "Great Gift...", "Best...", "Ultimate...", "Must-have..." unless genuinely appropriate. Do not force the title to the maximum length. Do not invent specifications.',
+      "TAG RULES: Exactly 13 tags. Every tag must be non-empty, 20 characters or fewer, and a multi-word phrase (no bare single words). Every tag must be relevant to the actual product and must not state an unsupported specification. No exact duplicate tags. Prefer tags that represent genuinely different search intents over near-duplicate phrasing of the same angle.",
+      "DESCRIPTION RULES: Write a useful listing description that explains the actual product, naturally uses relevant search terms, and describes legitimate use cases the product idea itself supports — without keyword-stuffing. Do not claim specific contents, file formats, page/file counts, sizes, delivery methods, or licensing terms unless they are known facts above (for example, a \"Wedding Planning Checklist Printable\" may be described in terms of wedding planning and organization in general, but must not claim to include a budget tracker, vendor contact page, timeline, seating chart, or guest list unless supplied). Do not mention internal targeting/audience metadata (for example \"for online shoppers\", \"for Pinterest users\") just because that option was selected.",
+      "WORDS TO AVOID: " + (
+        wordsToAvoid.length
+          ? wordsToAvoid.join(", ")
+          : "None specified"
+      ) + ". Do not use any of these words or phrases anywhere in the title, tags, or description."
+    ];
+
+    if (validationErrors.length) {
+      lines.push(
+        "",
+        "=== YOUR PREVIOUS ATTEMPT FAILED VALIDATION — FIX THESE EXACT ISSUES ===",
+        ...validationErrors.map(e => "- " + e),
+        "Return a corrected JSON object that fixes every issue above while still following all the rules stated earlier."
+      );
+    }
+
+    return lines.join("\n");
+  }
+
   /* ============================================================
      CLOUDFLARE PAGES FUNCTION CALL
      ============================================================ */
-  async function callGenerate(prompt){
+  async function callGenerate(prompt, requestId, hasProductDetails){
     if (!authSession || !authUser) {
       throw new Error("Please sign in before generating.");
     }
 
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + getAccessToken()
-      },
-      body: JSON.stringify({ prompt: prompt, license_key: licenseKey })
-    });
+    requestId = requestId || generateDiagnosticRequestId();
+    const clientStart = Date.now();
+
+    console.log("[TagPulse] request starting", { requestId: requestId, hasProductDetails: !!hasProductDetails });
+
+    let res;
+    try {
+      res = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + getAccessToken()
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          license_key: licenseKey,
+          request_id: requestId,
+          has_product_details: !!hasProductDetails
+        })
+      });
+    } catch (networkErr) {
+      // A genuine browser/network-level fetch rejection — nothing
+      // in this app produced or caught this. Diagnostic fields are
+      // attached directly to the original error object (not a new
+      // one) so its type (TypeError) and message are preserved
+      // exactly as the browser produced them.
+      const elapsedMs = Date.now() - clientStart;
+      networkErr.requestId = requestId;
+      networkErr.elapsedMs = elapsedMs;
+      networkErr.networkLevelFailure = true;
+      console.error("[TagPulse] request failed before receiving any response", { requestId: requestId, elapsedMs: elapsedMs, message: networkErr.message });
+      throw networkErr;
+    }
+
+    const elapsedMs = Date.now() - clientStart;
+    console.log("[TagPulse] response received", { requestId: requestId, elapsedMs: elapsedMs, status: res.status });
 
     let data = {};
     try {
       data = await res.json();
     } catch (_) {
-      throw new Error("The server returned an invalid response.");
+      const err = new Error("The server returned an invalid response.");
+      err.requestId = requestId;
+      err.elapsedMs = elapsedMs;
+      throw err;
     }
 
     // 402 is a structured "out of credits" response, not a generic
     // failure — it carries its own credits_remaining/is_pro/error
     // fields that the caller needs, so it's returned rather than thrown.
     if (res.status === 402) {
-      return { status: 402, data: data };
+      return { status: 402, data: data, requestId: requestId, elapsedMs: elapsedMs };
     }
 
     if (!res.ok) {
-      throw new Error(data.error || "AI generation failed (" + res.status + ").");
+      const err = new Error(data.error || "AI generation failed (" + res.status + ").");
+      err.requestId = requestId;
+      err.elapsedMs = elapsedMs;
+      throw err;
     }
 
     if (!data.text || typeof data.text !== "string") {
-      throw new Error("The AI didn't return a usable result. Please try again.");
+      const err = new Error("The AI didn't return a usable result. Please try again.");
+      err.requestId = requestId;
+      err.elapsedMs = elapsedMs;
+      throw err;
     }
 
-    return { status: 200, data: data };
+    return { status: 200, data: data, requestId: requestId, elapsedMs: elapsedMs };
+  }
+
+  /**
+   * Request ID generator. Originally diagnostics-only; now also
+   * functional — this same ID is sent to the backend and used as
+   * an idempotency key, and is reused verbatim by
+   * callGenerateWithNetworkRetry()'s one automatic retry so the
+   * backend can recognize a retried request as the same logical
+   * generation rather than a new one.
+   */
+  function generateDiagnosticRequestId(){
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return "req-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+  }
+
+  /**
+   * Wraps callGenerate() with exactly one automatic retry, and only
+   * for a genuine network-level failure (err.networkLevelFailure —
+   * a real browser "Failed to fetch"/connection error, never an
+   * HTTP 400/401/402/429/5xx, which callGenerate() never marks
+   * this way). The retry reuses the SAME request ID as the first
+   * attempt — resolved once, here, so both the original call and
+   * the retry share it — which is what lets the backend's
+   * idempotency check recognize them as one logical generation and
+   * avoid a duplicate credit charge or a duplicate Groq call.
+   *
+   * This is a transport-level concern only: it knows nothing about
+   * Etsy's SEO-validation retry (that's a separate, higher-level
+   * mechanism in handleGenerate that decides to build a *different*
+   * corrective prompt and call this function again with a *new*
+   * request ID for that attempt). The two retry mechanisms are
+   * independent and don't compound — each callGenerateWithNetworkRetry()
+   * call is bounded to at most one extra attempt of its own,
+   * regardless of how many times it's invoked overall.
+   */
+  async function callGenerateWithNetworkRetry(prompt, requestId, hasProductDetails){
+    requestId = requestId || generateDiagnosticRequestId();
+
+    try {
+      return await callGenerate(prompt, requestId, hasProductDetails);
+
+    } catch (err) {
+      if (!err.networkLevelFailure) {
+        throw err;
+      }
+
+      console.log("[TagPulse] network-level failure — retrying once with the same request ID", { requestId: requestId, elapsedMs: err.elapsedMs });
+      generateBtnLabel.innerHTML = '<span class="spinner"></span> Connection interrupted — retrying…';
+
+      try {
+        const result = await callGenerate(prompt, requestId, hasProductDetails);
+        generateBtnLabel.innerHTML = '<span class="spinner"></span> Generating…';
+        return result;
+
+      } catch (retryErr) {
+        retryErr.networkRetryExhausted = true;
+        throw retryErr;
+      }
+    }
   }
 
   function extractJSON(text){
@@ -3083,6 +3721,46 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     outputSection.classList.remove("hidden");
   }
 
+  /* ============================================================
+     PINTEREST OUTPUT RENDERER
+     ------------------------------------------------------------
+     Reuses the same three-card DOM/visual language as renderOutput
+     (per "reuse existing visual language, don't redesign the
+     interface"), but reads parsed.keywords (not .tags), uses
+     Pinterest's own character limits, doesn't apply Etsy's 20-char
+     "over limit" flag (Pinterest has no such official limit), and
+     labels the section "SEO Keywords" instead of "SEO Tags". Does
+     not call or modify renderOutput().
+     ============================================================ */
+  function renderPinterestOutput(parsed, category){
+    const title = String(parsed.title).trim();
+    titleOutput.textContent = title;
+    titleCharCount.textContent = title.length + " / 100 characters";
+    previewTitle.textContent = title;
+    previewCategory.textContent = category;
+    updateRiskAlert([keywordInput.value, title, (parsed.keywords || []).join(" ")].join(" "));
+    updateTagLimitUI(category);
+
+    tagsWrap.innerHTML = "";
+    const keywords = parsed.keywords.slice(0, 15).map(k => String(k).trim()).filter(Boolean);
+    keywords.forEach((kw, i) => {
+      const chip = document.createElement("span");
+      const length = [...kw].length;
+      chip.className = "tag-chip";
+      chip.style.animationDelay = (i * 0.03) + "s";
+      chip.innerHTML = '<span class="hash">#</span>' + escapeHTML(kw) + '<span class="tag-count" title="Character count">' + length + '</span>';
+      appendTagCopyButton(chip, kw);
+      tagsWrap.appendChild(chip);
+    });
+    tagsRaw.value = keywords.join(", ");
+
+    const description = String(parsed.description).trim();
+    descOutput.textContent = description;
+    descCharCount.textContent = [...description].length + " / 500 characters";
+
+    outputSection.classList.remove("hidden");
+  }
+
   function escapeHTML(str){
     const div = document.createElement("div");
     div.textContent = str;
@@ -3122,10 +3800,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   /* ============================================================
      OUTPUT VALIDATION + RENDER
      ------------------------------------------------------------
-     validateParsedOutput() and renderOutputByType() are thin
-     wrappers around the original renderOutput()/validation logic.
-     Multi-platform output types were removed; only the standard
-     Etsy/Digital/POD/Pinterest shape is supported now.
+     validateParsedOutput() is the original thin format check,
+     still used as-is for the 3 non-Etsy platforms. Etsy uses the
+     dedicated validateEtsyOutput() below instead, which performs
+     real blocking validation (exact tag count, per-tag length,
+     duplicates, near-duplicates, words-to-avoid) rather than only
+     checking that the fields exist.
      ============================================================ */
 
   function validateParsedOutput(outputType, parsed){
@@ -3134,13 +3814,395 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
   }
 
+  /* ------------------------------------------------------------
+     ETSY NEAR-DUPLICATE HEURISTIC
+     ------------------------------------------------------------
+     Deliberately conservative: two tags are only flagged if their
+     word sequences are identical once each word is naively
+     singularized (drop a trailing "s" on words longer than 3
+     characters). This catches "dog mom gift" vs "dog mom gifts"
+     (only the last word differs by pluralization) but does NOT
+     flag "dog mom gift" vs "dog mom sweatshirt" (the words differ,
+     not just their plural form) — it will not catch reordered or
+     loosely-related tags, which is intentional to avoid rejecting
+     legitimate tags that merely share important product words.
+     ------------------------------------------------------------ */
+
+  function normalizeTagForDuplicateCheck(tag){
+    return String(tag)
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(word => (word.length > 3 && word.endsWith("s")) ? word.slice(0, -1) : word)
+      .join(" ");
+  }
+
+  function findNearDuplicateTagPairs(tags){
+    const normalized = tags.map(normalizeTagForDuplicateCheck);
+    const pairs = [];
+    for (let i = 0; i < normalized.length; i++){
+      for (let j = i + 1; j < normalized.length; j++){
+        if (normalized[i] && normalized[i] === normalized[j]){
+          pairs.push([tags[i], tags[j]]);
+        }
+      }
+    }
+    return pairs;
+  }
+
+  /* ------------------------------------------------------------
+     AUDIENCE LEAK CHECK (conservative, narrow)
+     ------------------------------------------------------------
+     Only the targeting options that are purely platform/context
+     metadata (not plausible product-recipient keywords) get a
+     banned-phrase list here — e.g. "Online Shoppers" or "Etsy
+     Shoppers" should never surface as literal SEO text. Audiences
+     that could legitimately double as a real product-recipient
+     keyword (e.g. "Small Business Owners", "Entrepreneurs") are
+     deliberately left unchecked to avoid rejecting a genuinely
+     useful tag — same conservative philosophy as the near-duplicate
+     heuristic above.
+     ------------------------------------------------------------ */
+
+  function getAudienceLeakPhrases(audience){
+    const map = {
+      "Online Shoppers": ["online shopper", "online shoppers"],
+      "Etsy Shoppers": ["etsy shopper", "etsy shoppers", "etsy"],
+      "Pinterest Users": ["pinterest user", "pinterest users", "pinterest"],
+      "Instagram Users": ["instagram user", "instagram users", "instagram"],
+      "TikTok Users": ["tiktok user", "tiktok users", "tiktok"],
+      "Local Customers": ["local customer", "local customers"]
+    };
+    return map[audience] || [];
+  }
+
+  /* ------------------------------------------------------------
+     ETSY OUTPUT VALIDATION
+     ------------------------------------------------------------
+     Real blocking validation — returns { valid, errors }. errors
+     are human-readable AND written so they can be fed straight
+     back into buildEtsyPrompt()'s validationErrors correction
+     section on retry.
+
+     audience and productContext are optional (older call sites
+     still work); when supplied, they enable the audience-leak
+     check above. productContext should be the user's own inputs
+     (keyword + product details) so a phrase already genuinely
+     part of the product is never flagged as a "leak".
+     ------------------------------------------------------------ */
+
+  function validateEtsyOutput(parsed, wordsToAvoid, audience, productContext){
+    const errors = [];
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { valid: false, errors: ["The response was not a valid JSON object."] };
+    }
+
+    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
+    if (!title) {
+      errors.push("The title is missing or empty.");
+    } else if ([...title].length > 140) {
+      errors.push("The title is " + [...title].length + " characters, which exceeds the 140-character limit.");
+    }
+
+    const tagsIsArray = Array.isArray(parsed.tags);
+    if (!tagsIsArray) {
+      errors.push("The 'tags' field must be an array.");
+    } else if (parsed.tags.length !== 13) {
+      errors.push("Exactly 13 tags are required, but " + parsed.tags.length + " were returned.");
+    }
+
+    const trimmedTags = (tagsIsArray ? parsed.tags : []).map(t => (typeof t === "string" ? t.trim() : ""));
+
+    trimmedTags.forEach((t, i) => {
+      if (!t) {
+        errors.push("Tag #" + (i + 1) + " is empty.");
+        return;
+      }
+      const len = [...t].length;
+      if (len > 20) {
+        errors.push('Tag "' + t + '" is ' + len + ' characters, which exceeds the 20-character limit.');
+      }
+      if (!t.includes(" ")) {
+        errors.push('Tag "' + t + '" is a single word; every tag must be a multi-word phrase.');
+      }
+    });
+
+    const seen = new Map();
+    trimmedTags.forEach(t => {
+      if (!t) return;
+      const key = t.toLowerCase();
+      if (seen.has(key)) {
+        errors.push('Tag "' + t + '" is an exact duplicate of another tag.');
+      } else {
+        seen.set(key, true);
+      }
+    });
+
+    findNearDuplicateTagPairs(trimmedTags.filter(Boolean)).forEach(([a, b]) => {
+      if (a.toLowerCase() !== b.toLowerCase()) {
+        errors.push('Tags "' + a + '" and "' + b + '" look like near-duplicates of each other.');
+      }
+    });
+
+    const description = typeof parsed.description === "string" ? parsed.description.trim() : "";
+    if (!description) {
+      errors.push("The description is missing or empty.");
+    }
+
+    const haystack = [title, description].concat(trimmedTags).join(" \n ").toLowerCase();
+
+    if (Array.isArray(wordsToAvoid) && wordsToAvoid.length) {
+      wordsToAvoid.forEach(word => {
+        const w = String(word || "").trim().toLowerCase();
+        if (w && haystack.includes(w)) {
+          errors.push('The word "' + String(word).trim() + '" appears in the output but is on your Words to Avoid list.');
+        }
+      });
+    }
+
+    if (audience) {
+      const contextText = String(productContext || "").toLowerCase();
+      getAudienceLeakPhrases(audience)
+        .filter(phrase => !contextText.includes(phrase))
+        .forEach(phrase => {
+          const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp("\\b" + escaped + "\\b", "i");
+          if (re.test(haystack)) {
+            errors.push('The targeting label "' + audience + '" leaked into the output as "' + phrase + '" — targeting should only be strategic context, not an automatic keyword.');
+          }
+        });
+    }
+
+    return { valid: errors.length === 0, errors: errors };
+  }
+
+  /* ------------------------------------------------------------
+     PINTEREST OUTPUT VALIDATION
+     ------------------------------------------------------------
+     Dedicated Pinterest validator — a 15-keyword, 100-char-title,
+     500-char-description schema, not Etsy's. Deliberately reuses
+     findNearDuplicateTagPairs() and getAudienceLeakPhrases() as-is
+     (both are already generic string-array helpers, not Etsy-
+     specific) rather than duplicating that logic. Does not call
+     or modify validateEtsyOutput().
+     ------------------------------------------------------------ */
+
+  function validatePinterestOutput(parsed, wordsToAvoid, audience, productContext){
+    const errors = [];
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { valid: false, errors: ["The response was not a valid JSON object."] };
+    }
+
+    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
+    if (!title) {
+      errors.push("The title is missing or empty.");
+    } else if ([...title].length > 100) {
+      errors.push("The title is " + [...title].length + " characters, which exceeds Pinterest's 100-character limit.");
+    }
+
+    const keywordsIsArray = Array.isArray(parsed.keywords);
+    if (!keywordsIsArray) {
+      errors.push("The 'keywords' field must be an array.");
+    } else if (parsed.keywords.length !== 15) {
+      errors.push("Exactly 15 keywords are required, but " + parsed.keywords.length + " were returned.");
+    }
+
+    const trimmedKeywords = (keywordsIsArray ? parsed.keywords : []).map(k => (typeof k === "string" ? k.trim() : ""));
+
+    trimmedKeywords.forEach((k, i) => {
+      if (!k) {
+        errors.push("Keyword #" + (i + 1) + " is empty.");
+        return;
+      }
+      const len = [...k].length;
+      if (len > 60) {
+        errors.push('Keyword "' + k + '" is ' + len + ' characters, which is too long to be a reasonably concise keyword phrase.');
+      }
+    });
+
+    const seen = new Map();
+    trimmedKeywords.forEach(k => {
+      if (!k) return;
+      const key = k.toLowerCase();
+      if (seen.has(key)) {
+        errors.push('Keyword "' + k + '" is an exact duplicate of another keyword.');
+      } else {
+        seen.set(key, true);
+      }
+    });
+
+    findNearDuplicateTagPairs(trimmedKeywords.filter(Boolean)).forEach(([a, b]) => {
+      if (a.toLowerCase() !== b.toLowerCase()) {
+        errors.push('Keywords "' + a + '" and "' + b + '" look like near-duplicates of each other.');
+      }
+    });
+
+    const description = typeof parsed.description === "string" ? parsed.description.trim() : "";
+    if (!description) {
+      errors.push("The description is missing or empty.");
+    } else if ([...description].length > 500) {
+      errors.push("The description is " + [...description].length + " characters, which exceeds Pinterest's 500-character limit.");
+    } else {
+      // Conservative keyword-stuffing proxy: a real description is
+      // written in sentences (has at least one period); a comma-
+      // separated keyword dump typically has neither.
+      const commaCount = (description.match(/,/g) || []).length;
+      const periodCount = (description.match(/\./g) || []).length;
+      if (commaCount >= 4 && periodCount === 0) {
+        errors.push("The description reads like a comma-separated list of keywords rather than a natural sentence — rewrite it as readable prose.");
+      }
+    }
+
+    const haystack = [title, description].concat(trimmedKeywords).join(" \n ").toLowerCase();
+
+    if (Array.isArray(wordsToAvoid) && wordsToAvoid.length) {
+      wordsToAvoid.forEach(word => {
+        const w = String(word || "").trim().toLowerCase();
+        if (w && haystack.includes(w)) {
+          errors.push('The word "' + String(word).trim() + '" appears in the output but is on your Words to Avoid list.');
+        }
+      });
+    }
+
+    if (audience) {
+      const contextText = String(productContext || "").toLowerCase();
+      getAudienceLeakPhrases(audience)
+        .filter(phrase => !contextText.includes(phrase))
+        .forEach(phrase => {
+          const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp("\\b" + escaped + "\\b", "i");
+          if (re.test(haystack)) {
+            errors.push('The targeting label "' + audience + '" leaked into the output as "' + phrase + '" — targeting should only be strategic context, not an automatic keyword.');
+          }
+        });
+    }
+
+    return { valid: errors.length === 0, errors: errors };
+  }
+
+  /* ------------------------------------------------------------
+     DIGITAL / PRINTABLE OUTPUT VALIDATION
+     ------------------------------------------------------------
+     Same schema and limits as Etsy (140-char title, exactly 13
+     tags, 20 chars/tag, {title,tags,description}) since this
+     platform keeps the existing output format — only the prompt
+     content differs. Reuses findNearDuplicateTagPairs() and
+     getAudienceLeakPhrases() as-is. Does not call or modify
+     validateEtsyOutput() or validatePinterestOutput().
+     ------------------------------------------------------------ */
+
+  function validateDigitalPrintableOutput(parsed, wordsToAvoid, audience, productContext){
+    const errors = [];
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { valid: false, errors: ["The response was not a valid JSON object."] };
+    }
+
+    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
+    if (!title) {
+      errors.push("The title is missing or empty.");
+    } else if ([...title].length > 140) {
+      errors.push("The title is " + [...title].length + " characters, which exceeds the 140-character limit.");
+    }
+
+    const tagsIsArray = Array.isArray(parsed.tags);
+    if (!tagsIsArray) {
+      errors.push("The 'tags' field must be an array.");
+    } else if (parsed.tags.length !== 13) {
+      errors.push("Exactly 13 tags are required, but " + parsed.tags.length + " were returned.");
+    }
+
+    const trimmedTags = (tagsIsArray ? parsed.tags : []).map(t => (typeof t === "string" ? t.trim() : ""));
+
+    trimmedTags.forEach((t, i) => {
+      if (!t) {
+        errors.push("Tag #" + (i + 1) + " is empty.");
+        return;
+      }
+      const len = [...t].length;
+      if (len > 20) {
+        errors.push('Tag "' + t + '" is ' + len + ' characters, which exceeds the 20-character limit.');
+      }
+      if (!t.includes(" ")) {
+        errors.push('Tag "' + t + '" is a single word; every tag must be a multi-word phrase.');
+      }
+    });
+
+    const seen = new Map();
+    trimmedTags.forEach(t => {
+      if (!t) return;
+      const key = t.toLowerCase();
+      if (seen.has(key)) {
+        errors.push('Tag "' + t + '" is an exact duplicate of another tag.');
+      } else {
+        seen.set(key, true);
+      }
+    });
+
+    findNearDuplicateTagPairs(trimmedTags.filter(Boolean)).forEach(([a, b]) => {
+      if (a.toLowerCase() !== b.toLowerCase()) {
+        errors.push('Tags "' + a + '" and "' + b + '" look like near-duplicates of each other.');
+      }
+    });
+
+    const description = typeof parsed.description === "string" ? parsed.description.trim() : "";
+    if (!description) {
+      errors.push("The description is missing or empty.");
+    } else {
+      // Conservative keyword-stuffing proxy, same approach as the
+      // Pinterest validator: a real description reads as sentences
+      // (at least one period); a comma-separated keyword dump
+      // typically has neither.
+      const commaCount = (description.match(/,/g) || []).length;
+      const periodCount = (description.match(/\./g) || []).length;
+      if (commaCount >= 4 && periodCount === 0) {
+        errors.push("The description reads like a comma-separated list of keywords rather than a natural sentence — rewrite it as readable prose.");
+      }
+    }
+
+    const haystack = [title, description].concat(trimmedTags).join(" \n ").toLowerCase();
+
+    if (Array.isArray(wordsToAvoid) && wordsToAvoid.length) {
+      wordsToAvoid.forEach(word => {
+        const w = String(word || "").trim().toLowerCase();
+        if (w && haystack.includes(w)) {
+          errors.push('The word "' + String(word).trim() + '" appears in the output but is on your Words to Avoid list.');
+        }
+      });
+    }
+
+    if (audience) {
+      const contextText = String(productContext || "").toLowerCase();
+      getAudienceLeakPhrases(audience)
+        .filter(phrase => !contextText.includes(phrase))
+        .forEach(phrase => {
+          const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp("\\b" + escaped + "\\b", "i");
+          if (re.test(haystack)) {
+            errors.push('The targeting label "' + audience + '" leaked into the output as "' + phrase + '" — targeting should only be strategic context, not an automatic keyword.');
+          }
+        });
+    }
+
+    return { valid: errors.length === 0, errors: errors };
+  }
+
   function hideAllOutputSections(){
     outputSection.classList.add("hidden");
   }
 
   function renderOutputByType(outputType, parsed, category){
     hideAllOutputSections();
-    renderOutput(parsed, category);
+    descCharCount.textContent = "";
+    if (category === "Pinterest") {
+      renderPinterestOutput(parsed, category);
+    } else {
+      renderOutput(parsed, category);
+    }
     return outputSection;
   }
 
@@ -3155,7 +4217,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      COPY TO CLIPBOARD (with mobile/webview fallback)
      ============================================================ */
   copyTitleBtn.addEventListener("click", () => copyText(titleOutput.textContent, copyTitleBtn, "Copy Title"));
-  copyTagsBtn.addEventListener("click", () => copyText(tagsRaw.value, copyTagsBtn, "Copy All 13 Tags"));
+  copyTagsBtn.addEventListener("click", () => copyText(tagsRaw.value, copyTagsBtn, copyTagsBtn.textContent));
   copyDescBtn.addEventListener("click", () => copyText(descOutput.textContent, copyDescBtn, "Copy Description"));
 
   async function copyText(text, btn, originalLabel){
