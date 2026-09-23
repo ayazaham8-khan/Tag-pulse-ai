@@ -58,14 +58,26 @@ const GROQ_MODEL_PRIMARY =
 const GROQ_MODEL_FALLBACK =
   "qwen/qwen3.6-27b";
 
+// TEMPORARY: confirmed returning HTTP 404 for our account in
+// production (see the "Groq primary AND fallback both failed"
+// diagnostic capture). Attempting it currently guarantees a
+// second failed request for no benefit, so it's bypassed for now.
+// Re-enable only after confirming a working model via the
+// existing checkGroqModelAvailability() live-check output.
+const GROQ_FALLBACK_ENABLED = false;
+
+// Explicit output-token ceiling. Raised from 2048 to 4096 after
+// Groq dashboard evidence showed current HTTP 400 "Failed to
+// validate JSON" failures consistently landing at exactly 2048
+// output tokens -- gpt-oss-120b is a reasoning model, and
+// reasoning tokens count against this same budget before the
+// final JSON is written, so a long reasoning pass could exhaust
+// the old cap before the JSON completed.
+const GROQ_MAX_COMPLETION_TOKENS = 4096;
+
 const GROQ_TIMEOUT_MS = 30000;
 
 const FREE_CREDITS = 3;
-
-// creator_pro grants are manual and not tied to a Lemon Squeezy tier,
-// so refunds there are capped against a generous fixed ceiling rather
-// than a specific tier amount.
-const CREATOR_PRO_REFUND_CAP = 1000;
 
 
 /**
@@ -90,6 +102,17 @@ const SUPABASE_PUBLISHABLE_KEY =
 export async function onRequestPost(context) {
 
   const { request, env } = context;
+
+  // Diagnostics-only: the earliest possible timestamp inside this
+  // Function's execution — the best available proxy for "the
+  // Function was reached", since anything before this line is
+  // Cloudflare's own routing/dispatch, which this code cannot see.
+  const requestStartTime = Date.now();
+
+  // Declared here (function scope, not inside the try) so the
+  // outer catch below can still log it even if something fails
+  // before or while it would otherwise be assigned.
+  let requestId = "server-" + requestStartTime.toString(36);
 
   const corsHeaders =
     buildCorsHeaders();
@@ -151,6 +174,25 @@ export async function onRequestPost(context) {
 
 
     // ---------------------------------------------------------
+    // 2.5. Creator Pro invitation provisioning
+    //
+    // If this authenticated user's verified email matches a
+    // pending row in creator_invites, this atomically consumes
+    // the invite and provisions creator_pro (500 credits) —
+    // without ever touching an existing creator_pro balance.
+    //
+    // No-op for everyone else (normal users, Lemon users,
+    // already-provisioned creators, already-used invites).
+    // ---------------------------------------------------------
+
+    await provisionCreatorFromInvite(
+      env.DB,
+      normalizedUserId,
+      authenticatedUser.email
+    );
+
+
+    // ---------------------------------------------------------
     // 3. Parse request body
     // ---------------------------------------------------------
 
@@ -184,6 +226,22 @@ export async function onRequestPost(context) {
     const licenseKey =
       body && body.license_key;
 
+    // Diagnostics-only — never used for any generation/auth/credit
+    // decision. request_id is opaque, client-generated, and safe to
+    // log (it carries no user data). has_product_details is a
+    // boolean the frontend already computes for its own logging;
+    // reading it here never exposes the actual field values.
+    if (
+      body &&
+      typeof body.request_id === "string" &&
+      body.request_id
+    ) {
+      requestId = body.request_id;
+    }
+
+    const hasProductDetailsFlag =
+      !!(body && body.has_product_details);
+
 
     // ---------------------------------------------------------
     // 5. Validate prompt
@@ -206,6 +264,17 @@ export async function onRequestPost(context) {
     }
 
 
+    console.log(
+      "[TagPulse][generate] request received",
+      {
+        requestId: requestId,
+        hasProductDetails: hasProductDetailsFlag,
+        promptLength: prompt.length,
+        elapsedMs: Date.now() - requestStartTime
+      }
+    );
+
+
     // ---------------------------------------------------------
     // 6. Make sure Groq API key exists
     // ---------------------------------------------------------
@@ -225,6 +294,73 @@ export async function onRequestPost(context) {
         corsHeaders
       );
     }
+
+
+    // ---------------------------------------------------------
+    // 6.5. Idempotency check
+    // -----------------------------------------------------------
+    // Must run before ANY credit reservation or Groq call, per the
+    // idempotent-generation-requests design (see
+    // claimOrReplayGeneration() below). If this fails for any
+    // reason (e.g. the generation_requests table doesn't exist yet
+    // because the D1 migration hasn't been run), it degrades to
+    // "proceed as a normal new request" rather than breaking
+    // generation entirely — the missing protection is a regression
+    // to today's existing behavior, never worse than it.
+    // ---------------------------------------------------------
+
+    const idempotency =
+      await claimOrReplayGeneration(
+        env.DB,
+        requestId,
+        normalizedUserId
+      );
+
+    if (idempotency.outcome === "invalid") {
+
+      return jsonResponse(
+        {
+          error:
+            "This request could not be verified. Please try generating again."
+        },
+        409,
+        corsHeaders
+      );
+    }
+
+    if (idempotency.outcome === "replay") {
+
+      console.log(
+        "[TagPulse][generate] idempotent replay — returning cached result, no new credit reservation or Groq call",
+        { requestId: requestId, elapsedMs: Date.now() - requestStartTime }
+      );
+
+      return jsonResponse(
+        {
+          text: idempotency.result.result_text,
+          credits_remaining: idempotency.result.credits_remaining,
+          is_pro: !!idempotency.result.is_pro,
+          pro_type: idempotency.result.pro_type
+        },
+        200,
+        corsHeaders
+      );
+    }
+
+    if (idempotency.outcome === "still_in_progress") {
+
+      return jsonResponse(
+        {
+          error:
+            "Your previous request for this generation is still processing. Please wait a moment and try again."
+        },
+        409,
+        corsHeaders
+      );
+    }
+
+    // idempotency.outcome === "new" (or "degraded") — proceed
+    // exactly as before.
 
 
     // =========================================================
@@ -340,7 +476,8 @@ export async function onRequestPost(context) {
         const text =
           await callGroq(
             prompt,
-            env.GROQ_API_KEY
+            env.GROQ_API_KEY,
+            requestId
           );
 
 
@@ -387,6 +524,18 @@ export async function onRequestPost(context) {
             env.DB,
             normalizedUserId
           );
+
+
+        console.log(
+          "[TagPulse][generate] success response ready to send",
+          { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200 }
+        );
+
+        await markGenerationCompleted(
+          env.DB,
+          requestId,
+          { text: text, credits_remaining: remaining, is_pro: true, pro_type: "creator" }
+        );
 
 
         return jsonResponse(
@@ -662,7 +811,8 @@ export async function onRequestPost(context) {
         const text =
           await callGroq(
             prompt,
-            env.GROQ_API_KEY
+            env.GROQ_API_KEY,
+            requestId
           );
 
 
@@ -707,6 +857,18 @@ export async function onRequestPost(context) {
             env.DB,
             license.id
           );
+
+
+        console.log(
+          "[TagPulse][generate] success response ready to send",
+          { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200 }
+        );
+
+        await markGenerationCompleted(
+          env.DB,
+          requestId,
+          { text: text, credits_remaining: remaining, is_pro: true, pro_type: "lemon" }
+        );
 
 
         return jsonResponse(
@@ -830,7 +992,8 @@ export async function onRequestPost(context) {
       const text =
         await callGroq(
           prompt,
-          env.GROQ_API_KEY
+          env.GROQ_API_KEY,
+          requestId
         );
 
 
@@ -882,6 +1045,23 @@ export async function onRequestPost(context) {
           .first();
 
 
+      console.log(
+        "[TagPulse][generate] success response ready to send",
+        { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200 }
+      );
+
+      await markGenerationCompleted(
+        env.DB,
+        requestId,
+        {
+          text: text,
+          credits_remaining: row ? Number(row.credits_remaining) : 0,
+          is_pro: false,
+          pro_type: null
+        }
+      );
+
+
       return jsonResponse(
         {
           text,
@@ -925,13 +1105,22 @@ export async function onRequestPost(context) {
 
     if (
       err &&
-      err.message === "GROQ_TIMEOUT"
+      err.category === "timeout"
     ) {
+
+      console.log(
+        "[TagPulse][generate] timeout response ready to send",
+        { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 504 }
+      );
+
+      await deleteGenerationRequestRow(env.DB, requestId);
 
       return jsonResponse(
         {
           error:
-            "The AI took too long to respond. Please try again."
+            "The AI took too long to respond (model: " +
+            (err.groqModel || GROQ_MODEL_PRIMARY) +
+            "). Please try again."
         },
         504,
         corsHeaders
@@ -945,8 +1134,18 @@ export async function onRequestPost(context) {
 
     console.error(
       "Unhandled /api/generate error:",
-      err
+      {
+        requestId: requestId,
+        elapsedMs: Date.now() - requestStartTime,
+        detail:
+          (err && err.errorDetail) ||
+          describeGroqError(err) ||
+          (err && err.message) ||
+          err
+      }
     );
+
+    await deleteGenerationRequestRow(env.DB, requestId);
 
 
     return jsonResponse(
@@ -954,10 +1153,139 @@ export async function onRequestPost(context) {
         error:
           err && err.message
             ? err.message
-            : "Something went wrong generating your SEO listing."
+            : "Something went wrong generating your SEO listing.",
+        error_detail:
+          (err && err.errorDetail) || undefined
       },
-      502,
+      (err && typeof err.groqStatus === "number")
+        ? err.groqStatus
+        : 502,
       corsHeaders
+    );
+  }
+}
+
+
+/**
+ * =============================================================
+ * IDEMPOTENT GENERATION REQUESTS
+ * =============================================================
+ */
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function claimOrReplayGeneration(db, requestId, userId) {
+
+  try {
+
+    const claim = await db.prepare(
+      `INSERT OR IGNORE INTO generation_requests (request_id, user_id, status) VALUES (?1, ?2, 'in_progress')`
+    ).bind(requestId, userId).run();
+
+    if (claim.meta && claim.meta.changes === 1) {
+      return { outcome: "new" };
+    }
+
+    let existing = await db.prepare(
+      `SELECT user_id, status, result_text, credits_remaining, is_pro, pro_type FROM generation_requests WHERE request_id = ?1`
+    ).bind(requestId).first();
+
+    if (!existing) {
+      const reClaim = await db.prepare(
+        `INSERT OR IGNORE INTO generation_requests (request_id, user_id, status) VALUES (?1, ?2, 'in_progress')`
+      ).bind(requestId, userId).run();
+      return (reClaim.meta && reClaim.meta.changes === 1) ? { outcome: "new" } : { outcome: "still_in_progress" };
+    }
+
+    if (existing.user_id !== userId) {
+      return { outcome: "invalid" };
+    }
+
+    if (existing.status === "completed") {
+      return { outcome: "replay", result: existing };
+    }
+
+    const reclaim = await db.prepare(
+      `UPDATE generation_requests SET updated_at = CURRENT_TIMESTAMP WHERE request_id = ?1 AND status = 'in_progress' AND created_at < datetime('now', '-60 seconds')`
+    ).bind(requestId).run();
+
+    if (reclaim.meta && reclaim.meta.changes === 1) {
+      return { outcome: "new" };
+    }
+
+    for (let i = 0; i < 6; i++) {
+
+      await sleep(1000);
+
+      existing = await db.prepare(
+        `SELECT status, result_text, credits_remaining, is_pro, pro_type FROM generation_requests WHERE request_id = ?1`
+      ).bind(requestId).first();
+
+      if (existing && existing.status === "completed") {
+        return { outcome: "replay", result: existing };
+      }
+
+      if (!existing) {
+        const reClaim = await db.prepare(
+          `INSERT OR IGNORE INTO generation_requests (request_id, user_id, status) VALUES (?1, ?2, 'in_progress')`
+        ).bind(requestId, userId).run();
+        if (reClaim.meta && reClaim.meta.changes === 1) {
+          return { outcome: "new" };
+        }
+      }
+    }
+
+    return { outcome: "still_in_progress" };
+
+  } catch (err) {
+
+    console.error(
+      "[TagPulse][generate] idempotency check failed - proceeding without it for this request:",
+      { requestId: requestId, message: err && err.message }
+    );
+
+    return { outcome: "new", degraded: true };
+  }
+}
+
+async function markGenerationCompleted(db, requestId, result) {
+
+  try {
+
+    await db.prepare(
+      `UPDATE generation_requests SET status = 'completed', result_text = ?2, credits_remaining = ?3, is_pro = ?4, pro_type = ?5, updated_at = CURRENT_TIMESTAMP WHERE request_id = ?1`
+    ).bind(
+      requestId,
+      result.text,
+      result.credits_remaining,
+      result.is_pro ? 1 : 0,
+      result.pro_type || null
+    ).run();
+
+  } catch (err) {
+
+    console.error(
+      "[TagPulse][generate] failed to record idempotent completion:",
+      { requestId: requestId, message: err && err.message }
+    );
+  }
+}
+
+async function deleteGenerationRequestRow(db, requestId) {
+
+  try {
+
+    await db.prepare(
+      `DELETE FROM generation_requests WHERE request_id = ?1`
+    ).bind(requestId).run();
+
+  } catch (err) {
+
+    console.error(
+      "[TagPulse][generate] failed to clean up idempotency row after failure:",
+      { requestId: requestId, message: err && err.message }
     );
   }
 }
@@ -1070,6 +1398,153 @@ async function getAuthenticatedSupabaseUser(
 
 /**
  * =============================================================
+ * CREATOR PRO INVITATION PROVISIONING
+ * =============================================================
+ *
+ * If the authenticated user's verified email matches a pending
+ * row in creator_invites, atomically:
+ *
+ *   1. Mark that invitation 'used' — only if it is still
+ *      'pending' (prevents a second grant on repeat logins or
+ *      repeated requests).
+ *   2. Create the creator_pro row with 500 credits — only if
+ *      step 1 actually consumed a pending invite for this exact
+ *      user_id, AND only if a creator_pro row does not already
+ *      exist for this user (so an existing Creator Pro balance,
+ *      however it was created, is never reset or overwritten).
+ *
+ * Both statements run inside a single D1 batch(), which executes
+ * as one transaction — either both apply or neither does. That
+ * means a mid-way failure (e.g. the INSERT failing for some
+ * reason) can never leave an invitation permanently consumed
+ * without Creator Pro actually being created; the whole batch
+ * rolls back and the invite remains 'pending' for the next
+ * authenticated request to retry.
+ *
+ * The gating logic (has a pending invite? does creator_pro
+ * already exist?) is expressed entirely inside the SQL itself
+ * via EXISTS / NOT EXISTS, not in application code — this is
+ * what keeps two simultaneous requests for the same invited
+ * creator safe: D1 serializes write transactions against the
+ * same rows, so the second batch to run always sees the first
+ * batch's committed effects before its own statements execute.
+ *
+ * This function never throws to its caller. If provisioning
+ * fails for any reason, it is only logged — normal generation,
+ * free-user, and Lemon flows continue completely unaffected.
+ * =============================================================
+ */
+
+async function provisionCreatorFromInvite(
+  db,
+  userId,
+  email
+) {
+
+  if (
+    !userId ||
+    !email ||
+    typeof email !== "string"
+  ) {
+    return;
+  }
+
+
+  const normalizedEmail =
+    email
+      .trim()
+      .toLowerCase();
+
+
+  if (!normalizedEmail) {
+    return;
+  }
+
+
+  try {
+
+    const results =
+      await db.batch(
+        [
+
+          db.prepare(
+            `UPDATE creator_invites
+             SET status = 'used',
+                 used_at = CURRENT_TIMESTAMP,
+                 user_id = ?1
+             WHERE LOWER(TRIM(email)) = ?2
+               AND status = 'pending'`
+          )
+            .bind(
+              userId,
+              normalizedEmail
+            ),
+
+          db.prepare(
+            `INSERT INTO creator_pro
+               (user_id, credits_remaining)
+             SELECT
+               ?1,
+               500
+             WHERE EXISTS (
+               SELECT 1
+               FROM creator_invites
+               WHERE LOWER(TRIM(email)) = ?2
+                 AND status = 'used'
+                 AND user_id = ?1
+             )
+             AND NOT EXISTS (
+               SELECT 1
+               FROM creator_pro
+               WHERE user_id = ?1
+             )`
+          )
+            .bind(
+              userId,
+              normalizedEmail
+            )
+
+        ]
+      );
+
+
+    // -------------------------------------------------------
+    // Read back the invite UPDATE's actual row-change count
+    // from D1's batch result meta, purely for logging/
+    // confirmation — the correctness of the operation does
+    // NOT depend on this check (that lives in the SQL's
+    // EXISTS / NOT EXISTS conditions above).
+    // -------------------------------------------------------
+
+    const inviteChanges =
+      Number(
+        results?.[0]?.meta?.changes || 0
+      );
+
+
+    if (inviteChanges === 1) {
+
+      console.log(
+        "Creator invite consumed; Creator Pro provisioning attempted.",
+        {
+          userId,
+          email: normalizedEmail
+        }
+      );
+    }
+
+  } catch (err) {
+
+    console.error(
+      "Creator invite provisioning failed (invitation left untouched):",
+      err
+    );
+  }
+}
+
+
+/**
+ * =============================================================
  * RESERVE ONE CREATOR PRO CREDIT
  * =============================================================
  */
@@ -1114,18 +1589,24 @@ async function refundCreatorCredit(
   userId
 ) {
 
+  // This is only ever called immediately after this same request's
+  // reserveCreatorCredit() succeeded (see the catch block above), so
+  // it always restores exactly the one credit that request reserved.
+  // No upper-bound ceiling is applied — Creator Pro balances are
+  // manually granted and not tied to a fixed tier amount, so a
+  // hardcoded cap here could incorrectly block a legitimate refund
+  // for a creator whose granted balance exceeds that cap.
+
   await db.prepare(
     `UPDATE creator_pro
      SET credits_remaining =
            credits_remaining + 1,
          updated_at =
            CURRENT_TIMESTAMP
-     WHERE user_id = ?1
-       AND credits_remaining < ?2`
+     WHERE user_id = ?1`
   )
     .bind(
-      userId,
-      CREATOR_PRO_REFUND_CAP
+      userId
     )
     .run();
 }
@@ -1329,43 +1810,220 @@ async function getLicenseCredits(
 
 async function callGroq(
   prompt,
-  apiKey
+  apiKey,
+  requestId
 ) {
+
+  let primaryErr;
 
   try {
 
     return await callGroqModel(
       GROQ_MODEL_PRIMARY,
       prompt,
-      apiKey
+      apiKey,
+      requestId
     );
 
   } catch (err) {
 
+    primaryErr = err;
+
     if (
-      err &&
-      err.message === "GROQ_TIMEOUT"
+      primaryErr &&
+      primaryErr.category === "timeout"
     ) {
 
-      throw err;
+      // Unchanged behavior: a primary timeout does not attempt
+      // the fallback model.
+      throw primaryErr;
+    }
+
+
+    if (!GROQ_FALLBACK_ENABLED) {
+
+      // Fallback is temporarily disabled (see GROQ_FALLBACK_ENABLED
+      // above) — do not attempt it, and do not report this as a
+      // "both models failed" event, since only the primary was
+      // actually attempted.
+      console.error(
+        "Groq primary model failed (fallback disabled):",
+        describeGroqError(primaryErr)
+      );
+
+      throw buildFallbackDisabledError(
+        primaryErr
+      );
     }
 
 
     console.error(
-      GROQ_MODEL_PRIMARY +
-        " failed, falling back to " +
-        GROQ_MODEL_FALLBACK +
-        ":",
-      err
-    );
-
-
-    return await callGroqModel(
-      GROQ_MODEL_FALLBACK,
-      prompt,
-      apiKey
+      "Groq primary model failed, falling back:",
+      describeGroqError(primaryErr)
     );
   }
+
+
+  try {
+
+    const text =
+      await callGroqModel(
+        GROQ_MODEL_FALLBACK,
+        prompt,
+        apiKey,
+        requestId
+      );
+
+
+    console.error(
+      "Groq primary model failed but fallback succeeded:",
+      describeGroqError(primaryErr)
+    );
+
+    return text;
+
+  } catch (fallbackErr) {
+
+    console.error(
+      "Groq primary AND fallback both failed:",
+      {
+        primary: describeGroqError(primaryErr),
+        fallback: describeGroqError(fallbackErr)
+      }
+    );
+
+
+    const availability =
+      await checkGroqModelAvailability(
+        apiKey,
+        [
+          GROQ_MODEL_PRIMARY,
+          GROQ_MODEL_FALLBACK,
+          "qwen/qwen3.8-27b",
+          "openai/gpt-oss-20b"
+        ]
+      );
+
+    if (availability) {
+
+      console.error(
+        "Live Groq model availability check:",
+        availability
+      );
+    }
+
+
+    throw buildBothFailedError(
+      primaryErr,
+      fallbackErr,
+      availability
+    );
+  }
+}
+
+
+/**
+ * =============================================================
+ * STRUCTURED OUTPUT SCHEMAS
+ * -------------------------------------------------------------
+ * Two shapes only, matching the two output contracts that
+ * actually exist in public/index.html today:
+ *
+ *   - TAGS_OUTPUT_SCHEMA    -> { title, tags, description }
+ *     Read by validateParsedOutput() (POD/generic), and by the
+ *     dedicated validateEtsyOutput() and
+ *     validateDigitalPrintableOutput() — all three only ever
+ *     read parsed.title / parsed.tags / parsed.description.
+ *
+ *   - KEYWORDS_OUTPUT_SCHEMA -> { title, keywords, description }
+ *     Read by validatePinterestOutput(), which only ever reads
+ *     parsed.title / parsed.keywords / parsed.description.
+ *
+ * No other field is read by any validator or renderer in the
+ * frontend, so no other field is declared here.
+ *
+ * Exact tag/keyword COUNT (13 vs 15) and per-item/title/
+ * description character limits are intentionally NOT expressed
+ * here: Groq's strict-mode Structured Outputs does not support
+ * minItems/maxItems or string length constraints (they are
+ * silently unsupported / can cause the schema to be rejected).
+ * Those exact counts and lengths continue to be enforced exactly
+ * as before, by the existing, unmodified frontend validators —
+ * strict mode's job here is only to guarantee a syntactically and
+ * structurally valid {title, tags|keywords, description} object
+ * every time, eliminating the "Failed to validate JSON" failure
+ * class this was added to fix.
+ * =============================================================
+ */
+
+const TAGS_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    tags: {
+      type: "array",
+      items: { type: "string" }
+    },
+    description: { type: "string" }
+  },
+  required: ["title", "tags", "description"],
+  additionalProperties: false
+};
+
+const KEYWORDS_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    keywords: {
+      type: "array",
+      items: { type: "string" }
+    },
+    description: { type: "string" }
+  },
+  required: ["title", "keywords", "description"],
+  additionalProperties: false
+};
+
+/**
+ * The backend never receives the selected platform/category —
+ * the frontend only ever sends the finished prompt string. Each
+ * prompt builder embeds its own literal example output shape in
+ * its "OUTPUT FORMAT" section, and exactly one of them
+ * (buildPinterestPrompt) declares a `"keywords":` field; the
+ * other three (buildStandardPrompt/buildEtsyPrompt/
+ * buildDigitalPrintablePrompt) all declare `"tags":`. That literal
+ * substring is therefore a reliable, already-unique signal for
+ * which schema this specific request needs — verified against the
+ * current prompt builders, which are unmodified by this change.
+ */
+function selectResponseFormat(
+  prompt
+) {
+
+  const isKeywordsShape =
+    typeof prompt === "string" &&
+    prompt.includes('"keywords":');
+
+  if (isKeywordsShape) {
+
+    return {
+      type: "json_schema",
+      json_schema: {
+        name: "seo_listing_keywords",
+        strict: true,
+        schema: KEYWORDS_OUTPUT_SCHEMA
+      }
+    };
+  }
+
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "seo_listing_tags",
+      strict: true,
+      schema: TAGS_OUTPUT_SCHEMA
+    }
+  };
 }
 
 
@@ -1378,7 +2036,8 @@ async function callGroq(
 async function callGroqModel(
   model,
   prompt,
-  apiKey
+  apiKey,
+  requestId
 ) {
 
   const controller =
@@ -1394,6 +2053,12 @@ async function callGroqModel(
 
 
   let res;
+  const groqStart = Date.now();
+
+  console.log(
+    "[TagPulse][generate] groq request starting",
+    { requestId: requestId, model: model }
+  );
 
 
   try {
@@ -1427,9 +2092,13 @@ async function callGroqModel(
 
                 temperature: 0.9,
 
-                response_format: {
-                  type: "json_object"
-                }
+                max_completion_tokens:
+                  GROQ_MAX_COMPLETION_TOKENS,
+
+                reasoning_effort: "low",
+
+                response_format:
+                  selectResponseFormat(prompt)
               }
             ),
 
@@ -1446,14 +2115,31 @@ async function callGroqModel(
       err.name === "AbortError"
     ) {
 
-      throw new Error(
-        "GROQ_TIMEOUT"
+      console.log(
+        "[TagPulse][generate] groq request timed out",
+        { requestId: requestId, model: model, elapsedMs: Date.now() - groqStart }
+      );
+
+      throw makeGroqError(
+        "timeout",
+        model,
+        null,
+        "The AI took too long to respond."
       );
     }
 
 
-    throw new Error(
-      "Couldn't reach the AI service. Please try again."
+    console.log(
+      "[TagPulse][generate] groq request failed before any response",
+      { requestId: requestId, model: model, elapsedMs: Date.now() - groqStart, message: err && err.message }
+    );
+
+    throw makeGroqError(
+      "network",
+      model,
+      null,
+      (err && err.message) ||
+        "Couldn't reach the AI service."
     );
 
   } finally {
@@ -1464,12 +2150,22 @@ async function callGroqModel(
   }
 
 
+  console.log(
+    "[TagPulse][generate] groq response received",
+    { requestId: requestId, model: model, status: res.status, elapsedMs: Date.now() - groqStart }
+  );
+
+
   if (!res.ok) {
 
     let message =
       "Groq request failed (" +
       res.status +
       ").";
+
+    let errType = null;
+    let errCode = null;
+    let failedGeneration = null;
 
 
     try {
@@ -1486,11 +2182,51 @@ async function callGroqModel(
           errBody.error.message;
       }
 
+      if (errBody?.error?.type) {
+        errType = errBody.error.type;
+      }
+
+      if (errBody?.error?.code) {
+        errCode = errBody.error.code;
+      }
+
+      if (errBody?.error?.failed_generation) {
+        // Bounded generously (not the standard 300-char log cap) —
+        // this is the single most diagnostic field for a strict-
+        // mode schema failure (it's the model's actual raw output
+        // that failed validation), so we want enough of it to see
+        // whether/where it was truncated or malformed.
+        failedGeneration =
+          truncateForLog(
+            errBody.error.failed_generation,
+            4000
+          );
+      }
+
     } catch (_) {}
 
 
-    throw new Error(
-      message
+    let category = "http";
+
+    if (res.status === 429) {
+      category = "rate_limit";
+    } else if (res.status >= 500) {
+      category = "server_error";
+    } else if (res.status >= 400) {
+      category = "client_error";
+    }
+
+
+    throw makeGroqError(
+      category,
+      model,
+      res.status,
+      message,
+      {
+        type: errType,
+        code: errCode,
+        failedGeneration: failedGeneration
+      }
     );
   }
 
@@ -1505,10 +2241,24 @@ async function callGroqModel(
 
   } catch (_) {
 
-    throw new Error(
+    console.log(
+      "[TagPulse][generate] groq response failed to parse as JSON",
+      { requestId: requestId, model: model }
+    );
+
+    throw makeGroqError(
+      "malformed",
+      model,
+      res.status,
       "Received a malformed response from the AI service."
     );
   }
+
+
+  console.log(
+    "[TagPulse][generate] groq response parsed successfully",
+    { requestId: requestId, model: model }
+  );
 
 
   const choice =
@@ -1521,7 +2271,10 @@ async function callGroqModel(
       "content_filter"
   ) {
 
-    throw new Error(
+    throw makeGroqError(
+      "content_filter",
+      model,
+      res.status,
       "The AI couldn't generate a result for this input. Try rephrasing your product keyword."
     );
   }
@@ -1533,13 +2286,280 @@ async function callGroqModel(
 
   if (!text) {
 
-    throw new Error(
+    throw makeGroqError(
+      "empty",
+      model,
+      res.status,
       "The AI didn't return a usable result. Please try again."
     );
   }
 
 
   return text;
+}
+
+
+/**
+ * =============================================================
+ * GROQ ERROR DIAGNOSTICS
+ * -------------------------------------------------------------
+ * Everything below is diagnostic-only additions: they change what
+ * information an error carries and how it's logged, not when a
+ * failure happens or how a success is produced. None of this
+ * touches prompt construction, credits, or the success-path
+ * response shape.
+ * =============================================================
+ */
+
+/**
+ * Builds an Error carrying structured diagnostic fields, so the
+ * caller can distinguish timeout / network / rate-limit / client
+ * error / server error / malformed / content-filter / empty
+ * without re-parsing a message string.
+ *
+ * `extra` is optional and only ever passed by the !res.ok branch
+ * above, which is the only place Groq's own error body (with a
+ * possible type/code/failed_generation) is available. Every other
+ * call site (timeout, network, malformed, content_filter, empty)
+ * omits it, so those errors are completely unaffected by this
+ * addition.
+ */
+function makeGroqError(
+  category,
+  model,
+  status,
+  message,
+  extra
+) {
+
+  const err =
+    new Error(
+      message ||
+        ("Groq request failed" +
+          (status ? " (" + status + ")" : "") +
+          ".")
+    );
+
+  err.category = category;
+  err.groqModel = model;
+  err.groqStatus = status || null;
+  err.groqMessage = message || null;
+  err.groqType = (extra && extra.type) || null;
+  err.groqCode = (extra && extra.code) || null;
+  err.groqFailedGeneration = (extra && extra.failedGeneration) || null;
+
+  return err;
+}
+
+/**
+ * Caps a string for safe logging — Groq error messages are
+ * ordinary API error text (never the API key, a token, or a
+ * license key), but this keeps logs bounded regardless.
+ */
+function truncateForLog(
+  text,
+  max
+) {
+
+  max = max || 300;
+  text = String(text || "");
+
+  return text.length > max
+    ? text.slice(0, max) + "…"
+    : text;
+}
+
+/**
+ * Reduces a Groq error (structured or not) to a small, safe-to-log
+ * object: model, category, status, message, and — when Groq's own
+ * error body included them — type, code, and failed_generation
+ * (the model's raw output that failed strict-mode validation).
+ * Never includes the API key, an Authorization header, the user's
+ * prompt/Product Details, or any user/credit data — none of those
+ * are ever attached to these error objects in the first place.
+ */
+function describeGroqError(err) {
+
+  if (!err) {
+    return null;
+  }
+
+  return {
+    model: err.groqModel || null,
+    category: err.category || "unknown",
+    status: err.groqStatus || null,
+    message: truncateForLog(
+      err.groqMessage || err.message || ""
+    ),
+    type: err.groqType || null,
+    code: err.groqCode || null,
+    failed_generation: err.groqFailedGeneration || null
+  };
+}
+
+/**
+ * Best-effort, read-only check against Groq's own model list,
+ * using the server-side GROQ_API_KEY only (never sent to or
+ * logged for the frontend). Only called when both the primary and
+ * fallback model attempts have already failed, so it never adds
+ * latency to a normal successful request. Bounded to a short 5s
+ * timeout and never throws — a failure here must never hide or
+ * replace the real underlying error.
+ */
+async function checkGroqModelAvailability(
+  apiKey,
+  modelIds
+) {
+
+  const controller =
+    new AbortController();
+
+  const timeoutId =
+    setTimeout(
+      () => controller.abort(),
+      5000
+    );
+
+  try {
+
+    const res =
+      await fetch(
+        "https://api.groq.com/openai/v1/models",
+        {
+          method: "GET",
+          headers: {
+            "Authorization": "Bearer " + apiKey
+          },
+          signal: controller.signal
+        }
+      );
+
+    if (!res.ok) {
+      return null;
+    }
+
+    const data =
+      await res.json();
+
+    const availableIds =
+      new Set(
+        (data?.data || []).map(m => m.id)
+      );
+
+    const result = {};
+
+    modelIds.forEach(id => {
+      result[id] = availableIds.has(id);
+    });
+
+    return result;
+
+  } catch (_) {
+
+    // Diagnostic-only — never let this check itself fail the
+    // actual error response.
+    return null;
+
+  } finally {
+
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Builds the Error thrown when the primary model fails and the
+ * fallback is currently disabled (GROQ_FALLBACK_ENABLED = false).
+ * Deliberately separate from buildBothFailedError() below — this
+ * error must never claim two models were attempted when only one
+ * was, per the diagnostics-accuracy requirement.
+ */
+function buildFallbackDisabledError(
+  primaryErr
+) {
+
+  const p = describeGroqError(primaryErr) || {};
+
+  const err =
+    new Error(
+      'The AI model "' + (p.model || GROQ_MODEL_PRIMARY) + '" failed: ' +
+      (p.status ? "HTTP " + p.status + " — " : "") +
+      (p.message || "unknown error") +
+      ". (Fallback model is currently disabled.)"
+    );
+
+  err.category = primaryErr && primaryErr.category;
+  err.groqModel = p.model || GROQ_MODEL_PRIMARY;
+  err.groqStatus =
+    (typeof p.status === "number" && p.status) ||
+    502;
+  err.fallbackDisabled = true;
+  err.primary = p;
+  err.errorDetail = p;
+
+  return err;
+}
+
+/**
+ * Builds the single Error thrown when BOTH the primary and
+ * fallback model attempts fail, with both models' real status
+ * codes and messages folded into one human-readable message
+ * (surfaced verbatim to the frontend toast — no frontend change
+ * needed) plus the same detail preserved as structured fields for
+ * logging.
+ */
+function buildBothFailedError(
+  primaryErr,
+  fallbackErr,
+  availability
+) {
+
+  const p = describeGroqError(primaryErr) || {};
+  const f = describeGroqError(fallbackErr) || {};
+
+  const parts = [
+    "Both Groq models failed.",
+
+    'Primary "' + (p.model || GROQ_MODEL_PRIMARY) + '": ' +
+      (p.status ? "HTTP " + p.status + " — " : "") +
+      (p.message || "unknown error") + ".",
+
+    'Fallback "' + (f.model || GROQ_MODEL_FALLBACK) + '": ' +
+      (f.status ? "HTTP " + f.status + " — " : "") +
+      (f.message || "unknown error") + "."
+  ];
+
+  if (availability) {
+
+    parts.push(
+      "Live check — primary available: " +
+        (availability[GROQ_MODEL_PRIMARY] ? "yes" : "no") +
+        ", fallback available: " +
+        (availability[GROQ_MODEL_FALLBACK] ? "yes" : "no") +
+        "."
+    );
+  }
+
+  const err =
+    new Error(
+      parts.join(" ")
+    );
+
+  err.bothFailed = true;
+  err.primary = p;
+  err.fallback = f;
+  err.availability = availability || null;
+  err.errorDetail = { primary: p, fallback: f, availability: availability || null };
+
+  // Preserve a real HTTP status where we have one — prefer the
+  // fallback's (the more recent attempt), then the primary's,
+  // and only default to 502 if neither call produced a usable
+  // numeric status (e.g. both were network-level failures).
+  err.groqStatus =
+    (typeof f.status === "number" && f.status) ||
+    (typeof p.status === "number" && p.status) ||
+    502;
+
+  return err;
 }
 
 
