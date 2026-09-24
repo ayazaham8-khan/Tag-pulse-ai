@@ -29,6 +29,8 @@
  * =============================================================
  */
 
+import { FREE_CREDITS } from "../_shared/free-credits.js";
+
 
 /**
  * =============================================================
@@ -280,7 +282,11 @@ export async function onRequestPost(context) {
               freeUser.credits_remaining || 0
             )
           )
-        : 5;
+        // No free_users row yet = a brand-new free account that has not
+        // generated anything. /api/generate creates its row with exactly
+        // FREE_CREDITS on first use, so show that same shared value here.
+        // (Existing rows are never touched — their stored balance wins.)
+        : FREE_CREDITS;
 
 
     return jsonResponse(
