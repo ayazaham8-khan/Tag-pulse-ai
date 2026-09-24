@@ -3011,13 +3011,22 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     let etsyStage = null;
     const generationId = generateDiagnosticRequestId();
 
+    // The first request is the paid one. A validation retry is part of
+    // the SAME logical generation: it names its parent (retry_of) and
+    // uses an ID derived from it, which lets the server recognize it and
+    // NOT charge a second credit (see resolveFreeValidationRetry() in
+    // functions/api/generate.js). The network-retry wrapper still reuses
+    // whichever ID it is given, unchanged.
+    const firstRequestId = generationId + "-1";
+    const validationRetryRequestId = firstRequestId + "-retry";
+
     if (category === "Etsy") {
       etsyStage = "request-1";
       console.log("[TagPulse][Etsy] request #1 starting", { hasProductDetails: hasProductDetails });
     }
 
     try {
-      const result = await callGenerateWithNetworkRetry(prompt, generationId + "-1", hasProductDetails);
+      const result = await callGenerateWithNetworkRetry(prompt, firstRequestId, hasProductDetails);
 
       if (category === "Etsy") {
         console.log("[TagPulse][Etsy] request #1 completed", { status: result.status });
@@ -3064,7 +3073,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           etsyStage = "request-2-retry";
           console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: hasProductDetails });
 
-          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, generationId + "-2", hasProductDetails);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId);
 
           console.log("[TagPulse][Etsy] retry (request #2) completed", { status: retryResult.status });
 
@@ -3109,7 +3118,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
             validation.errors
           );
 
-          const retryResult = await callGenerateWithNetworkRetry(retryPrompt);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId);
 
           if (retryResult.status === 402) {
             applyServerState(retryResult.data);
@@ -3152,7 +3161,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
             validation.errors
           );
 
-          const retryResult = await callGenerateWithNetworkRetry(retryPrompt);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId);
 
           if (retryResult.status === 402) {
             applyServerState(retryResult.data);
@@ -3540,7 +3549,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   /* ============================================================
      CLOUDFLARE PAGES FUNCTION CALL
      ============================================================ */
-  async function callGenerate(prompt, requestId, hasProductDetails){
+  async function callGenerate(prompt, requestId, hasProductDetails, retryOf){
     if (!authSession || !authUser) {
       throw new Error("Please sign in before generating.");
     }
@@ -3558,12 +3567,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           "Content-Type": "application/json",
           "Authorization": "Bearer " + getAccessToken()
         },
-        body: JSON.stringify({
+        body: JSON.stringify(Object.assign({
           prompt: prompt,
           license_key: licenseKey,
           request_id: requestId,
           has_product_details: !!hasProductDetails
-        })
+        }, retryOf ? { retry_of: retryOf } : {}))
       });
     } catch (networkErr) {
       // A genuine browser/network-level fetch rejection — nothing
@@ -3651,11 +3660,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
    * call is bounded to at most one extra attempt of its own,
    * regardless of how many times it's invoked overall.
    */
-  async function callGenerateWithNetworkRetry(prompt, requestId, hasProductDetails){
+  async function callGenerateWithNetworkRetry(prompt, requestId, hasProductDetails, retryOf){
     requestId = requestId || generateDiagnosticRequestId();
 
     try {
-      return await callGenerate(prompt, requestId, hasProductDetails);
+      return await callGenerate(prompt, requestId, hasProductDetails, retryOf);
 
     } catch (err) {
       if (!err.networkLevelFailure) {
@@ -3666,7 +3675,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       generateBtnLabel.innerHTML = '<span class="spinner"></span> Connection interrupted — retrying…';
 
       try {
-        const result = await callGenerate(prompt, requestId, hasProductDetails);
+        const result = await callGenerate(prompt, requestId, hasProductDetails, retryOf);
         generateBtnLabel.innerHTML = '<span class="spinner"></span> Generating…';
         return result;
 
