@@ -43,6 +43,9 @@
  */
 
 
+import { FREE_CREDITS } from "../_shared/free-credits.js";
+
+
 /**
  * =============================================================
  * CONFIGURATION
@@ -77,7 +80,9 @@ const GROQ_MAX_COMPLETION_TOKENS = 4096;
 
 const GROQ_TIMEOUT_MS = 30000;
 
-const FREE_CREDITS = 3;
+// FREE_CREDITS (a new free account's starting balance) is imported at
+// the top of this file from ../_shared/free-credits.js, so /api/generate
+// and /api/pro-status always agree on it.
 
 
 /**
@@ -360,7 +365,92 @@ export async function onRequestPost(context) {
     }
 
     // idempotency.outcome === "new" (or "degraded") — proceed
-    // exactly as before.
+    // exactly as before, EXCEPT for the one narrow case below.
+
+
+    // ---------------------------------------------------------
+    // 6.6. Validation retry — same logical generation, no new credit
+    // ---------------------------------------------------------
+    // The browser validates each AI result (Etsy / Pinterest /
+    // Digital-Printable) and, if it fails, sends ONE corrective
+    // follow-up request. That follow-up is part of the SAME logical
+    // generation the user already paid for with the first request,
+    // so it must not reserve a second credit.
+    //
+    // It is only treated that way when resolveFreeValidationRetry()
+    // can PROVE it belongs to a completed, fresh, same-user parent
+    // request (see that function for the exact rules). In every other
+    // case — missing/invalid retry_of, unknown or foreign parent,
+    // idempotency table unavailable — it returns null and the request
+    // falls through to the normal, charged path below, i.e. exactly
+    // the behavior that existed before this change.
+    //
+    // Nothing is reserved here, so nothing is refunded on failure:
+    // the outer catch below simply deletes this request's idempotency
+    // row (as it always has) and reports the error.
+    // ---------------------------------------------------------
+
+    const freeRetry =
+      (idempotency.outcome === "new" && !idempotency.degraded)
+        ? await resolveFreeValidationRetry(
+            env.DB,
+            requestId,
+            normalizedUserId,
+            body && body.retry_of
+          )
+        : null;
+
+    if (freeRetry) {
+
+      console.log(
+        "[TagPulse][generate] validation retry of a completed request — no additional credit reserved",
+        {
+          requestId: requestId,
+          retryOf: body.retry_of,
+          elapsedMs: Date.now() - requestStartTime
+        }
+      );
+
+      const retryText =
+        await callGroq(
+          prompt,
+          env.GROQ_API_KEY,
+          requestId
+        );
+
+      await markGenerationCompleted(
+        env.DB,
+        requestId,
+        {
+          text: retryText,
+          credits_remaining: freeRetry.credits_remaining,
+          is_pro: freeRetry.is_pro,
+          pro_type: freeRetry.pro_type
+        }
+      );
+
+      console.log(
+        "[TagPulse][generate] success response ready to send",
+        { requestId: requestId, elapsedMs: Date.now() - requestStartTime, status: 200, validationRetry: true }
+      );
+
+      return jsonResponse(
+        {
+          text: retryText,
+
+          credits_remaining:
+            freeRetry.credits_remaining,
+
+          is_pro:
+            freeRetry.is_pro,
+
+          pro_type:
+            freeRetry.pro_type
+        },
+        200,
+        corsHeaders
+      );
+    }
 
 
     // =========================================================
@@ -909,7 +999,7 @@ export async function onRequestPost(context) {
     //
     // No creator Pro entitlement.
     // No active Lemon Pro license.
-    // Therefore use the normal 5-generation system.
+    // Therefore use the normal free-credit system (FREE_CREDITS).
     // =========================================================
 
 
@@ -1287,6 +1377,96 @@ async function deleteGenerationRequestRow(db, requestId) {
       "[TagPulse][generate] failed to clean up idempotency row after failure:",
       { requestId: requestId, message: err && err.message }
     );
+  }
+}
+
+
+/**
+ * =============================================================
+ * VALIDATION RETRY — NO SECOND CREDIT
+ * =============================================================
+ *
+ * ONE logical generation = ONE credit maximum.
+ *
+ * The frontend's deterministic validation can reject the first AI
+ * result and trigger one corrective follow-up request. This
+ * function decides whether such a follow-up may skip credit
+ * reservation. It returns the parent's post-charge account state
+ * (so the UI keeps showing the right balance) or null.
+ *
+ * ALL of these must hold, otherwise null (=> normal charged path):
+ *
+ *  1. retry_of is a non-empty string (<= 200 chars).
+ *  2. retry_of does NOT itself end in "-retry" — a free retry can
+ *     never be the parent of another free retry (no chains).
+ *  3. request_id === retry_of + "-retry". The retry's ID is derived
+ *     from its parent, and request_id is the primary key of
+ *     generation_requests, so at most ONE free retry can ever
+ *     complete per parent: any repeat of the same ID is answered by
+ *     the existing idempotent replay before this function runs.
+ *  4. The parent row exists in generation_requests, belongs to the
+ *     SAME authenticated user, is 'completed' (i.e. it already went
+ *     through normal credit reservation and produced a result), and
+ *     was completed within the last 10 minutes.
+ *
+ * Any lookup error fails CLOSED (returns null => charged as before).
+ *
+ * Known, accepted limit: validation runs in the browser, so the
+ * server cannot verify that the parent's result really failed
+ * validation. Worst case a client can obtain at most one extra
+ * generation per credit it has actually paid for — never an
+ * unbounded number.
+ * =============================================================
+ */
+const VALIDATION_RETRY_SUFFIX = "-retry";
+
+async function resolveFreeValidationRetry(db, requestId, userId, retryOf) {
+
+  try {
+
+    if (
+      typeof retryOf !== "string" ||
+      !retryOf ||
+      retryOf.length > 200
+    ) {
+      return null;
+    }
+
+    if (retryOf.endsWith(VALIDATION_RETRY_SUFFIX)) {
+      return null;
+    }
+
+    if (requestId !== retryOf + VALIDATION_RETRY_SUFFIX) {
+      return null;
+    }
+
+    const parent = await db.prepare(
+      `SELECT credits_remaining, is_pro, pro_type
+         FROM generation_requests
+        WHERE request_id = ?1
+          AND user_id = ?2
+          AND status = 'completed'
+          AND updated_at > datetime('now', '-10 minutes')`
+    ).bind(retryOf, userId).first();
+
+    if (!parent) {
+      return null;
+    }
+
+    return {
+      credits_remaining: parent.credits_remaining,
+      is_pro: !!parent.is_pro,
+      pro_type: parent.pro_type || null
+    };
+
+  } catch (err) {
+
+    console.error(
+      "[TagPulse][generate] validation-retry eligibility check failed - treating as a normal charged request:",
+      { requestId: requestId, message: err && err.message }
+    );
+
+    return null;
   }
 }
 
