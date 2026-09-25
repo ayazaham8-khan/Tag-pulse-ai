@@ -2215,6 +2215,13 @@ const KEYWORDS_OUTPUT_SCHEMA = {
  * =============================================================
  */
 
+// The 5-value role whitelist. NOT enforced via schema `enum` (see
+// HOTFIX note on the `role` field below) — enforcement lives only
+// in the deterministic post-processing code in public/index.html
+// (processEtsyKeywordIntelligence), which discards any opportunity
+// whose role isn't exactly one of these 5 values. Kept here purely
+// so the schema's human-readable `description` text (below) can't
+// drift out of sync with the actual whitelist.
 const ETSY_KEYWORD_OPPORTUNITY_ROLES = [
   "core",
   "long_tail",
@@ -2241,9 +2248,25 @@ const ETSY_INTELLIGENCE_OUTPUT_SCHEMA = {
             type: "object",
             properties: {
               keyword: { type: "string" },
+              // HOTFIX: was `enum: ETSY_KEYWORD_OPPORTUNITY_ROLES`. Groq's
+              // strict-mode Structured Outputs rejects the ENTIRE
+              // generation (HTTP 400) if the model emits any role
+              // string outside the enum, which turned an advisory,
+              // non-blocking feature into a hard failure of the
+              // whole Etsy listing. A plain `type: "string"` (with
+              // the whitelist only documented, not enforced, in
+              // `description`) can never reject the response on
+              // this field. Enforcement of the actual 5-value
+              // whitelist still happens exactly as before: in
+              // processEtsyKeywordIntelligence() in public/index.html,
+              // which discards any opportunity whose role isn't one
+              // of these 5 values.
               role: {
                 type: "string",
-                enum: ETSY_KEYWORD_OPPORTUNITY_ROLES
+                description:
+                  "One of: " +
+                  ETSY_KEYWORD_OPPORTUNITY_ROLES.join(", ") +
+                  "."
               },
               why: { type: "string" },
               selected_for_tags: { type: "boolean" }
