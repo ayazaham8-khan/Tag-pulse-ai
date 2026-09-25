@@ -247,6 +247,22 @@ export async function onRequestPost(context) {
     const hasProductDetailsFlag =
       !!(body && body.has_product_details);
 
+    // Etsy Keyword Intelligence (batch 1): an explicit, whitelisted
+    // shape selector — NOT prompt-content sniffing. Any value other
+    // than a recognized member of ALLOWED_RESPONSE_SHAPES collapses
+    // to null, which preserves the existing sniff-based behavior in
+    // selectResponseFormat() exactly as it was before this change.
+    // Pinterest/Digital/standard never send this field, so this line
+    // always evaluates to null for them.
+    const responseShapeRaw =
+      body && body.response_shape;
+
+    const responseShape =
+      (typeof responseShapeRaw === "string" &&
+        ALLOWED_RESPONSE_SHAPES.has(responseShapeRaw))
+        ? responseShapeRaw
+        : null;
+
 
     // ---------------------------------------------------------
     // 5. Validate prompt
@@ -415,7 +431,8 @@ export async function onRequestPost(context) {
         await callGroq(
           prompt,
           env.GROQ_API_KEY,
-          requestId
+          requestId,
+          responseShape
         );
 
       await markGenerationCompleted(
@@ -567,7 +584,8 @@ export async function onRequestPost(context) {
           await callGroq(
             prompt,
             env.GROQ_API_KEY,
-            requestId
+            requestId,
+            responseShape
           );
 
 
@@ -902,7 +920,8 @@ export async function onRequestPost(context) {
           await callGroq(
             prompt,
             env.GROQ_API_KEY,
-            requestId
+            requestId,
+            responseShape
           );
 
 
@@ -1083,7 +1102,8 @@ export async function onRequestPost(context) {
         await callGroq(
           prompt,
           env.GROQ_API_KEY,
-          requestId
+          requestId,
+          responseShape
         );
 
 
@@ -1991,7 +2011,8 @@ async function getLicenseCredits(
 async function callGroq(
   prompt,
   apiKey,
-  requestId
+  requestId,
+  responseShape
 ) {
 
   let primaryErr;
@@ -2002,7 +2023,8 @@ async function callGroq(
       GROQ_MODEL_PRIMARY,
       prompt,
       apiKey,
-      requestId
+      requestId,
+      responseShape
     );
 
   } catch (err) {
@@ -2051,7 +2073,8 @@ async function callGroq(
         GROQ_MODEL_FALLBACK,
         prompt,
         apiKey,
-        requestId
+        requestId,
+        responseShape
       );
 
 
@@ -2165,6 +2188,91 @@ const KEYWORDS_OUTPUT_SCHEMA = {
 };
 
 /**
+ * =============================================================
+ * ETSY KEYWORD INTELLIGENCE — RESPONSE SCHEMA (batch 1)
+ * -------------------------------------------------------------
+ * Adds one additional object, keywordIntelligence, to the exact
+ * same {title, tags, description} shape TAGS_OUTPUT_SCHEMA already
+ * declares. Selected only when the caller explicitly requests it
+ * via responseShape === "etsy_intelligence" (see
+ * ALLOWED_RESPONSE_SHAPES / selectResponseFormat() below) — never
+ * by sniffing prompt content, and never for Pinterest/Digital/
+ * standard, which do not send that field.
+ *
+ * role is a closed enum (exactly the 5 values the product spec
+ * defines). No numeric score/tier field exists here on purpose:
+ * opportunity tiers are deterministic, computed client-side in a
+ * later batch, never authored by the model. selected_for_tags is a
+ * plain boolean the model self-reports; batch 1 does not reconcile
+ * or validate it against the actual `tags` array — that
+ * reconciliation is explicitly out of scope for this batch.
+ *
+ * No minItems/maxItems on `opportunities`, for the same reason
+ * TAGS_OUTPUT_SCHEMA has none on `tags`: Groq's strict-mode
+ * Structured Outputs does not support array length constraints.
+ * The "roughly 12–20 opportunities" target is therefore a prompt
+ * instruction only (see buildEtsyPrompt()), not a schema rule.
+ * =============================================================
+ */
+
+const ETSY_KEYWORD_OPPORTUNITY_ROLES = [
+  "core",
+  "long_tail",
+  "buyer_intent",
+  "attribute_style",
+  "personalization"
+];
+
+const ETSY_INTELLIGENCE_OUTPUT_SCHEMA = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    tags: {
+      type: "array",
+      items: { type: "string" }
+    },
+    description: { type: "string" },
+    keywordIntelligence: {
+      type: "object",
+      properties: {
+        opportunities: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              keyword: { type: "string" },
+              role: {
+                type: "string",
+                enum: ETSY_KEYWORD_OPPORTUNITY_ROLES
+              },
+              why: { type: "string" },
+              selected_for_tags: { type: "boolean" }
+            },
+            required: ["keyword", "role", "why", "selected_for_tags"],
+            additionalProperties: false
+          }
+        }
+      },
+      required: ["opportunities"],
+      additionalProperties: false
+    }
+  },
+  required: ["title", "tags", "description", "keywordIntelligence"],
+  additionalProperties: false
+};
+
+/**
+ * Explicit, whitelisted response-shape selectors. This is the ONLY
+ * mechanism batch 1 adds for choosing the Etsy Keyword Intelligence
+ * schema — deliberately not another prompt-content sniff signal
+ * alongside the `'"keywords":'` one below. Any request value not in
+ * this set is treated as absent (see responseShape above).
+ */
+const ALLOWED_RESPONSE_SHAPES = new Set([
+  "etsy_intelligence"
+]);
+
+/**
  * The backend never receives the selected platform/category —
  * the frontend only ever sends the finished prompt string. Each
  * prompt builder embeds its own literal example output shape in
@@ -2177,8 +2285,25 @@ const KEYWORDS_OUTPUT_SCHEMA = {
  * current prompt builders, which are unmodified by this change.
  */
 function selectResponseFormat(
-  prompt
+  prompt,
+  responseShape
 ) {
+
+  // Explicit, whitelisted selector — checked first and independent
+  // of prompt content. Etsy Keyword Intelligence (batch 1) is the
+  // only shape that sets this; everything else falls through to the
+  // pre-existing sniff logic below, completely unchanged.
+  if (responseShape === "etsy_intelligence") {
+
+    return {
+      type: "json_schema",
+      json_schema: {
+        name: "seo_listing_etsy_intelligence",
+        strict: true,
+        schema: ETSY_INTELLIGENCE_OUTPUT_SCHEMA
+      }
+    };
+  }
 
   const isKeywordsShape =
     typeof prompt === "string" &&
@@ -2217,7 +2342,8 @@ async function callGroqModel(
   model,
   prompt,
   apiKey,
-  requestId
+  requestId,
+  responseShape
 ) {
 
   const controller =
@@ -2278,7 +2404,7 @@ async function callGroqModel(
                 reasoning_effort: "low",
 
                 response_format:
-                  selectResponseFormat(prompt)
+                  selectResponseFormat(prompt, responseShape)
               }
             ),
 
