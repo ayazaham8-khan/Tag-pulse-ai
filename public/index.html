@@ -3020,13 +3020,23 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     const firstRequestId = generationId + "-1";
     const validationRetryRequestId = firstRequestId + "-retry";
 
+    // Etsy Keyword Intelligence (batch 1): the explicit, whitelisted
+    // shape selector sent ONLY on Etsy's two generation calls (the
+    // initial request and its validation retry, below). Pinterest
+    // and Digital/Printable never set this, so their calls omit
+    // response_shape entirely and the backend's existing behavior
+    // for them is unchanged (see selectResponseFormat() in
+    // functions/api/generate.js).
+    const etsyResponseShape =
+      category === "Etsy" ? "etsy_intelligence" : undefined;
+
     if (category === "Etsy") {
       etsyStage = "request-1";
       console.log("[TagPulse][Etsy] request #1 starting", { hasProductDetails: hasProductDetails });
     }
 
     try {
-      const result = await callGenerateWithNetworkRetry(prompt, firstRequestId, hasProductDetails);
+      const result = await callGenerateWithNetworkRetry(prompt, firstRequestId, hasProductDetails, undefined, etsyResponseShape);
 
       if (category === "Etsy") {
         console.log("[TagPulse][Etsy] request #1 completed", { status: result.status });
@@ -3073,7 +3083,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           etsyStage = "request-2-retry";
           console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: hasProductDetails });
 
-          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId, etsyResponseShape);
 
           console.log("[TagPulse][Etsy] retry (request #2) completed", { status: retryResult.status });
 
@@ -3118,7 +3128,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
             validation.errors
           );
 
-          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId, etsyResponseShape);
 
           if (retryResult.status === 402) {
             applyServerState(retryResult.data);
@@ -3161,7 +3171,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
             validation.errors
           );
 
-          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId, etsyResponseShape);
 
           if (retryResult.status === 402) {
             applyServerState(retryResult.data);
@@ -3337,17 +3347,32 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       'Never create a keyword merely by combining the targeting label with a product word (for example, do not produce "online shopper gift", "etsy dog mom", "pinterest wall art", or similar). Do not insert phrases like "for online shoppers", "for Etsy shoppers", "for Pinterest users", or similar targeting/audience metadata into the title, tags, or description just because that option was selected.',
       "A term may still be used if it is independently relevant to the actual product or genuine buyer search intent — the rule is only against mechanically converting the UI targeting label into SEO text. SEO phrases must come primarily from the actual product concept, the supplied product details above, genuine buyer intent, and search contexts specific to this product — not from the targeting label itself.",
       "",
-      "=== KEYWORD STRATEGY (internal reasoning — do not output this part) ===",
-      "Before writing the final tags, privately evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product: core product, product type/variant, primary theme/design, personalization/customization, recipient/audience, occasion, gift intent, use case, style/aesthetic, relevant niche/sub-niche. These are reasoning categories, NOT mandatory tags — only use a cluster that is genuinely supported by the product and supplied facts; do not force every cluster to appear.",
+      "=== KEYWORD STRATEGY (this reasoning IS part of your output — see KEYWORD INTELLIGENCE below) ===",
+      "Before writing the final tags, evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product: core product, product type/variant, primary theme/design, personalization/customization, recipient/audience, occasion, gift intent, use case, style/aesthetic, relevant niche/sub-niche. These are reasoning categories, NOT mandatory tags — only use a cluster that is genuinely supported by the product and supplied facts; do not force every cluster to appear.",
       "Prioritize, in order: (1) direct relevance to the actual product, (2) strong buyer/search intent, (3) specificity, (4) distinct search intent, (5) natural multi-word phrasing, (6) Etsy tag constraints, (7) diversity across the 13 tags.",
       'Avoid generating several tags that are merely grammatical variations of the same search intent — for example "dog mom gift", "gift for dog mom", and "dog mom present" all express the same intent; select only the strongest one and use the freed-up slots for other genuinely different search intents. Do not fill slots with generic filler such as "unique gift", "special occasion gift", "perfect gift", "cute item", or "great present" unless the phrase carries genuinely useful, product-specific search intent. Do not overcorrect: tags that represent legitimately different product attributes or angles (for example "dog mom sweatshirt" and "personalized dog mom") may coexist.',
       "",
+      "=== KEYWORD INTELLIGENCE (output this — this is TagPulse's own internal analysis layer, NOT official Etsy data) ===",
+      "In keywordIntelligence.opportunities, list roughly 12 to 20 of the strongest keyword phrases your KEYWORD STRATEGY reasoning above actually identified for this specific product — do not pad the list with weak or irrelevant filler just to reach a count.",
+      "For EACH opportunity provide exactly these 4 fields:",
+      '  - "keyword": the candidate phrase itself.',
+      '  - "role": EXACTLY one of these 5 values, and no others: "core", "long_tail", "buyer_intent", "attribute_style", "personalization".',
+      '  - "why": one short, concrete, product-specific sentence explaining why this keyword is useful for THIS product. Never generic filler like "this is a good keyword" or "this will help sales" — ground it in the actual product, audience, or intent.',
+      '  - "selected_for_tags": true ONLY if this exact keyword phrase is one of the 13 tags you output below in "tags". Use false for additional relevant opportunities you considered but did not select for the final 13.',
+      "Keyword Intelligence is TagPulse's own internal analysis, not Etsy platform data. NEVER state or imply an Etsy search volume, competition level, demand number, trend percentage, ranking position, or ranking probability anywhere in \"why\" or elsewhere — TagPulse does not have that data. Do not include any numeric score or tier for an opportunity.",
+      "Keep every \"why\" brief (roughly one sentence) — this section supports the listing below, it must not balloon the response.",
+      "",
       "=== OUTPUT FORMAT ===",
-      "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation, NO keyword-reasoning fields, NO intermediate work. Exactly this shape:",
+      "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation outside the fields specified, NO intermediate work. Exactly this shape:",
       "{",
       '  "title": "...",',
       '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13"],',
-      '  "description": "..."',
+      '  "description": "...",',
+      '  "keywordIntelligence": {',
+      '    "opportunities": [',
+      '      { "keyword": "...", "role": "core", "why": "...", "selected_for_tags": true }',
+      "    ]",
+      "  }",
       "}",
       "",
       'TITLE RULES: Maximum 140 characters. Put the primary product phrase naturally near the beginning when it reads well. Natural and readable, not a keyword dump. No repetitive synonym chains. No unsupported product attributes. Avoid generic filler such as "Perfect Gift", "Great Gift", or "Perfect for..." when a stronger, more product-specific phrase is available. Do not stuff in extra words just to use up the character limit.',
@@ -3549,7 +3574,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   /* ============================================================
      CLOUDFLARE PAGES FUNCTION CALL
      ============================================================ */
-  async function callGenerate(prompt, requestId, hasProductDetails, retryOf){
+  async function callGenerate(prompt, requestId, hasProductDetails, retryOf, responseShape){
     if (!authSession || !authUser) {
       throw new Error("Please sign in before generating.");
     }
@@ -3572,7 +3597,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           license_key: licenseKey,
           request_id: requestId,
           has_product_details: !!hasProductDetails
-        }, retryOf ? { retry_of: retryOf } : {}))
+        }, retryOf ? { retry_of: retryOf } : {}, responseShape ? { response_shape: responseShape } : {}))
       });
     } catch (networkErr) {
       // A genuine browser/network-level fetch rejection — nothing
@@ -3660,11 +3685,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
    * call is bounded to at most one extra attempt of its own,
    * regardless of how many times it's invoked overall.
    */
-  async function callGenerateWithNetworkRetry(prompt, requestId, hasProductDetails, retryOf){
+  async function callGenerateWithNetworkRetry(prompt, requestId, hasProductDetails, retryOf, responseShape){
     requestId = requestId || generateDiagnosticRequestId();
 
     try {
-      return await callGenerate(prompt, requestId, hasProductDetails, retryOf);
+      return await callGenerate(prompt, requestId, hasProductDetails, retryOf, responseShape);
 
     } catch (err) {
       if (!err.networkLevelFailure) {
@@ -3675,7 +3700,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       generateBtnLabel.innerHTML = '<span class="spinner"></span> Connection interrupted — retrying…';
 
       try {
-        const result = await callGenerate(prompt, requestId, hasProductDetails, retryOf);
+        const result = await callGenerate(prompt, requestId, hasProductDetails, retryOf, responseShape);
         generateBtnLabel.innerHTML = '<span class="spinner"></span> Generating…';
         return result;
 
