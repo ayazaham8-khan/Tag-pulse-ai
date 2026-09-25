@@ -3110,6 +3110,25 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           }
         }
 
+        // Batch 2: deterministic, non-blocking Keyword Intelligence
+        // post-processing. Runs only once validation above has
+        // already accepted title/tags/description; can never fail
+        // generation and never triggers another retry — see
+        // processEtsyKeywordIntelligence() for the full contract.
+        try {
+          parsed.keywordIntelligence =
+            processEtsyKeywordIntelligence(parsed, productContextText);
+        } catch (intelErr) {
+          console.warn(
+            "[TagPulse][Etsy] keyword intelligence processing failed - continuing without it",
+            intelErr
+          );
+          parsed.keywordIntelligence = { opportunities: [], roleBreakdown: {
+            core: 0, long_tail: 0, buyer_intent: 0, attribute_style: 0,
+            personalization: 0, unclassified: Array.isArray(parsed.tags) ? parsed.tags.length : 0
+          }};
+        }
+
       } else if (category === "Pinterest") {
 
         // Same real-validation + single-retry architecture as Etsy,
@@ -3910,6 +3929,225 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       "Local Customers": ["local customer", "local customers"]
     };
     return map[audience] || [];
+  }
+
+  /* ------------------------------------------------------------
+     ETSY KEYWORD INTELLIGENCE — DETERMINISTIC POST-PROCESSING
+     (batch 2)
+     ------------------------------------------------------------
+     keywordIntelligence, as returned by the model, is ADVISORY
+     input ONLY. Nothing in this file trusts it: every field is
+     re-derived or verified deterministically from the model's
+     OTHER, already-blocking-validated output (the final `tags`
+     array) and from the product context the user actually typed.
+
+     This runs strictly AFTER validateEtsyOutput() has already
+     accepted the title/tags/description (see the single call site
+     in handleGenerate's Etsy branch). It never blocks generation,
+     never triggers a retry, and never throws — a completely
+     missing or garbage keywordIntelligence object still produces a
+     valid, fully-formed result (opportunities: [], roleBreakdown:
+     all-unclassified against the real tags), so Etsy generation
+     always succeeds whenever the existing validator says the
+     listing itself is valid.
+
+     Design choice for a missing/unusable section (spec said "omit
+     or degrade"): this always DEGRADES to a consistent, fully-
+     shaped object rather than omitting the key. Batch 3's UI can
+     then key off `opportunities.length` to decide whether to
+     render the section, without a second "is the key even present"
+     case to handle.
+     ------------------------------------------------------------ */
+
+  const ETSY_KEYWORD_INTELLIGENCE_ROLES = [
+    "core", "long_tail", "buyer_intent", "attribute_style", "personalization"
+  ];
+
+  const ETSY_KEYWORD_INTELLIGENCE_FILLER_PHRASES = [
+    "unique gift", "perfect gift", "great gift", "special gift", "gift idea"
+  ];
+
+  function normalizeEtsyKeywordText(value){
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+  }
+
+  // Deterministic per-opportunity tier score. Internal only — the
+  // numeric value itself is never exposed to the caller, only the
+  // resulting "Strong" / "Moderate" / "Limited" label (see
+  // computeEtsyOpportunityTier below).
+  function scoreEtsyOpportunity(opportunity, isConfirmedSelected, productContextText){
+    let score = 0;
+
+    if (isConfirmedSelected) score += 2;
+
+    if (opportunity.role === "core" || opportunity.role === "buyer_intent") {
+      score += 1;
+    }
+
+    const normalizedKeyword = normalizeEtsyKeywordText(opportunity.keyword);
+    const normalizedContext = normalizeEtsyKeywordText(productContextText);
+
+    if (normalizedKeyword && normalizedContext) {
+      const keywordWords = normalizedKeyword.split(" ").filter(function(w){ return w.length > 2; });
+      const hasOverlap = keywordWords.some(function(word){
+        return normalizedContext.indexOf(word) !== -1;
+      });
+      if (hasOverlap) score += 1;
+    }
+
+    if (ETSY_KEYWORD_INTELLIGENCE_FILLER_PHRASES.indexOf(normalizedKeyword) !== -1) {
+      score -= 1;
+    }
+
+    return score;
+  }
+
+  function computeEtsyOpportunityTier(score){
+    if (score >= 3) return "Strong";
+    if (score >= 1) return "Moderate";
+    return "Limited";
+  }
+
+  /**
+   * processEtsyKeywordIntelligence(parsed, productContextText)
+   *
+   * parsed        — the already blocking-validated Etsy result
+   *                 (must have a valid `tags` array; this function
+   *                 does not re-check that).
+   * productContextText — the same string already built in
+   *                 handleGenerate (keyword + supplied Product
+   *                 Details), used only for the deterministic
+   *                 word-overlap signal. No AI call, no external
+   *                 data, no web search.
+   *
+   * Returns a NEW keywordIntelligence object:
+   *   {
+   *     opportunities: [{ keyword, role, why, selected_for_tags, tier }],
+   *     roleBreakdown: { core, long_tail, buyer_intent,
+   *                      attribute_style, personalization,
+   *                      unclassified }   // always sums to tags.length
+   *   }
+   *
+   * Never throws.
+   */
+  function processEtsyKeywordIntelligence(parsed, productContextText){
+
+    const finalTags = Array.isArray(parsed && parsed.tags) ? parsed.tags : [];
+    const normalizedTags = finalTags.map(normalizeEtsyKeywordText);
+
+    const roleBreakdown = {
+      core: 0,
+      long_tail: 0,
+      buyer_intent: 0,
+      attribute_style: 0,
+      personalization: 0,
+      unclassified: 0
+    };
+
+    let rawOpportunities;
+    try {
+      rawOpportunities =
+        (parsed &&
+          parsed.keywordIntelligence &&
+          Array.isArray(parsed.keywordIntelligence.opportunities))
+          ? parsed.keywordIntelligence.opportunities
+          : [];
+    } catch (err) {
+      rawOpportunities = [];
+    }
+
+    // ---- Step 1: filter to well-formed opportunities only ------
+    // (§3 role validation, §9 malformed-field handling — a bad
+    // item is dropped, never allowed to break anything.)
+    const wellFormed = [];
+    for (let i = 0; i < rawOpportunities.length; i++) {
+      const raw = rawOpportunities[i];
+      if (!raw || typeof raw !== "object") continue;
+
+      const keyword = normalizeEtsyKeywordText(raw.keyword);
+      if (!keyword) continue;
+
+      if (ETSY_KEYWORD_INTELLIGENCE_ROLES.indexOf(raw.role) === -1) continue;
+
+      wellFormed.push({
+        keyword: keyword,
+        role: raw.role,
+        why: (typeof raw.why === "string" && raw.why.trim()) ? raw.why.trim() : "",
+        // The model's flag is read here only as a hint for step 2's
+        // dedup preference — it is NEVER trusted as the final value.
+        modelClaimedSelected: raw.selected_for_tags === true
+      });
+    }
+
+    // ---- Step 2: de-duplicate by normalized keyword (§10) -------
+    // Prefer the version with a valid role (guaranteed at this
+    // point, all survivors have one) and a non-empty "why"; among
+    // ties, prefer one the model itself claimed was selected.
+    const byKeyword = new Map();
+    for (let i = 0; i < wellFormed.length; i++) {
+      const item = wellFormed[i];
+      const existing = byKeyword.get(item.keyword);
+      if (!existing) {
+        byKeyword.set(item.keyword, item);
+        continue;
+      }
+      const itemScore = (item.why ? 1 : 0) + (item.modelClaimedSelected ? 1 : 0);
+      const existingScore = (existing.why ? 1 : 0) + (existing.modelClaimedSelected ? 1 : 0);
+      if (itemScore > existingScore) {
+        byKeyword.set(item.keyword, item);
+      }
+    }
+    const deduped = Array.from(byKeyword.values());
+
+    // ---- Step 3: reconcile selected_for_tags against the REAL,
+    // already-validated final tags (§2) — exact normalized match
+    // only, never the model's self-report. ------------------------
+    const confirmedTagIndexes = new Set();
+    const opportunities = deduped.map(function(item){
+      const tagIndex = normalizedTags.indexOf(item.keyword);
+      const confirmedSelected = tagIndex !== -1;
+      if (confirmedSelected) confirmedTagIndexes.add(tagIndex);
+
+      const score = scoreEtsyOpportunity(item, confirmedSelected, productContextText);
+
+      return {
+        keyword: item.keyword,
+        role: item.role,
+        why: item.why,
+        selected_for_tags: confirmedSelected,
+        tier: computeEtsyOpportunityTier(score)
+        // Note: `score` itself is intentionally not included —
+        // only the resulting tier label is ever exposed (§4/§7).
+      };
+    });
+
+    // Tally roles ONLY for opportunities confirmed selected — an
+    // opportunity that isn't one of the 13 tags doesn't occupy a
+    // slot in the listing's role breakdown, no matter how the
+    // model classified it.
+    for (let i = 0; i < opportunities.length; i++) {
+      if (opportunities[i].selected_for_tags &&
+          Object.prototype.hasOwnProperty.call(roleBreakdown, opportunities[i].role)) {
+        roleBreakdown[opportunities[i].role]++;
+      }
+    }
+
+    // ---- Step 4: any final tag with no confirmed opportunity is
+    // "unclassified" (§2/§6) — counted once per tag, never
+    // invented as a fake opportunity. --------------------------
+    for (let i = 0; i < normalizedTags.length; i++) {
+      if (!confirmedTagIndexes.has(i)) {
+        roleBreakdown.unclassified++;
+      }
+    }
+
+    return {
+      opportunities: opportunities,
+      roleBreakdown: roleBreakdown
+    };
   }
 
   /* ------------------------------------------------------------
