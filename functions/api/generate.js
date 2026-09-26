@@ -69,14 +69,26 @@ const GROQ_MODEL_FALLBACK =
 // existing checkGroqModelAvailability() live-check output.
 const GROQ_FALLBACK_ENABLED = false;
 
-// Explicit output-token ceiling. Raised from 2048 to 4096 after
-// Groq dashboard evidence showed current HTTP 400 "Failed to
-// validate JSON" failures consistently landing at exactly 2048
-// output tokens -- gpt-oss-120b is a reasoning model, and
-// reasoning tokens count against this same budget before the
-// final JSON is written, so a long reasoning pass could exhaust
-// the old cap before the JSON completed.
-const GROQ_MAX_COMPLETION_TOKENS = 4096;
+// Explicit output-token ceiling. History: raised from 2048 to 4096
+// after Groq dashboard evidence showed HTTP 400 "Failed to validate
+// JSON" failures consistently landing at exactly 2048 output tokens
+// -- gpt-oss-120b is a reasoning model, and reasoning tokens count
+// against this same budget before the final JSON is written, so a
+// long reasoning pass could exhaust too low a cap before the JSON
+// completed.
+//
+// TOKEN OPTIMIZATION (current): lowered from 4096 to 3072. The
+// declared ceiling is what Groq's TPM rate limiter reserves against
+// for THIS request, independent of what is actually generated (see
+// the token-usage audit) -- 4096 was reserving far more than the
+// real Etsy+Keyword-Intelligence output needs (~850-1,200 estimated
+// tokens for the JSON alone), and every validation retry reserves
+// the ceiling a second time within the same request. 3072 keeps
+// substantially more headroom than the 2048 level that already
+// proved insufficient above, while cutting reserved-per-call
+// pressure by roughly 25%. Model, reasoning_effort, temperature, and
+// response_format are unchanged by this constant.
+const GROQ_MAX_COMPLETION_TOKENS = 3072;
 
 const GROQ_TIMEOUT_MS = 30000;
 
