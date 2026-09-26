@@ -729,6 +729,53 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 .desc-output{ font-size:14px; color:var(--ink-soft); white-space:pre-wrap; line-height:1.7; }
 
 /* ============================================================
+   KEYWORD INTELLIGENCE (batch 3 — Etsy only)
+   ------------------------------------------------------------
+   Reuses existing tokens/patterns only (.card, .output-card-head,
+   .num, .char-count, .tag-chip pill language) — no new design
+   system, no colors outside :root. Secondary to the listing above
+   it: quieter type scale, no bright/large badges.
+   ============================================================ */
+.ki-disclaimer{ font-size:11px; color:var(--muted); font-weight:600; line-height:1.5; margin:-4px 0 14px; }
+
+.ki-breakdown{ margin-bottom:16px; }
+.ki-breakdown-total{ font-size:12.5px; font-weight:800; color:var(--ink-soft); margin-bottom:8px; }
+.ki-breakdown-pills{ display:flex; flex-wrap:wrap; gap:6px; }
+.ki-role-pill{
+  display:inline-flex; align-items:center;
+  background:var(--bg); color:var(--ink-soft);
+  border:1px solid var(--border); border-radius:999px;
+  font-size:11px; font-weight:700; padding:4px 10px;
+}
+
+.ki-opportunities{ display:flex; flex-direction:column; gap:10px; }
+.ki-opportunity{
+  border:1px solid var(--border); border-radius:var(--radius-sm);
+  background:var(--bg); padding:11px 13px;
+}
+.ki-opportunity-head{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:6px; }
+.ki-keyword{ font-size:13px; font-weight:700; color:var(--ink); word-break:break-word; }
+.ki-selected-badge{
+  font-size:10.5px; font-weight:800; color:var(--success);
+  background:var(--success-tint); border-radius:999px; padding:2px 9px;
+  white-space:nowrap;
+}
+.ki-opportunity-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+.ki-meta-pill{
+  font-size:10.5px; font-weight:700; color:var(--ink-soft);
+  background:#fff; border:1px solid var(--border); border-radius:999px; padding:3px 9px;
+}
+.ki-tier-strong{ color:var(--success); border-color:var(--success); }
+.ki-tier-moderate{ color:var(--primary-dark); border-color:#f8cba9; }
+.ki-tier-limited{ color:var(--muted); }
+.ki-why{ font-size:12.5px; color:var(--ink-soft); line-height:1.55; margin:0; }
+.ki-empty-note{ font-size:12.5px; color:var(--muted); }
+
+@media (min-width:600px){
+  .ki-opportunity-head{ justify-content:space-between; flex-wrap:nowrap; }
+}
+
+/* ============================================================
    TOAST
    ============================================================ */
 #toast{
@@ -1431,6 +1478,17 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <p class="char-count" id="descCharCount"></p>
     </div>
 
+    <div class="card ki-card hidden" id="keywordIntelligenceCard">
+      <div class="output-card-head">
+        <h3><span class="num">4</span>Keyword Intelligence</h3>
+      </div>
+      <p class="ki-disclaimer">TagPulse Estimated Opportunity — based on your listing inputs and generated keyword relevance. This is not Etsy search-volume or ranking data.</p>
+
+      <div class="ki-breakdown" id="kiRoleBreakdown"></div>
+
+      <div class="ki-opportunities" id="kiOpportunitiesList"></div>
+    </div>
+
   </section>
   </section>
 </main>
@@ -1761,6 +1819,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const tagsRaw        = $("tagsRaw");
   const descOutput     = $("descOutput");
   const descCharCount  = $("descCharCount");
+
+  const keywordIntelligenceCard = $("keywordIntelligenceCard");
+  const kiRoleBreakdown          = $("kiRoleBreakdown");
+  const kiOpportunitiesList      = $("kiOpportunitiesList");
 
   const copyTitleBtn = $("copyTitleBtn");
   const copyTagsBtn  = $("copyTagsBtn");
@@ -3771,6 +3833,142 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
   }
 
+  /* ============================================================
+     KEYWORD INTELLIGENCE RENDERING (batch 3 — Etsy only)
+     ------------------------------------------------------------
+     Purely a display layer. Every value rendered here (role, tier,
+     selected_for_tags, roleBreakdown) is already normalized and
+     reconciled by processEtsyKeywordIntelligence() (batch 2) --
+     this function does not recompute, re-score, or re-validate
+     anything. It only decides HOW to show data that already exists,
+     and defensively skips anything it doesn't recognize rather than
+     guessing or inventing a category.
+
+     Called only from renderOutput() when category === "Etsy". Old
+     history entries (saved before this feature existed) simply have
+     no parsed.keywordIntelligence, so this hides the card and the
+     rest of the Etsy result renders exactly as it always has.
+     ============================================================ */
+
+  const KI_ROLE_LABELS = {
+    core: "Core",
+    long_tail: "Long-tail",
+    buyer_intent: "Buyer Intent",
+    attribute_style: "Attribute / Style",
+    personalization: "Personalization",
+    unclassified: "Unclassified"
+  };
+  const KI_ROLE_DISPLAY_ORDER =
+    ["core", "long_tail", "buyer_intent", "attribute_style", "personalization", "unclassified"];
+  const KI_TIER_CLASS = { "Strong": "strong", "Moderate": "moderate", "Limited": "limited" };
+
+  function renderEtsyKeywordIntelligence(parsed){
+    const ki = parsed && parsed.keywordIntelligence;
+    const opportunities = (ki && Array.isArray(ki.opportunities)) ? ki.opportunities : [];
+    const roleBreakdown =
+      (ki && ki.roleBreakdown && typeof ki.roleBreakdown === "object" && !Array.isArray(ki.roleBreakdown))
+        ? ki.roleBreakdown
+        : null;
+
+    // Nothing usable at all (missing/malformed/old history entry) —
+    // omit the section entirely rather than showing an empty card.
+    if (!roleBreakdown && opportunities.length === 0) {
+      keywordIntelligenceCard.classList.add("hidden");
+      kiRoleBreakdown.innerHTML = "";
+      kiOpportunitiesList.innerHTML = "";
+      return;
+    }
+
+    keywordIntelligenceCard.classList.remove("hidden");
+
+    // ---- role breakdown summary ----
+    kiRoleBreakdown.innerHTML = "";
+    if (roleBreakdown) {
+      let total = 0;
+      KI_ROLE_DISPLAY_ORDER.forEach(function(roleKey){
+        total += Number(roleBreakdown[roleKey]) || 0;
+      });
+
+      const totalLine = document.createElement("p");
+      totalLine.className = "ki-breakdown-total";
+      totalLine.textContent = total + (total === 1 ? " Tag Analyzed" : " Tags Analyzed");
+      kiRoleBreakdown.appendChild(totalLine);
+
+      const pills = document.createElement("div");
+      pills.className = "ki-breakdown-pills";
+      KI_ROLE_DISPLAY_ORDER.forEach(function(roleKey){
+        const count = Number(roleBreakdown[roleKey]) || 0;
+        if (count === 0) return; // keep the summary compact — only show categories actually present
+        const pill = document.createElement("span");
+        pill.className = "ki-role-pill";
+        pill.textContent = KI_ROLE_LABELS[roleKey] + " · " + count;
+        pills.appendChild(pill);
+      });
+      kiRoleBreakdown.appendChild(pills);
+    }
+
+    // ---- individual opportunities ----
+    kiOpportunitiesList.innerHTML = "";
+    if (opportunities.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "ki-empty-note";
+      empty.textContent = "No individual keyword opportunities were available for this listing.";
+      kiOpportunitiesList.appendChild(empty);
+      return;
+    }
+
+    opportunities.forEach(function(opp){
+      if (!opp || typeof opp !== "object") return; // defensive display guard only
+
+      const item = document.createElement("div");
+      item.className = "ki-opportunity";
+
+      const head = document.createElement("div");
+      head.className = "ki-opportunity-head";
+
+      const kw = document.createElement("span");
+      kw.className = "ki-keyword";
+      kw.textContent = String(opp.keyword || "").trim();
+      head.appendChild(kw);
+
+      if (opp.selected_for_tags === true) {
+        const badge = document.createElement("span");
+        badge.className = "ki-selected-badge";
+        badge.textContent = "✓ Selected for tags";
+        head.appendChild(badge);
+      }
+      item.appendChild(head);
+
+      const meta = document.createElement("div");
+      meta.className = "ki-opportunity-meta";
+
+      if (KI_ROLE_LABELS[opp.role]) {
+        const roleSpan = document.createElement("span");
+        roleSpan.className = "ki-meta-pill";
+        roleSpan.textContent = "Role: " + KI_ROLE_LABELS[opp.role];
+        meta.appendChild(roleSpan);
+      }
+
+      if (KI_TIER_CLASS[opp.tier]) {
+        const tierSpan = document.createElement("span");
+        tierSpan.className = "ki-meta-pill ki-tier-" + KI_TIER_CLASS[opp.tier];
+        tierSpan.textContent = "Opportunity: " + opp.tier;
+        meta.appendChild(tierSpan);
+      }
+
+      if (meta.children.length) item.appendChild(meta);
+
+      if (opp.why) {
+        const why = document.createElement("p");
+        why.className = "ki-why";
+        why.textContent = String(opp.why).trim();
+        item.appendChild(why);
+      }
+
+      kiOpportunitiesList.appendChild(item);
+    });
+  }
+
   function renderOutput(parsed, category){
     const title = String(parsed.title).trim();
     titleOutput.textContent = title;
@@ -3796,6 +3994,16 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     tagsRaw.value = tags.join(", ");
 
     descOutput.textContent = String(parsed.description).trim();
+
+    // Keyword Intelligence is Etsy-only. renderOutput() is shared with
+    // Digital/Printable/POD (see renderOutputByType below), so every
+    // other category explicitly hides the card rather than leaving a
+    // stale one visible from a previous Etsy generation.
+    if (category === "Etsy") {
+      renderEtsyKeywordIntelligence(parsed);
+    } else {
+      keywordIntelligenceCard.classList.add("hidden");
+    }
 
     outputSection.classList.remove("hidden");
   }
@@ -3836,6 +4044,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     const description = String(parsed.description).trim();
     descOutput.textContent = description;
     descCharCount.textContent = [...description].length + " / 500 characters";
+
+    // Keyword Intelligence is Etsy-only — never shown for Pinterest.
+    // Explicit hide here too (renderPinterestOutput doesn't call
+    // renderOutput) so a stale card from a prior Etsy generation
+    // can never remain visible after switching platforms.
+    keywordIntelligenceCard.classList.add("hidden");
 
     outputSection.classList.remove("hidden");
   }
