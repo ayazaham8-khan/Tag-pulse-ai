@@ -3340,6 +3340,20 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     productDetails = productDetails || {};
     validationErrors = validationErrors || [];
 
+    // TOKEN OPTIMIZATION: reordered so every static instructional
+    // block (identical on every Etsy request) comes FIRST, and all
+    // user-specific/dynamic content (product facts, audience,
+    // words-to-avoid, retry feedback) comes LAST. This gives
+    // repeated Etsy requests a long, stable common prefix that is
+    // eligible for Groq's automatic prompt caching -- it does not
+    // guarantee a cache hit on any given request.
+    //
+    // Wording is preserved verbatim wherever possible. A few
+    // sentences that said "above" / "below" needed small, purely
+    // positional fixes since the facts they refer to moved -- no
+    // rule, safeguard, or requirement was reworded in substance.
+    // See the batch report for the exact list of touched sentences.
+
     const knownFacts = [
       "- Product idea: " + keyword
     ];
@@ -3350,21 +3364,21 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     if (productDetails.features)        knownFacts.push("- Key features: " + productDetails.features);
     knownFacts.push("- SEO goal: " + seoGoal);
 
+    // ---- STATIC PREFIX (identical across every Etsy request) ----
     const lines = [
       "Act as a senior Etsy SEO strategist and listing copywriter. This is a strict factual-accuracy task, not a creative-writing task.",
       "",
-      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
-      ...knownFacts,
+      "=== KNOWN FACTS RULE ===",
+      "The KNOWN FACTS for this product — the ONLY facts you may state or imply — are given later in this message, under a KNOWN FACTS heading.",
       "",
       "=== UNKNOWN FACTS — DO NOT INVENT ===",
-      "Any product attribute NOT listed above as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, garment construction, pockets, shipping details, delivery times, washing instructions, quality claims, packaging, personalization workflow/capabilities, quantities, file formats, DPI, and measurements.",
-      'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", "top quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact above. If you have nothing factual to say about a dimension, omit it rather than filling the gap with unsupported language.',
+      "Any product attribute NOT listed below as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, garment construction, pockets, shipping details, delivery times, washing instructions, quality claims, packaging, personalization workflow/capabilities, quantities, file formats, DPI, and measurements.",
+      'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", "top quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact below. If you have nothing factual to say about a dimension, omit it rather than filling the gap with unsupported language.',
       "",
       "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
-      "Selected targeting option: " + audience,
       "This tells you who the likely buyer is, to help you judge tone and genuine buyer intent. It is background context only — it is not a product fact and not a keyword to insert.",
       'Never create a keyword merely by combining the targeting label with a product word (for example, do not produce "online shopper gift", "etsy dog mom", "pinterest wall art", or similar). Do not insert phrases like "for online shoppers", "for Etsy shoppers", "for Pinterest users", or similar targeting/audience metadata into the title, tags, or description just because that option was selected.',
-      "A term may still be used if it is independently relevant to the actual product or genuine buyer search intent — the rule is only against mechanically converting the UI targeting label into SEO text. SEO phrases must come primarily from the actual product concept, the supplied product details above, genuine buyer intent, and search contexts specific to this product — not from the targeting label itself.",
+      "A term may still be used if it is independently relevant to the actual product or genuine buyer search intent — the rule is only against mechanically converting the UI targeting label into SEO text. SEO phrases must come primarily from the actual product concept, the supplied product details, genuine buyer intent, and search contexts specific to this product — not from the targeting label itself.",
       "",
       "=== KEYWORD STRATEGY (this reasoning IS part of your output — see KEYWORD INTELLIGENCE below) ===",
       "Before writing the final tags, evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product: core product, product type/variant, primary theme/design, personalization/customization, recipient/audience, occasion, gift intent, use case, style/aesthetic, relevant niche/sub-niche. These are reasoning categories, NOT mandatory tags — only use a cluster that is genuinely supported by the product and supplied facts; do not force every cluster to appear.",
@@ -3396,13 +3410,25 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       "",
       'TITLE RULES: Maximum 140 characters. Put the primary product phrase naturally near the beginning when it reads well. Natural and readable, not a keyword dump. No repetitive synonym chains. No unsupported product attributes. Avoid generic filler such as "Perfect Gift", "Great Gift", or "Perfect for..." when a stronger, more product-specific phrase is available. Do not stuff in extra words just to use up the character limit.',
       "TAG RULES: Exactly 13 tags. Every tag must be non-empty, 20 characters or fewer, and a multi-word phrase (no bare single words). Every tag must be relevant to the actual product and must not state an unsupported factual attribute. No exact duplicate tags. Prefer tags that represent genuinely different search-intent angles over near-duplicate phrasing of the same angle — but do not force artificial diversity where it doesn't fit the product.",
-      'DESCRIPTION RULES: Write a useful Etsy description using ONLY the known facts and the stated SEO goal above, plus general non-specific framing (use-case, occasion, gift-worthiness) where it doesn\'t require inventing a fact. Do not add unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production, or packaging. Do not mention internal targeting/audience metadata (for example "for online shoppers", "for Etsy shoppers", "for Pinterest users") just because that option was selected — speak naturally to the buyer and product without exposing internal targeting labels.',
+      'DESCRIPTION RULES: Write a useful Etsy description using ONLY the known facts and the stated SEO goal provided later in this message, plus general non-specific framing (use-case, occasion, gift-worthiness) where it doesn\'t require inventing a fact. Do not add unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production, or packaging. Do not mention internal targeting/audience metadata (for example "for online shoppers", "for Etsy shoppers", "for Pinterest users") just because that option was selected — speak naturally to the buyer and product without exposing internal targeting labels.',
+      "WORDS-TO-AVOID RULE: Do not use any of the words or phrases listed under WORDS TO AVOID later in this message, anywhere in the title, tags, or description."
+    ];
+
+    // ---- DYNAMIC SUFFIX (user-specific — varies every request) ----
+    lines.push(
+      "",
+      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
+      ...knownFacts,
+      "",
+      "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
+      "Selected targeting option: " + audience,
+      "",
       "WORDS TO AVOID: " + (
         wordsToAvoid.length
           ? wordsToAvoid.join(", ")
           : "None specified"
-      ) + ". Do not use any of these words or phrases anywhere in the title, tags, or description."
-    ];
+      ) + "."
+    );
 
     if (validationErrors.length) {
       lines.push(
