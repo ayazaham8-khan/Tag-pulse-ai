@@ -762,6 +762,10 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 .ki-why{ font-size:12.5px; color:var(--ink-soft); line-height:1.55; margin:0; }
 .ki-empty-note{ font-size:12.5px; color:var(--muted); }
 
+.ki-coverage{ font-size:12px; font-weight:700; color:var(--ink-soft); margin:0 0 8px; }
+.ki-strategy-text{ font-size:12.5px; color:var(--ink-soft); line-height:1.55; margin:0 0 6px; }
+.ki-focus{ font-size:11.5px; font-weight:700; color:var(--primary-dark); margin:0; }
+
 /* ============================================================
    TOAST
    ============================================================ */
@@ -1476,6 +1480,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <div class="ki-opportunities" id="kiOpportunitiesList"></div>
     </div>
 
+    <div class="card ki-card hidden" id="keywordStrategyCard">
+      <div class="output-card-head">
+        <h3><span class="num">5</span>Keyword Strategy</h3>
+      </div>
+      <p class="ki-coverage" id="ksCoverage"></p>
+      <p class="ki-strategy-text" id="ksStrategyText"></p>
+      <p class="ki-focus" id="ksFocus"></p>
+    </div>
+
   </section>
   </section>
 </main>
@@ -1810,6 +1823,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const keywordIntelligenceCard = $("keywordIntelligenceCard");
   const kiRoleBreakdown          = $("kiRoleBreakdown");
   const kiOpportunitiesList      = $("kiOpportunitiesList");
+
+  const keywordStrategyCard = $("keywordStrategyCard");
+  const ksCoverage          = $("ksCoverage");
+  const ksStrategyText      = $("ksStrategyText");
+  const ksFocus             = $("ksFocus");
 
   const copyTitleBtn = $("copyTitleBtn");
   const copyTagsBtn  = $("copyTagsBtn");
@@ -3863,6 +3881,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       keywordIntelligenceCard.classList.add("hidden");
       kiRoleBreakdown.innerHTML = "";
       kiOpportunitiesList.innerHTML = "";
+      renderEtsyKeywordStrategy(null); // no source data -> Strategy hides too
       return;
     }
 
@@ -3961,6 +3980,125 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
       kiOpportunitiesList.appendChild(item);
     });
+
+    renderEtsyKeywordStrategy(roleBreakdown);
+  }
+
+  /* ============================================================
+     KEYWORD STRATEGY (batch 4 — Etsy only)
+     ------------------------------------------------------------
+     "How do the 13 tags work together?" — derived ENTIRELY from
+     the roleBreakdown that processEtsyKeywordIntelligence() (batch
+     2) already computed and renderEtsyKeywordIntelligence() (batch
+     3) already validated above. No Groq call, no new taxonomy, no
+     re-scoring: this only reads counts that already exist and
+     assembles a short, deterministic explanation from them.
+
+     "Insufficient data" here means specifically: every one of the
+     13 tags landed in "unclassified" (i.e. batch 2's reconciliation
+     could not confirm a role for any of them) — Coverage would be
+     empty and there is nothing meaningful to say about how the tags
+     work together, so the card hides. Passing null (no roleBreakdown
+     at all — old history, or Keyword Intelligence itself absent)
+     hides it the same way.
+     ============================================================ */
+
+  // Order matches the product spec's own Coverage example exactly
+  // (Core, Buyer Intent, Long-tail, Attribute/Style, Personalization) —
+  // intentionally NOT the same left-to-right order as the role
+  // breakdown pills above, and "unclassified" is never part of
+  // Coverage: an unclassified tag doesn't describe part of the
+  // strategy, by definition.
+  const KS_COVERAGE_ORDER = ["core", "buyer_intent", "long_tail", "attribute_style", "personalization"];
+
+  const KS_ROLE_CLAUSES = {
+    core: "a core product phrase",
+    buyer_intent: "buyer-intent phrasing aimed at shoppers ready to purchase",
+    long_tail: "more specific long-tail variations",
+    attribute_style: "attribute and style-based modifiers",
+    personalization: "personalization-focused phrasing"
+  };
+
+  function joinWithAnd(parts){
+    if (parts.length <= 1) return parts.join("");
+    if (parts.length === 2) return parts[0] + " with " + parts[1];
+    return parts.slice(0, -1).join(", ") + ", and " + parts[parts.length - 1];
+  }
+
+  /**
+   * computeEtsyKeywordStrategy(roleBreakdown)
+   *
+   * Pure, deterministic. Returns null when there isn't enough
+   * classified data to say anything meaningful, otherwise:
+   *   { coverageParts: [{role, label, count}], strategyText, focusText }
+   * focusText may be null (spec: omit rather than guess).
+   */
+  function computeEtsyKeywordStrategy(roleBreakdown){
+    if (!roleBreakdown || typeof roleBreakdown !== "object" || Array.isArray(roleBreakdown)) {
+      return null;
+    }
+
+    const coverageParts = [];
+    let totalClassified = 0;
+    KS_COVERAGE_ORDER.forEach(function(roleKey){
+      const count = Number(roleBreakdown[roleKey]) || 0;
+      if (count > 0) {
+        coverageParts.push({ role: roleKey, label: KI_ROLE_LABELS[roleKey], count: count });
+        totalClassified += count;
+      }
+    });
+
+    // Every tag unclassified (or a completely empty breakdown) — no
+    // reliable structure to describe. Hide rather than show an empty
+    // Coverage line and a meaningless sentence.
+    if (totalClassified === 0) return null;
+
+    // ---- strategy sentence: which clauses are present decides the
+    // wording, so the text genuinely varies with the data instead of
+    // being one fixed sentence for every listing. ----
+    const clauses = coverageParts.map(function(p){ return KS_ROLE_CLAUSES[p.role]; });
+    let strategyText;
+    if (clauses.length === 1) {
+      strategyText = "Your tags rely mainly on " + clauses[0] + ".";
+    } else {
+      strategyText = "Your tags combine " + joinWithAnd(clauses) +
+        " to cover different search intents without relying on near-duplicate phrases.";
+    }
+
+    // ---- optional focus signal: only when reliably determinable ----
+    let focusText = null;
+    const dominant = coverageParts.reduce(function(best, p){
+      return (!best || p.count > best.count) ? p : best;
+    }, null);
+    if (dominant && dominant.count >= 2 && (dominant.count / totalClassified) >= 0.4) {
+      focusText = dominant.label + " is a major part of this strategy.";
+    } else if ((Number(roleBreakdown.buyer_intent) || 0) === 0 && totalClassified >= 3) {
+      focusText = "Buyer-intent coverage is limited.";
+    }
+
+    return { coverageParts: coverageParts, strategyText: strategyText, focusText: focusText };
+  }
+
+  function renderEtsyKeywordStrategy(roleBreakdown){
+    const strategy = computeEtsyKeywordStrategy(roleBreakdown);
+
+    if (!strategy) {
+      keywordStrategyCard.classList.add("hidden");
+      ksCoverage.textContent = "";
+      ksStrategyText.textContent = "";
+      ksFocus.textContent = "";
+      return;
+    }
+
+    keywordStrategyCard.classList.remove("hidden");
+
+    ksCoverage.textContent = strategy.coverageParts
+      .map(function(p){ return p.label + " " + p.count; })
+      .join(" · ");
+
+    ksStrategyText.textContent = strategy.strategyText;
+
+    ksFocus.textContent = strategy.focusText ? ("Focus: " + strategy.focusText) : "";
   }
 
   function renderOutput(parsed, category){
@@ -3997,6 +4135,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       renderEtsyKeywordIntelligence(parsed);
     } else {
       keywordIntelligenceCard.classList.add("hidden");
+      keywordStrategyCard.classList.add("hidden");
     }
 
     outputSection.classList.remove("hidden");
@@ -4044,6 +4183,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     // renderOutput) so a stale card from a prior Etsy generation
     // can never remain visible after switching platforms.
     keywordIntelligenceCard.classList.add("hidden");
+    keywordStrategyCard.classList.add("hidden");
 
     outputSection.classList.remove("hidden");
   }
