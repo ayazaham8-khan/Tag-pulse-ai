@@ -749,31 +749,18 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 }
 
 .ki-opportunities{ display:flex; flex-direction:column; gap:10px; }
+.ki-top-heading{ font-size:12px; font-weight:800; color:var(--ink-soft); margin:0 0 2px; }
 .ki-opportunity{
   border:1px solid var(--border); border-radius:var(--radius-sm);
   background:var(--bg); padding:11px 13px;
 }
-.ki-opportunity-head{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:6px; }
-.ki-keyword{ font-size:13px; font-weight:700; color:var(--ink); word-break:break-word; }
-.ki-selected-badge{
-  font-size:10.5px; font-weight:800; color:var(--success);
-  background:var(--success-tint); border-radius:999px; padding:2px 9px;
-  white-space:nowrap;
-}
-.ki-opportunity-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
-.ki-meta-pill{
-  font-size:10.5px; font-weight:700; color:var(--ink-soft);
-  background:#fff; border:1px solid var(--border); border-radius:999px; padding:3px 9px;
-}
-.ki-tier-strong{ color:var(--success); border-color:var(--success); }
-.ki-tier-moderate{ color:var(--primary-dark); border-color:#f8cba9; }
+.ki-keyword{ font-size:13px; font-weight:700; color:var(--ink); word-break:break-word; margin:0 0 4px; }
+.ki-meta-line{ font-size:11px; font-weight:700; margin:0 0 6px; }
+.ki-tier-strong{ color:var(--success); }
+.ki-tier-moderate{ color:var(--primary-dark); }
 .ki-tier-limited{ color:var(--muted); }
 .ki-why{ font-size:12.5px; color:var(--ink-soft); line-height:1.55; margin:0; }
 .ki-empty-note{ font-size:12.5px; color:var(--muted); }
-
-@media (min-width:600px){
-  .ki-opportunity-head{ justify-content:space-between; flex-wrap:nowrap; }
-}
 
 /* ============================================================
    TOAST
@@ -3907,56 +3894,63 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       kiRoleBreakdown.appendChild(pills);
     }
 
-    // ---- individual opportunities ----
+    // ---- top keyword opportunities (batch 3 revision) ----
+    // Per the UX revision: this is a compact "what matters about the
+    // keyword strategy" summary, not a per-keyword mini-report. The
+    // 13 actual tags are already shown above, so this shows at most
+    // the 5 strongest opportunities rather than every opportunity,
+    // and drops the selected_for_tags badge and role/tier pill rows
+    // (already implicit in the role breakdown above). This is a
+    // display-only SELECTION over data processEtsyKeywordIntelligence()
+    // already computed — no new scoring, no re-reconciliation.
     kiOpportunitiesList.innerHTML = "";
-    if (opportunities.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "ki-empty-note";
-      empty.textContent = "No individual keyword opportunities were available for this listing.";
-      kiOpportunitiesList.appendChild(empty);
+
+    const validOpportunities = opportunities.filter(function(opp){
+      return opp && typeof opp === "object" && KI_TIER_CLASS[opp.tier];
+    });
+
+    if (validOpportunities.length === 0) {
+      // Nothing renderable at the individual level. The role
+      // breakdown above may still stand on its own — omit this
+      // subsection quietly (no "no data" filler) rather than a
+      // broken or empty-looking list.
       return;
     }
 
-    opportunities.forEach(function(opp){
-      if (!opp || typeof opp !== "object") return; // defensive display guard only
+    // Strong -> Moderate -> Limited, and a stable tiebreak that
+    // preserves processEtsyKeywordIntelligence()'s own existing
+    // order within a tier (explicit index tiebreak rather than
+    // relying only on Array.sort's stability guarantee).
+    const KI_TIER_PRIORITY = { "Strong": 0, "Moderate": 1, "Limited": 2 };
+    const topOpportunities = validOpportunities
+      .map(function(opp, index){ return { opp: opp, index: index }; })
+      .sort(function(a, b){
+        const diff = KI_TIER_PRIORITY[a.opp.tier] - KI_TIER_PRIORITY[b.opp.tier];
+        return diff !== 0 ? diff : a.index - b.index;
+      })
+      .slice(0, 5)
+      .map(function(entry){ return entry.opp; });
 
+    const heading = document.createElement("p");
+    heading.className = "ki-top-heading";
+    heading.textContent = "Top Keyword Opportunities";
+    kiOpportunitiesList.appendChild(heading);
+
+    topOpportunities.forEach(function(opp){
       const item = document.createElement("div");
       item.className = "ki-opportunity";
 
-      const head = document.createElement("div");
-      head.className = "ki-opportunity-head";
-
-      const kw = document.createElement("span");
+      const kw = document.createElement("p");
       kw.className = "ki-keyword";
       kw.textContent = String(opp.keyword || "").trim();
-      head.appendChild(kw);
+      item.appendChild(kw);
 
-      if (opp.selected_for_tags === true) {
-        const badge = document.createElement("span");
-        badge.className = "ki-selected-badge";
-        badge.textContent = "✓ Selected for tags";
-        head.appendChild(badge);
-      }
-      item.appendChild(head);
-
-      const meta = document.createElement("div");
-      meta.className = "ki-opportunity-meta";
-
-      if (KI_ROLE_LABELS[opp.role]) {
-        const roleSpan = document.createElement("span");
-        roleSpan.className = "ki-meta-pill";
-        roleSpan.textContent = "Role: " + KI_ROLE_LABELS[opp.role];
-        meta.appendChild(roleSpan);
-      }
-
-      if (KI_TIER_CLASS[opp.tier]) {
-        const tierSpan = document.createElement("span");
-        tierSpan.className = "ki-meta-pill ki-tier-" + KI_TIER_CLASS[opp.tier];
-        tierSpan.textContent = "Opportunity: " + opp.tier;
-        meta.appendChild(tierSpan);
-      }
-
-      if (meta.children.length) item.appendChild(meta);
+      const metaParts = [opp.tier];
+      if (KI_ROLE_LABELS[opp.role]) metaParts.push(KI_ROLE_LABELS[opp.role]);
+      const meta = document.createElement("p");
+      meta.className = "ki-meta-line ki-tier-" + KI_TIER_CLASS[opp.tier];
+      meta.textContent = metaParts.join(" · ");
+      item.appendChild(meta);
 
       if (opp.why) {
         const why = document.createElement("p");
