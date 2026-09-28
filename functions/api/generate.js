@@ -59,15 +59,16 @@ const GROQ_MODEL_PRIMARY =
   "openai/gpt-oss-120b";
 
 const GROQ_MODEL_FALLBACK =
-  "qwen/qwen3.6-27b";
+  "qwen/qwen3.8-27b";
 
-// TEMPORARY: confirmed returning HTTP 404 for our account in
-// production (see the "Groq primary AND fallback both failed"
-// diagnostic capture). Attempting it currently guarantees a
-// second failed request for no benefit, so it's bypassed for now.
-// Re-enable only after confirming a working model via the
-// existing checkGroqModelAvailability() live-check output.
-const GROQ_FALLBACK_ENABLED = false;
+// RELIABILITY FIX: qwen/qwen3.6-27b was deprecated by Groq (the
+// prior fallback attempt failed with HTTP 404 for our account, see
+// the historical "Groq primary AND fallback both failed" capture
+// this comment used to reference). Replaced with qwen/qwen3.8-27b
+// and re-enabled, scoped to a narrow set of primary-model failures
+// (see isEligibleForGroqFallback() below) rather than every error —
+// see callGroq() for exactly which failures attempt it.
+const GROQ_FALLBACK_ENABLED = true;
 
 // Explicit output-token ceiling. History: raised from 2048 to 4096
 // after Groq dashboard evidence showed HTTP 400 "Failed to validate
@@ -2020,6 +2021,73 @@ async function getLicenseCredits(
  * =============================================================
  */
 
+/**
+ * RELIABILITY FIX — narrow fallback eligibility.
+ * -------------------------------------------------------------
+ * The primary model falls back to GROQ_MODEL_FALLBACK for exactly
+ * two failure classes, matched against the current production
+ * evidence (see the read-only diagnosis this fix followed):
+ *
+ *   A. HTTP 429 (category "rate_limit") — Groq capacity limiting.
+ *
+ *   B. HTTP 400 that is SPECIFICALLY Groq's structured-output /
+ *      JSON-schema validation failure (the "Failed to validate
+ *      JSON..." error), not any other 400.
+ *
+ * Everything else — auth errors, an invalid/malformed request,
+ * unsupported parameters, model-not-found, other permanent
+ * configuration errors, 5xx, timeout, network failure, a
+ * content-filter refusal, or an empty response — returns false
+ * here and is left exactly as before: a single attempt, reported
+ * through the existing single-attempt error path, no second Groq
+ * call. This function only classifies; it has no side effects and
+ * never throws.
+ */
+function isEligibleForGroqFallback(err) {
+
+  if (!err) {
+    return false;
+  }
+
+  if (err.category === "rate_limit") {
+    return true;
+  }
+
+  if (err.groqStatus !== 400) {
+    return false;
+  }
+
+  return isStructuredOutputValidationFailure(err);
+}
+
+/**
+ * Narrow detector for Groq's own structured-output / JSON-schema
+ * validation failure, using whichever of Groq's own error fields
+ * are actually present — never the frontend's display text. Groq
+ * error codes/types for this failure aren't fully stable across
+ * models, so this checks, in order: an explicit code/type naming
+ * "json" validation, then (only as a fallback signal) Groq's own
+ * error message — the exact text this fix was written to handle in
+ * production. A 400 with none of these signals (e.g. an unrelated
+ * bad-request response) is treated as NOT eligible.
+ */
+function isStructuredOutputValidationFailure(err) {
+
+  const code = String(err.groqCode || "").toLowerCase();
+  const type = String(err.groqType || "").toLowerCase();
+  const message = String(err.groqMessage || err.message || "");
+
+  if (code === "json_validate_failed") {
+    return true;
+  }
+
+  if (code.indexOf("json") !== -1 || type.indexOf("json") !== -1) {
+    return true;
+  }
+
+  return /failed to validate json/i.test(message);
+}
+
 async function callGroq(
   prompt,
   apiKey,
@@ -2027,6 +2095,7 @@ async function callGroq(
   responseShape
 ) {
 
+  const callStart = Date.now();
   let primaryErr;
 
   try {
@@ -2054,26 +2123,54 @@ async function callGroq(
     }
 
 
-    if (!GROQ_FALLBACK_ENABLED) {
+    const eligible =
+      isEligibleForGroqFallback(primaryErr);
 
-      // Fallback is temporarily disabled (see GROQ_FALLBACK_ENABLED
-      // above) — do not attempt it, and do not report this as a
-      // "both models failed" event, since only the primary was
-      // actually attempted.
+
+    if (!GROQ_FALLBACK_ENABLED || !eligible) {
+
+      // Either the fallback switch is off, or this specific
+      // failure isn't one of the two eligible classes (see
+      // isEligibleForGroqFallback above) — do not attempt a
+      // second model call, and do not report this as a "both
+      // models failed" event, since only the primary was ever
+      // attempted.
       console.error(
-        "Groq primary model failed (fallback disabled):",
-        describeGroqError(primaryErr)
+        "[TagPulse][generate] Groq primary model failed" +
+          (GROQ_FALLBACK_ENABLED
+            ? " (not eligible for fallback)"
+            : " (fallback disabled)") +
+          ":",
+        {
+          requestId: requestId,
+          primaryModel: GROQ_MODEL_PRIMARY,
+          primaryStatus: primaryErr.groqStatus,
+          primaryCategory: primaryErr.category,
+          fallbackAttempted: false,
+          finalResult: "failure",
+          elapsedMs: Date.now() - callStart
+        }
       );
 
-      throw buildFallbackDisabledError(
-        primaryErr
+      throw (
+        GROQ_FALLBACK_ENABLED
+          ? buildFallbackNotEligibleError(primaryErr)
+          : buildFallbackDisabledError(primaryErr)
       );
     }
 
 
     console.error(
-      "Groq primary model failed, falling back:",
-      describeGroqError(primaryErr)
+      "[TagPulse][generate] Groq primary model failed, attempting fallback:",
+      {
+        requestId: requestId,
+        primaryModel: GROQ_MODEL_PRIMARY,
+        primaryStatus: primaryErr.groqStatus,
+        primaryCategory: primaryErr.category,
+        fallbackModel: GROQ_MODEL_FALLBACK,
+        fallbackAttempted: true,
+        elapsedMs: Date.now() - callStart
+      }
     );
   }
 
@@ -2091,8 +2188,16 @@ async function callGroq(
 
 
     console.error(
-      "Groq primary model failed but fallback succeeded:",
-      describeGroqError(primaryErr)
+      "[TagPulse][generate] Groq primary model failed but fallback succeeded:",
+      {
+        requestId: requestId,
+        primaryModel: GROQ_MODEL_PRIMARY,
+        primaryStatus: primaryErr.groqStatus,
+        primaryCategory: primaryErr.category,
+        fallbackModel: GROQ_MODEL_FALLBACK,
+        finalResult: "success",
+        elapsedMs: Date.now() - callStart
+      }
     );
 
     return text;
@@ -2100,10 +2205,17 @@ async function callGroq(
   } catch (fallbackErr) {
 
     console.error(
-      "Groq primary AND fallback both failed:",
+      "[TagPulse][generate] Groq primary AND fallback both failed:",
       {
-        primary: describeGroqError(primaryErr),
-        fallback: describeGroqError(fallbackErr)
+        requestId: requestId,
+        primaryModel: GROQ_MODEL_PRIMARY,
+        primaryStatus: primaryErr.groqStatus,
+        primaryCategory: primaryErr.category,
+        fallbackModel: GROQ_MODEL_FALLBACK,
+        fallbackStatus: fallbackErr && fallbackErr.groqStatus,
+        fallbackCategory: fallbackErr && fallbackErr.category,
+        finalResult: "failure",
+        elapsedMs: Date.now() - callStart
       }
     );
 
@@ -2114,7 +2226,6 @@ async function callGroq(
         [
           GROQ_MODEL_PRIMARY,
           GROQ_MODEL_FALLBACK,
-          "qwen/qwen3.8-27b",
           "openai/gpt-oss-20b"
         ]
       );
@@ -2507,6 +2618,16 @@ async function callGroqModel(
     let errType = null;
     let errCode = null;
     let failedGeneration = null;
+    let rateLimitHeaders = null;
+
+    if (res.status === 429) {
+      // Diagnostic-only capture of Groq's own rate-limit headers
+      // (never secrets — no key/auth data lives in these), so a
+      // 429 fallback event can be logged with the limiter's own
+      // numbers instead of guessing. Only included when present.
+      rateLimitHeaders =
+        buildRateLimitHeaderSnapshot(res.headers);
+    }
 
 
     try {
@@ -2566,7 +2687,8 @@ async function callGroqModel(
       {
         type: errType,
         code: errCode,
-        failedGeneration: failedGeneration
+        failedGeneration: failedGeneration,
+        rateLimitHeaders: rateLimitHeaders
       }
     );
   }
@@ -2665,6 +2787,44 @@ async function callGroqModel(
  * omits it, so those errors are completely unaffected by this
  * addition.
  */
+/**
+ * Reads Groq's standard rate-limit response headers, when present,
+ * into a small plain object for logging only — never acted on to
+ * pace/delay a retry in this change (see RELIABILITY FIX above:
+ * a 429 goes straight to one fallback attempt, not a wait). Only
+ * known, non-sensitive header names are read; nothing else on the
+ * response (no auth/cookie data) is ever touched.
+ */
+function buildRateLimitHeaderSnapshot(headers) {
+
+  if (!headers || typeof headers.get !== "function") {
+    return null;
+  }
+
+  const names = [
+    "retry-after",
+    "x-ratelimit-limit-requests",
+    "x-ratelimit-remaining-requests",
+    "x-ratelimit-reset-requests",
+    "x-ratelimit-limit-tokens",
+    "x-ratelimit-remaining-tokens",
+    "x-ratelimit-reset-tokens"
+  ];
+
+  const snapshot = {};
+  let any = false;
+
+  names.forEach(function (name) {
+    const value = headers.get(name);
+    if (value !== null && value !== undefined) {
+      snapshot[name] = value;
+      any = true;
+    }
+  });
+
+  return any ? snapshot : null;
+}
+
 function makeGroqError(
   category,
   model,
@@ -2688,6 +2848,7 @@ function makeGroqError(
   err.groqType = (extra && extra.type) || null;
   err.groqCode = (extra && extra.code) || null;
   err.groqFailedGeneration = (extra && extra.failedGeneration) || null;
+  err.groqRateLimitHeaders = (extra && extra.rateLimitHeaders) || null;
 
   return err;
 }
@@ -2734,7 +2895,8 @@ function describeGroqError(err) {
     ),
     type: err.groqType || null,
     code: err.groqCode || null,
-    failed_generation: err.groqFailedGeneration || null
+    failed_generation: err.groqFailedGeneration || null,
+    rate_limit_headers: err.groqRateLimitHeaders || null
   };
 }
 
@@ -2834,6 +2996,41 @@ function buildFallbackDisabledError(
     (typeof p.status === "number" && p.status) ||
     502;
   err.fallbackDisabled = true;
+  err.primary = p;
+  err.errorDetail = p;
+
+  return err;
+}
+
+/**
+ * Builds the Error thrown when the primary model fails with a
+ * failure class that is NOT eligible for fallback (see
+ * isEligibleForGroqFallback()) even though GROQ_FALLBACK_ENABLED is
+ * true — e.g. an auth error, a malformed request, an unsupported
+ * parameter, or any other permanent configuration error. Kept
+ * deliberately separate from buildFallbackDisabledError() so the
+ * message accurately reflects why only one model was attempted.
+ */
+function buildFallbackNotEligibleError(
+  primaryErr
+) {
+
+  const p = describeGroqError(primaryErr) || {};
+
+  const err =
+    new Error(
+      'The AI model "' + (p.model || GROQ_MODEL_PRIMARY) + '" failed: ' +
+      (p.status ? "HTTP " + p.status + " — " : "") +
+      (p.message || "unknown error") +
+      "."
+    );
+
+  err.category = primaryErr && primaryErr.category;
+  err.groqModel = p.model || GROQ_MODEL_PRIMARY;
+  err.groqStatus =
+    (typeof p.status === "number" && p.status) ||
+    502;
+  err.fallbackNotEligible = true;
   err.primary = p;
   err.errorDetail = p;
 
