@@ -766,6 +766,19 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 .ki-strategy-text{ font-size:12.5px; color:var(--ink-soft); line-height:1.55; margin:0 0 6px; }
 .ki-focus{ font-size:11.5px; font-weight:700; color:var(--primary-dark); margin:0; }
 
+/* Listing Score (Batch 5) — reuses the ki-card look; only the score
+   line and diagnostic rows are new. */
+.ls-score-row{ display:flex; align-items:baseline; gap:6px; margin:0 0 12px; }
+.ls-score{ font-size:34px; font-weight:800; line-height:1; color:var(--ink); }
+.ls-score-max{ font-size:13px; font-weight:700; color:var(--muted); }
+.ls-diagnostics{ list-style:none; margin:0 0 12px; padding:0; display:flex; flex-direction:column; gap:6px; }
+.ls-diag{ display:flex; gap:8px; font-size:12.5px; color:var(--ink-soft); line-height:1.5; }
+.ls-diag-mark{ flex:0 0 auto; width:12px; text-align:center; font-weight:800; }
+.ls-strength .ls-diag-mark{ color:var(--success); }
+.ls-improve .ls-diag-mark{ color:var(--primary-dark); }
+.ls-info .ls-diag-mark{ color:var(--muted); }
+.ls-note{ font-size:11px; color:var(--muted); font-weight:600; line-height:1.5; margin:0; }
+
 /* ============================================================
    TOAST
    ============================================================ */
@@ -1489,6 +1502,18 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <p class="ki-focus" id="ksFocus"></p>
     </div>
 
+    <div class="card ki-card hidden" id="listingScoreCard">
+      <div class="output-card-head">
+        <h3><span class="num">6</span>TagPulse Listing Score</h3>
+      </div>
+      <div class="ls-score-row">
+        <span class="ls-score" id="lsScoreValue"></span>
+        <span class="ls-score-max">/ 100</span>
+      </div>
+      <ul class="ls-diagnostics" id="lsDiagnostics"></ul>
+      <p class="ls-note">Measures listing quality and keyword/fact coverage. It does not measure Etsy rankings, search volume, competition, or sales probability.</p>
+    </div>
+
   </section>
   </section>
 </main>
@@ -1828,6 +1853,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const ksCoverage          = $("ksCoverage");
   const ksStrategyText      = $("ksStrategyText");
   const ksFocus             = $("ksFocus");
+
+  const listingScoreCard = $("listingScoreCard");
+  const lsScoreValue     = $("lsScoreValue");
+  const lsDiagnostics    = $("lsDiagnostics");
 
   const copyTitleBtn = $("copyTitleBtn");
   const copyTagsBtn  = $("copyTagsBtn");
@@ -3196,6 +3225,23 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           }};
         }
 
+        // Batch 5: deterministic, local Listing Score. No network
+        // request, no Groq call, no credit involvement. Stored on the
+        // payload so saved history keeps the exact score. A failure
+        // here only omits the score - the listing is never affected.
+        try {
+          const listingScore = computeEtsyListingScore(parsed, {
+            keyword: keyword,
+            productDetails: productDetails,
+            wordsToAvoid: wordsToAvoid
+          });
+          if (listingScore) parsed.listingScore = listingScore;
+          else delete parsed.listingScore;
+        } catch (scoreErr) {
+          console.warn("[TagPulse][Etsy] listing score failed - continuing without it", scoreErr);
+          delete parsed.listingScore;
+        }
+
       } else if (category === "Pinterest") {
 
         // Same real-validation + single-retry architecture as Etsy,
@@ -4133,9 +4179,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     // stale one visible from a previous Etsy generation.
     if (category === "Etsy") {
       renderEtsyKeywordIntelligence(parsed);
+      renderEtsyListingScore(parsed);
     } else {
       keywordIntelligenceCard.classList.add("hidden");
       keywordStrategyCard.classList.add("hidden");
+      listingScoreCard.classList.add("hidden");
     }
 
     outputSection.classList.remove("hidden");
@@ -4152,6 +4200,483 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      labels the section "SEO Keywords" instead of "SEO Tags". Does
      not call or modify renderOutput().
      ============================================================ */
+  /* ============================================================
+     TAGPULSE LISTING SCORE (Batch 5, Etsy only)
+     ------------------------------------------------------------
+     A deterministic, local 0-100 diagnostic of how well the
+     generated Etsy listing is structured, using ONLY data TagPulse
+     already has: title, tags, description, processed Keyword
+     Intelligence roleBreakdown, the seller's product keyword,
+     seller-supplied Product Details and Words to Avoid.
+
+     It is NOT an Etsy ranking / search-volume / competition / CTR /
+     conversion / sales measure, and never claims to be. No network
+     request, no Groq call, no credit involved.
+
+     Components (target weights):
+       productKeywordCoverage 25   keywordRoleCoverage 20
+       tagDiversity           15   productFactCoverage 20
+       descriptionCoverage    15   wordsToAvoid         5
+
+     A component that cannot apply to this listing (no product
+     keyword tokens, no usable Keyword Intelligence, no supplied
+     facts, no Words to Avoid, fewer than 2 tags) is marked
+     applicable:false and EXCLUDED from both the earned points and
+     the maximum - the total is then earned / applicable-maximum x
+     100. Blank inputs are therefore never penalised and never earn
+     free credit.
+
+     computeEtsyListingScore() returns a plain serialisable object
+     (stored on the Etsy payload, so saved history keeps the exact
+     score) or null when it cannot be computed. Callers must treat
+     null / a throw as "no score" and never block generation.
+     ============================================================ */
+
+  const LS_STOPWORDS = new Set([
+    "a", "an", "and", "the", "for", "of", "to", "in", "on", "with", "by",
+    "or", "your", "my", "is", "it", "at", "from", "this", "that", "as",
+    "are", "be", "you", "our", "its"
+  ]);
+
+  const LS_PERSONALIZATION_SIGNALS = new Set([
+    "personalized", "personalised", "personalization", "personalisation",
+    "personalize", "personalise", "custom", "customized", "customised",
+    "customizable", "customisable", "customization", "customisation",
+    "monogram", "monogrammed", "engraved", "engraving"
+  ]);
+
+  const LS_FACT_LABELS = {
+    material: "material", color: "color", size: "size",
+    personalization: "personalization", features: "key features"
+  };
+  const LS_FACT_FIELDS = ["material", "color", "size", "personalization", "features"];
+  const LS_NEGATIVE_FACT = /^(no|none|n\/a|na|not available|not applicable|-+)$/i;
+
+  const LS_MAX = {
+    productKeywordCoverage: 25,
+    keywordRoleCoverage: 20,
+    tagDiversity: 15,
+    productFactCoverage: 20,
+    descriptionCoverage: 15,
+    wordsToAvoid: 5
+  };
+
+  function lsAsText(v){
+    return (typeof v === "string") ? v.trim() : "";
+  }
+
+  function lsClamp01(n){
+    return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0;
+  }
+
+  function lsRound1(n){
+    return Math.round(n * 10) / 10;
+  }
+
+  function lsUnique(arr){
+    return Array.from(new Set(arr));
+  }
+
+  // Whole-token normalisation. Reuses the existing stemmer in
+  // normalizeTagForDuplicateCheck() (plural -s) so scoring agrees
+  // with duplicate detection. Matching is by whole token, never by
+  // substring ("cat" does not match "category").
+  function lsTokens(text, keepStopwords){
+    const s = lsAsText(text).toLowerCase()
+      .replace(/(\d)\s*x\s*(\d)/g, "$1x$2")
+      .replace(/(\d)\s+(oz|ml|cm|mm|ft|lb|lbs|kg|inch|inches)\b/g, "$1$2")
+      .replace(/[^a-z0-9\s]/g, " ");
+    return s.split(/\s+/)
+      .filter(w => w && (keepStopwords || !LS_STOPWORDS.has(w)))
+      .map(w => normalizeTagForDuplicateCheck(w))
+      .filter(Boolean);
+  }
+
+  function lsContainsSeq(hay, needle){
+    if (!needle.length || needle.length > hay.length) return false;
+    for (let i = 0; i + needle.length <= hay.length; i++){
+      let ok = true;
+      for (let j = 0; j < needle.length; j++){
+        if (hay[i + j] !== needle[j]){ ok = false; break; }
+      }
+      if (ok) return true;
+    }
+    return false;
+  }
+
+  function lsHitRatio(needTokens, haveSet){
+    if (!needTokens.length) return { hit: 0, total: 0, ratio: 0 };
+    const hit = needTokens.filter(t => haveSet.has(t)).length;
+    return { hit: hit, total: needTokens.length, ratio: hit / needTokens.length };
+  }
+
+  // Seller-supplied facts actually usable for scoring. "Personalization:
+  // No / none / n/a" is not a fact to be represented, so it is skipped.
+  function lsSuppliedFacts(pd){
+    const out = {};
+    LS_FACT_FIELDS.forEach(function(f){
+      const t = lsAsText(pd && pd[f]);
+      if (!t) return;
+      if (f === "personalization" && LS_NEGATIVE_FACT.test(t)) return;
+      if (!lsTokens(t).length) return;
+      out[f] = t;
+    });
+    return out;
+  }
+
+  // Score how well each supplied fact is represented in `haveSet`
+  // (a set of listing tokens). An item counts fully once at least half
+  // of its content tokens appear; personalization also counts fully
+  // when the listing carries a personalization signal word.
+  function lsFactScores(facts, haveSet){
+    const fieldScores = [];
+    Object.keys(facts).forEach(function(field){
+      const text = facts[field];
+      let score;
+      if (field === "personalization"){
+        const toks = lsUnique(lsTokens(text));
+        let signal = false;
+        haveSet.forEach(function(t){ if (LS_PERSONALIZATION_SIGNALS.has(t)) signal = true; });
+        score = signal ? 1 : lsClamp01(lsHitRatio(toks, haveSet).ratio / 0.5);
+      } else {
+        const items = text.split(/[,;\n|]+/).map(s => s.trim()).filter(Boolean);
+        const itemScores = [];
+        items.forEach(function(item){
+          const toks = lsUnique(lsTokens(item));
+          if (!toks.length) return;
+          itemScores.push(lsClamp01(lsHitRatio(toks, haveSet).ratio / 0.5));
+        });
+        if (!itemScores.length) return;
+        score = itemScores.reduce((a, b) => a + b, 0) / itemScores.length;
+      }
+      fieldScores.push({ field: field, score: score });
+    });
+    if (!fieldScores.length) return null;
+    return {
+      fieldScores: fieldScores,
+      avg: fieldScores.reduce((a, b) => a + b.score, 0) / fieldScores.length
+    };
+  }
+
+  function lsPlural(n, one, many){
+    return n + " " + (n === 1 ? one : (many || one + "s"));
+  }
+
+  /* --- A. Primary product keyword coverage (25) --- */
+  function lsScoreKeyword(keyword, titleTokens, descSet){
+    const max = LS_MAX.productKeywordCoverage;
+    const seq = lsTokens(keyword);
+    const K = lsUnique(seq);
+    if (!K.length) return { max: max, points: 0, applicable: false };
+
+    const t = lsHitRatio(K, new Set(titleTokens));
+    const d = lsHitRatio(K, descSet);
+    const phrase = lsContainsSeq(titleTokens, seq) ? 1 : 0;
+    const titleScore = 0.8 * t.ratio + 0.2 * phrase;
+    const ratio = 0.7 * titleScore + 0.3 * d.ratio;
+
+    let improve = null;
+    if (ratio < 0.85){
+      if (t.ratio < 1) improve = "Title includes " + t.hit + " of " + t.total + " words from your product keyword.";
+      else if (d.ratio < 1) improve = "Description mentions " + d.hit + " of " + d.total + " words from your product keyword.";
+      else improve = "Title contains your keyword's words but not as a phrase.";
+    }
+    return {
+      max: max, points: max * ratio, applicable: true,
+      improve: improve,
+      strength: "Title and description cover your product keyword well."
+    };
+  }
+
+  /* --- B. Keyword role coverage (20) --- */
+  function lsScoreRoles(roleBreakdown, hasAttributeFacts, hasPersonalization){
+    const max = LS_MAX.keywordRoleCoverage;
+    if (!roleBreakdown || typeof roleBreakdown !== "object") return { max: max, points: 0, applicable: false };
+
+    const keys = ["core", "long_tail", "buyer_intent", "attribute_style", "personalization", "unclassified"];
+    const c = {};
+    let total = 0;
+    keys.forEach(function(k){
+      const v = roleBreakdown[k];
+      c[k] = (Number.isFinite(v) && v > 0) ? v : 0;
+      total += c[k];
+    });
+    const classified = total - c.unclassified;
+    if (total <= 0 || classified <= 0) return { max: max, points: 0, applicable: false };
+
+    const weights = { core: 6, buyer_intent: 5, long_tail: 4, attribute_style: 3, personalization: 3 };
+    const applicableRoles = ["core", "buyer_intent", "long_tail"];
+    if (hasAttributeFacts) applicableRoles.push("attribute_style");
+    if (hasPersonalization) applicableRoles.push("personalization");
+
+    let wAll = 0, wCovered = 0, covered = 0;
+    const missing = [];
+    applicableRoles.forEach(function(r){
+      wAll += weights[r];
+      if (c[r] > 0){ wCovered += weights[r]; covered++; }
+      else missing.push(r);
+    });
+    const share = classified / total;
+    const ratio = 0.85 * (wCovered / wAll) + 0.15 * share;
+
+    let improve = null;
+    if (missing.length){
+      improve = "No " + missing.map(r => KI_ROLE_LABELS[r]).join(" or ") + " tag identified in the keyword analysis.";
+    } else if (share < 0.6){
+      improve = "Keyword analysis could classify only " + classified + " of " + total + " tags.";
+    }
+    return {
+      max: max, points: max * ratio, applicable: true,
+      improve: improve,
+      strength: "Tags cover " + covered + " of " + applicableRoles.length + " applicable keyword roles."
+    };
+  }
+
+  /* --- C. Tag diversity / redundancy (15) --- */
+  function lsScoreTags(tags){
+    const max = LS_MAX.tagDiversity;
+    const n = tags.length;
+    if (n < 2) return { max: max, points: 0, applicable: false };
+
+    const lower = tags.map(t => t.toLowerCase().replace(/\s+/g, " "));
+    const exactDupes = n - new Set(lower).size;
+
+    const sets = tags.map(t => new Set(lsTokens(t)));
+    let setPairs = 0;
+    for (let i = 0; i < n; i++){
+      for (let j = i + 1; j < n; j++){
+        if (lower[i] === lower[j]) continue;
+        const a = sets[i], b = sets[j];
+        if (!a.size || !b.size) continue;
+        let inter = 0;
+        a.forEach(function(x){ if (b.has(x)) inter++; });
+        const union = a.size + b.size - inter;
+        const subset = inter === a.size || inter === b.size;
+        if ((inter === a.size && inter === b.size) || (subset && inter / union >= 0.75)) setPairs++;
+      }
+    }
+    // Existing near-duplicate helper (same stemming as validation).
+    const helperPairs = findNearDuplicateTagPairs(tags)
+      .filter(p => p[0].toLowerCase().trim() !== p[1].toLowerCase().trim()).length;
+    const redundantPairs = Math.max(setPairs, helperPairs);
+
+    let totalTok = 0;
+    const seen = new Set();
+    sets.forEach(function(s){ totalTok += s.size; s.forEach(function(t){ seen.add(t); }); });
+    const uniqRatio = totalTok ? seen.size / totalTok : 1;
+    const div = lsClamp01((uniqRatio - 0.3) / 0.3);
+
+    const points = 4 * ((n - exactDupes) / n)
+      + Math.max(0, 5 - 1.5 * redundantPairs)
+      + 6 * div;
+
+    let improve = null;
+    if (exactDupes > 0) improve = lsPlural(exactDupes, "duplicate tag") + ".";
+    else if (redundantPairs > 0) improve = lsPlural(redundantPairs, "tag pair") + " express nearly the same phrase.";
+    else if (div < 0.6) improve = "Tags repeat many of the same words.";
+
+    return {
+      max: max, points: Math.min(max, points), applicable: true,
+      improve: improve,
+      strength: "Tags are varied, with little redundancy."
+    };
+  }
+
+  /* --- D. Provided product-fact coverage (20) --- */
+  function lsScoreFacts(facts, listingSet){
+    const max = LS_MAX.productFactCoverage;
+    const res = Object.keys(facts).length ? lsFactScores(facts, listingSet) : null;
+    if (!res) return { max: max, points: 0, applicable: false,
+      info: "No product details were supplied, so fact coverage wasn't scored." };
+
+    const weak = res.fieldScores.filter(f => f.score < 0.6).map(f => LS_FACT_LABELS[f.field]);
+    return {
+      max: max, points: max * res.avg, applicable: true,
+      improve: (res.avg < 0.85 && weak.length)
+        ? ("Some supplied details aren't clearly reflected in the listing (" + weak.join(", ") + ").")
+        : null,
+      strength: "Your supplied product details are well represented."
+    };
+  }
+
+  /* --- E. Description coverage / completeness (15) --- */
+  function lsScoreDescription(descSet, keywordTokens, tags, facts){
+    const max = LS_MAX.descriptionCoverage;
+    const subs = [];   // { key, w, r }
+
+    subs.push({ key: "substance", w: 5, r: lsClamp01(descSet.size / 40) });
+    if (keywordTokens.length){
+      subs.push({ key: "keyword", w: 4, r: lsHitRatio(keywordTokens, descSet).ratio });
+    }
+    const fr = Object.keys(facts).length ? lsFactScores(facts, descSet) : null;
+    if (fr) subs.push({ key: "facts", w: 3, r: fr.avg });
+
+    const tagRatios = [];
+    tags.forEach(function(t){
+      const toks = lsUnique(lsTokens(t));
+      if (toks.length) tagRatios.push(lsHitRatio(toks, descSet).ratio >= 0.5 ? 1 : 0);
+    });
+    if (tagRatios.length){
+      subs.push({ key: "tags", w: 3, r: tagRatios.reduce((a, b) => a + b, 0) / tagRatios.length });
+    }
+
+    const wAll = subs.reduce((a, s) => a + s.w, 0);
+    const ratio = subs.reduce((a, s) => a + s.w * s.r, 0) / wAll;
+
+    const msgs = {
+      substance: "Description is short on distinct content.",
+      keyword: "Description mentions few of your product keyword's words.",
+      facts: "Description doesn't mention some of your supplied details.",
+      tags: "Description covers few of your tag terms."
+    };
+    let worst = null;
+    subs.forEach(function(s){ if (s.r < 0.6 && (!worst || s.r < worst.r)) worst = s; });
+
+    return {
+      max: max, points: max * ratio, applicable: true,
+      improve: (ratio < 0.85 && worst) ? msgs[worst.key] : null,
+      strength: "Description supports the listing's keyword and tag terms."
+    };
+  }
+
+  /* --- F. Words-to-avoid compliance (5) --- */
+  function lsScoreAvoid(avoidList, titleFull, tagsFull, descFull){
+    const max = LS_MAX.wordsToAvoid;
+    const phrases = avoidList
+      .map(p => ({ raw: p, toks: lsTokens(p, true) }))
+      .filter(p => p.toks.length);
+    if (!phrases.length) return { max: max, points: 0, applicable: false };
+
+    const found = phrases.filter(function(p){
+      return lsContainsSeq(titleFull, p.toks) ||
+             lsContainsSeq(descFull, p.toks) ||
+             tagsFull.some(t => lsContainsSeq(t, p.toks));
+    }).map(p => p.raw);
+
+    return {
+      max: max, points: max * Math.max(0, 1 - 0.5 * found.length), applicable: true,
+      improve: found.length ? ("Contains a Words to Avoid entry: " + found.slice(0, 2).join(", ") + ".") : null,
+      strength: "No Words to Avoid entries appear in the listing."
+    };
+  }
+
+  function computeEtsyListingScore(parsed, ctx){
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const title = lsAsText(parsed.title);
+    const description = lsAsText(parsed.description);
+    const tags = Array.isArray(parsed.tags) ? parsed.tags.map(lsAsText).filter(Boolean) : [];
+    if (!title || !description || !tags.length) return null;
+
+    ctx = (ctx && typeof ctx === "object") ? ctx : {};
+    const keyword = lsAsText(ctx.keyword);
+    const pd = (ctx.productDetails && typeof ctx.productDetails === "object") ? ctx.productDetails : {};
+    const avoid = Array.isArray(ctx.wordsToAvoid) ? ctx.wordsToAvoid.map(lsAsText).filter(Boolean) : [];
+
+    const titleTokens = lsTokens(title);
+    const descTokens = lsTokens(description);
+    const descSet = new Set(descTokens);
+    const listingSet = new Set(titleTokens.concat(descTokens));
+    tags.forEach(function(t){ lsTokens(t).forEach(function(x){ listingSet.add(x); }); });
+
+    const facts = lsSuppliedFacts(pd);
+    const hasAttributeFacts = !!(facts.material || facts.color || facts.size || facts.features);
+    const hasPersonalization = !!facts.personalization;
+    const keywordTokens = lsUnique(lsTokens(keyword));
+
+    const ki = (parsed.keywordIntelligence && typeof parsed.keywordIntelligence === "object")
+      ? parsed.keywordIntelligence : null;
+
+    const comps = {
+      productKeywordCoverage: lsScoreKeyword(keyword, titleTokens, descSet),
+      keywordRoleCoverage: lsScoreRoles(ki && ki.roleBreakdown, hasAttributeFacts, hasPersonalization),
+      tagDiversity: lsScoreTags(tags),
+      productFactCoverage: lsScoreFacts(facts, listingSet),
+      descriptionCoverage: lsScoreDescription(descSet, keywordTokens, tags, facts),
+      wordsToAvoid: lsScoreAvoid(
+        avoid, lsTokens(title, true), tags.map(t => lsTokens(t, true)), lsTokens(description, true)
+      )
+    };
+
+    let earned = 0, possible = 0;
+    const keys = Object.keys(LS_MAX);
+    keys.forEach(function(k){
+      if (comps[k].applicable){
+        earned += Math.min(comps[k].max, Math.max(0, comps[k].points));
+        possible += comps[k].max;
+      }
+    });
+    if (possible <= 0) return null;
+    const score = Math.min(100, Math.max(0, Math.round(100 * earned / possible)));
+
+    // Diagnostics come only from the actual component results:
+    // weakest applicable components first (up to 3), then strengths.
+    const applicableKeys = keys.filter(k => comps[k].applicable);
+    const ratioOf = k => comps[k].points / comps[k].max;
+    const improves = applicableKeys
+      .filter(k => comps[k].improve)
+      .sort((a, b) => (ratioOf(a) - ratioOf(b)) || (comps[b].max - comps[a].max))
+      .slice(0, 3)
+      .map(k => ({ type: "improve", message: comps[k].improve }));
+    const strengths = applicableKeys
+      .filter(k => !comps[k].improve && ratioOf(k) >= 0.85)
+      .sort((a, b) => (ratioOf(b) - ratioOf(a)) || (comps[b].max - comps[a].max))
+      .map(k => ({ type: "strength", message: comps[k].strength }));
+    // When no product details were supplied, one slot explains why fact
+    // coverage wasn't scored (so the score is never silently different).
+    const wantInfo = !comps.productFactCoverage.applicable && !!comps.productFactCoverage.info;
+    const diagnostics = improves.concat(strengths).slice(0, wantInfo ? 3 : 4);
+    if (wantInfo) diagnostics.push({ type: "info", message: comps.productFactCoverage.info });
+
+    const outComponents = {};
+    keys.forEach(function(k){
+      outComponents[k] = {
+        points: comps[k].applicable ? lsRound1(Math.min(comps[k].max, Math.max(0, comps[k].points))) : 0,
+        max: comps[k].max,
+        applicable: !!comps[k].applicable
+      };
+    });
+
+    return { version: 1, score: score, components: outComponents, diagnostics: diagnostics };
+  }
+
+  function renderEtsyListingScore(parsed){
+    function hide(){
+      listingScoreCard.classList.add("hidden");
+      lsScoreValue.textContent = "";
+      lsDiagnostics.innerHTML = "";
+    }
+    try {
+      const ls = parsed && parsed.listingScore;
+      if (!ls || typeof ls !== "object" || !Number.isFinite(ls.score) ||
+          ls.score < 0 || ls.score > 100 || !Array.isArray(ls.diagnostics)){
+        hide();
+        return;
+      }
+      lsScoreValue.textContent = String(Math.round(ls.score));
+      lsDiagnostics.innerHTML = "";
+      const marks = { strength: "\u2713", improve: "\u2022", info: "i" };
+      ls.diagnostics.slice(0, 4).forEach(function(d){
+        if (!d || typeof d.message !== "string" || !d.message) return;
+        const type = marks.hasOwnProperty(d.type) ? d.type : "info";
+        const li = document.createElement("li");
+        li.className = "ls-diag ls-" + type;
+        const mark = document.createElement("span");
+        mark.className = "ls-diag-mark";
+        mark.textContent = marks[type];
+        const text = document.createElement("span");
+        text.textContent = d.message;
+        li.appendChild(mark);
+        li.appendChild(text);
+        lsDiagnostics.appendChild(li);
+      });
+      listingScoreCard.classList.remove("hidden");
+    } catch (e) {
+      console.warn("[TagPulse][Etsy] listing score render failed - hiding card", e);
+      hide();
+    }
+  }
+
   function renderPinterestOutput(parsed, category){
     const title = String(parsed.title).trim();
     titleOutput.textContent = title;
@@ -4184,6 +4709,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     // can never remain visible after switching platforms.
     keywordIntelligenceCard.classList.add("hidden");
     keywordStrategyCard.classList.add("hidden");
+    listingScoreCard.classList.add("hidden");
 
     outputSection.classList.remove("hidden");
   }
