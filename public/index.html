@@ -3523,6 +3523,13 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       "",
       'TITLE RULES: Maximum 140 characters. Put the primary product phrase naturally near the beginning when it reads well. Natural and readable, not a keyword dump. No repetitive synonym chains. No unsupported product attributes. Avoid generic filler such as "Perfect Gift", "Great Gift", or "Perfect for..." when a stronger, more product-specific phrase is available. Do not stuff in extra words just to use up the character limit.',
       "TAG RULES: Exactly 13 tags. Every tag must be non-empty, 20 characters or fewer, and a multi-word phrase (no bare single words). Every tag must be relevant to the actual product and must not state an unsupported factual attribute. No exact duplicate tags. Prefer tags that represent genuinely different search-intent angles over near-duplicate phrasing of the same angle — but do not force artificial diversity where it doesn't fit the product.",
+      "=== TAG LENGTH PROCEDURE (follow exactly, before finalizing tags) ===",
+      "HARD constraints — must never be violated: every tag is 20 characters or fewer, INCLUDING SPACES. The tags array contains EXACTLY 13 tags.",
+      "STRATEGY (a preference, not a hard rule): prefer a natural multi-word phrase when one fits within the 20-character hard limit.",
+      "Before finalizing the tags array: count the characters of EVERY tag, one at a time, including spaces. Never assume a phrase fits just because it looks short — actually count it.",
+      "If a natural keyword phrase exceeds 20 characters, do NOT output it and do NOT truncate or cut it down — a cut-off word is not a valid tag. Instead replace it entirely with a different, shorter, still-relevant phrase that you have counted and confirmed fits within 20 characters.",
+      'Examples of tags that fit the 20-character hard limit (count includes spaces; these are illustrative only, not phrases you must use): "custom name gift" (16), "handmade wall art" (17), "boho home decor" (15), "minimalist jewelry" (18), "birthday gift idea" (18).',
+      "After any replacement, recount every one of the 13 tags again and confirm the array still contains exactly 13 valid tags before returning your response.",
       'DESCRIPTION RULES: Write a useful Etsy description using ONLY the known facts and the stated SEO goal provided later in this message, plus general non-specific framing (use-case, occasion, gift-worthiness) where it doesn\'t require inventing a fact. Do not add unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production, or packaging. Do not mention internal targeting/audience metadata (for example "for online shoppers", "for Etsy shoppers", "for Pinterest users") just because that option was selected — speak naturally to the buyer and product without exposing internal targeting labels.',
       "WORDS-TO-AVOID RULE: Do not use any of the words or phrases listed under WORDS TO AVOID later in this message, anywhere in the title, tags, or description."
     ];
@@ -3550,6 +3557,25 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         ...validationErrors.map(e => "- " + e),
         "Return a corrected JSON object that fixes every issue above while still following all the rules stated earlier."
       );
+
+      // RELIABILITY FIX (Etsy tag-length only): validateEtsyOutput()'s
+      // tag-length rejection message always contains this exact phrase
+      // (see validateEtsyOutput() below) — detected here only to decide
+      // whether to add extra, more directive coaching; the validator's
+      // own rejection logic and wording are unchanged.
+      const hasTagLengthViolation =
+        validationErrors.some(function (e) {
+          return /exceeds the 20-character limit/.test(e);
+        });
+
+      if (hasTagLengthViolation) {
+        lines.push(
+          "",
+          "=== TAG LENGTH CORRECTION — READ CAREFULLY ===",
+          "At least one tag above was rejected for exceeding the 20-character hard limit. For every tag flagged above as too long: do NOT make a small edit to that same phrase — trimming a word or abbreviating it usually still exceeds 20 characters or breaks the multi-word requirement. Instead REPLACE it entirely with a different, shorter, still-relevant phrase that you have already counted and confirmed is 20 characters or fewer, including spaces.",
+          "Before returning this corrected response, count the characters of ALL 13 tags again, one at a time, including spaces — not only the tag(s) flagged above. Fixing one tag must not introduce a new violation elsewhere, and the array must still contain exactly 13 tags."
+        );
+      }
     }
 
     return lines.join("\n");
