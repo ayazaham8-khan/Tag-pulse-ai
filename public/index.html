@@ -780,6 +780,38 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 .ls-note{ font-size:11px; color:var(--muted); font-weight:600; line-height:1.5; margin:0; }
 
 /* ============================================================
+   EXISTING LISTING ANALYSIS (Batch 6 - Etsy only)
+   Reuses existing tokens, .card/.ki-card and .ls-diag rows; only
+   the mode switch, textarea fields and the overview chips are new.
+   ============================================================ */
+.field textarea{
+  width:100%; padding:13px 14px; line-height:1.5; resize:vertical;
+  border:1.5px solid var(--border); border-radius:var(--radius-sm);
+  background:var(--bg); color:var(--ink);
+  transition:border-color .15s, box-shadow .15s;
+}
+.field textarea:hover{ border-color:#d8cfc0; }
+.field textarea:focus{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(241,100,30,0.15); outline:none; }
+.mode-switch{
+  display:flex; gap:6px; margin-bottom:14px; padding:5px;
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius-md);
+}
+.mode-btn{
+  flex:1; border:0; background:transparent; color:var(--ink-soft);
+  font-size:13px; font-weight:700; padding:10px 8px; border-radius:var(--radius-sm);
+}
+.mode-btn.is-active{ background:var(--primary-tint); color:var(--primary-dark); }
+#analyzeCard + #analysisSection{ margin-top:16px; }
+.ela-overview{ display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:8px; margin-bottom:16px; }
+.ela-item{ border:1px solid var(--border); border-left-width:3px; border-radius:var(--radius-sm); background:var(--bg); padding:9px 11px; display:flex; flex-direction:column; gap:2px; }
+.ela-item-label{ font-size:11px; font-weight:800; color:var(--muted); }
+.ela-item-value{ font-size:12.5px; font-weight:700; color:var(--ink-soft); word-break:break-word; }
+.ela-ok{ border-left-color:var(--success); }
+.ela-attention{ border-left-color:var(--primary); }
+.ela-issue{ border-left-color:var(--danger); }
+.ela-heading{ margin-top:14px; }
+
+/* ============================================================
    TOAST
    ============================================================ */
 #toast{
@@ -1290,6 +1322,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     <button type="button" class="btn btn-primary" id="creditsBannerBtn">Upgrade to Pro</button>
   </div>
 
+  <div class="mode-switch" id="etsyModeSwitch" role="group" aria-label="Etsy mode">
+    <button type="button" class="mode-btn is-active" id="modeGenerateBtn" aria-pressed="true">Create New Listing</button>
+    <button type="button" class="mode-btn" id="modeAnalyzeBtn" aria-pressed="false">Analyze Existing Listing</button>
+  </div>
+
   <form id="generatorForm" class="card" novalidate>
     <div class="field">
       <label for="keywordInput">Product keyword / title</label>
@@ -1433,6 +1470,44 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <span id="generateBtnLabel">⚡ Generate Optimized Tags</span>
     </button>
   </form>
+
+  <div class="card hidden" id="analyzeCard">
+    <div class="field">
+      <label for="analyzeTitleInput">Existing title</label>
+      <input type="text" id="analyzeTitleInput" placeholder="Paste your current Etsy listing title" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="analyzeTagsInput">Existing tags</label>
+      <textarea id="analyzeTagsInput" rows="4" placeholder="One tag per line, or comma-separated"></textarea>
+    </div>
+    <div class="field">
+      <label for="analyzeDescInput">Existing description</label>
+      <textarea id="analyzeDescInput" rows="6" placeholder="Paste your current Etsy listing description"></textarea>
+    </div>
+    <div class="field">
+      <label for="analyzeIdeaInput">Product / listing idea <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span></label>
+      <input type="text" id="analyzeIdeaInput" placeholder="e.g. custom leather journal" autocomplete="off">
+      <p class="field-help">Optional. Lets TagPulse check that your product's key words appear in the listing.</p>
+    </div>
+    <div class="field">
+      <label for="analyzeAudienceSelect">Audience <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span></label>
+      <select id="analyzeAudienceSelect"><option value="">Not specified</option></select>
+    </div>
+    <div id="analyzeProductDetailsSlot"></div>
+    <div class="field-error" id="analyzeError">Paste at least a title, tags, or a description to analyze.</div>
+    <button type="button" class="btn btn-primary generate-btn" id="analyzeBtn">Analyze Listing</button>
+    <p class="field-help">Runs in your browser. No credit is used.</p>
+  </div>
+
+  <section id="analysisSection" class="hidden">
+    <div class="card ki-card">
+      <div class="output-card-head">
+        <h3>Existing Listing Analysis</h3>
+      </div>
+      <div id="analysisBody"></div>
+    </div>
+  </section>
+
 
   <!-- ============ OUTPUT ============ -->
   <section id="outputSection" class="hidden">
@@ -2625,9 +2700,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     const item = items[index];
     if (!item) return;
 
+    etsyMode = "generate"; syncEtsyModeUI(); // reopening a saved generation always uses Generate mode
     keywordInput.value = item.keyword || "";
     categorySelect.value = item.category || categorySelect.value;
     syncPlatformTrigger();
+    syncEtsyModeUI();
     audienceSelect.value = item.audience || audienceSelect.value;
     syncAudienceTrigger();
     seoGoalSelect.value = item.seoGoal || seoGoalSelect.value;
@@ -4702,6 +4779,715 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       hide();
     }
   }
+
+  /* ============================================================
+     EXISTING ETSY LISTING ANALYSIS (Batch 6, Etsy only)
+     ------------------------------------------------------------
+     A deterministic, local, LISTING-INTERNAL analysis of an Etsy
+     listing the seller already has (title + tags + description,
+     plus optional context). It reports what TagPulse can verify
+     from that text. It has NO marketplace data: it never states or
+     implies search volume, competition, ranking, CTR, conversion or
+     sales. No network request, no Groq call, no credit, no history
+     write - and it does NOT depend on validateEtsyOutput(): an
+     invalid listing (too many tags, long title, empty description)
+     is reported as a finding, never rejected.
+     Reuses the Batch 5 / validation helpers rather than copying
+     them: lsTokens / lsUnique / lsHitRatio / lsContainsSeq /
+     lsSuppliedFacts / lsFactScores / LS_* constants, the
+     normalizeTagForDuplicateCheck stemmer behind the near-duplicate
+     heuristic, and getAudienceLeakPhrases. computeEtsyListingScore()
+     is NOT called and no second score is produced.
+     analyzeExistingEtsyListing(input) -> listingAnalysis (version 1)
+     is a plain serialisable object, kept stable for a future
+     "Improve My Listing" batch. Never throws for string/blank
+     input; blank/malformed optional values simply skip that check.
+     ============================================================ */
+  const ELA_TITLE_LIMIT = 140;          // same limit as validateEtsyOutput()
+  const ELA_TAG_COUNT = 13;             // same rule as validateEtsyOutput()
+  const ELA_TAG_MAX_CHARS = 20;         // same rule as validateEtsyOutput()
+  const ELA_MAX_TAGS = 200;             // safety cap for pasted input only
+  const ELA_PLACEHOLDER_RE = /^(description|desc|todo|tbd|coming soon|n\/a|na|none|placeholder|test|testing|asdf+|xxx+|\.+|-+)$/i;
+  // Audience labels that carry no distinctive wording to look for.
+  const ELA_AUDIENCE_GENERIC = new Set([
+    "consumer", "shopper", "user", "customer", "online", "local", "general",
+    "owner", "etsy", "pinterest", "instagram", "tiktok", "b2b"
+  ]);
+  const ELA_COLOR_WORDS = new Set([
+    "red", "blue", "green", "yellow", "orange", "purple", "pink", "black", "white",
+    "gray", "brown", "beige", "navy", "teal", "turquoise", "burgundy", "maroon",
+    "ivory", "lavender"
+  ]);
+  const ELA_MATERIAL_WORDS = new Set([
+    "leather", "cotton", "wool", "linen", "silk", "wood", "bamboo", "ceramic",
+    "porcelain", "glass", "metal", "steel", "brass", "copper", "silver", "plastic",
+    "acrylic", "resin", "paper", "canvas", "denim", "velvet", "polyester",
+    "stoneware", "marble", "vinyl", "felt"
+  ]);
+  const ELA_SEVERITY_RANK = { issue: 0, warning: 1, strength: 2, info: 3 };
+
+  // "Original" word for a stemmed token, so messages say "glass", not "glas".
+  function elaDisplayWord(text, stem){
+    const words = lsAsText(text).toLowerCase().match(/[a-z0-9]+/g) || [];
+    for (let i = 0; i < words.length; i++){
+      if (normalizeTagForDuplicateCheck(words[i]) === stem) return words[i];
+    }
+    return stem;
+  }
+  function elaQuoteList(items, max){
+    const shown = items.slice(0, max).map(x => "\u201C" + x + "\u201D").join(", ");
+    return items.length > max ? shown + " and " + (items.length - max) + " more" : shown;
+  }
+  function elaPlural(n, one, many){
+    return n + " " + (n === 1 ? one : (many || one + "s"));
+  }
+  // One tag per line OR comma-separated; trims, collapses whitespace,
+  // drops blanks and simple list bullets/numbering.
+  function elaParseTags(raw){
+    let items = [];
+    if (Array.isArray(raw)) items = raw.map(x => (typeof x === "string" ? x : ""));
+    else if (typeof raw === "string") items = raw.split(/[\r\n,]+/);
+    const tags = [];
+    let blank = 0;
+    items.forEach(function(item){
+      const t = item.replace(/^\s*(?:[-*\u2022]|\d+[.)])\s+/, "").replace(/\s+/g, " ").trim();
+      if (!t){ blank++; return; }
+      tags.push(t);
+    });
+    return { tags: tags.slice(0, ELA_MAX_TAGS), truncated: tags.length > ELA_MAX_TAGS, blankIgnored: blank };
+  }
+  function elaCountTokens(tokens){
+    const counts = new Map();
+    tokens.forEach(function(t){
+      if (t.length >= 3) counts.set(t, (counts.get(t) || 0) + 1);
+    });
+    return counts;
+  }
+  function elaRawWords(text){
+    return (lsAsText(text).toLowerCase().match(/[a-z]+/g) || []).map(function(w){
+      if (w === "grey") return "gray";
+      if (w === "wooden") return "wood";
+      return w;
+    });
+  }
+  function elaAddDiag(list, category, severity, priority, message){
+    if (!message) return;
+    list.push({ category: category, severity: severity, priority: priority, message: message });
+  }
+
+  // ---- A. Title -------------------------------------------------
+  function elaAnalyzeTitle(title, diags){
+    const present = !!title;
+    const length = [...title].length;
+    const out = { present: present, length: length, limit: ELA_TITLE_LIMIT,
+      overLimit: length > ELA_TITLE_LIMIT, repeatedTerms: [], repeatedSegments: [] };
+    if (!present){
+      elaAddDiag(diags, "title", "issue", 1, "No title was provided.");
+      return out;
+    }
+    if (out.overLimit){
+      elaAddDiag(diags, "title", "issue", 1,
+        "Title is " + length + " characters; TagPulse\u2019s Etsy limit is " + ELA_TITLE_LIMIT + ".");
+    }
+    const counts = elaCountTokens(lsTokens(title));
+    counts.forEach(function(c, stem){
+      if (c >= 3) out.repeatedTerms.push({ term: elaDisplayWord(title, stem), count: c });
+    });
+    const seenSeg = new Set();
+    title.split(/\s*[|,;\u2013\u2014]\s*|\s-\s/).forEach(function(seg){
+      const key = lsUnique(lsTokens(seg)).sort().join(" ");
+      if (!key || key.indexOf(" ") === -1) return;
+      if (seenSeg.has(key) && out.repeatedSegments.indexOf(seg.trim()) === -1) out.repeatedSegments.push(seg.trim());
+      seenSeg.add(key);
+    });
+    if (out.repeatedSegments.length){
+      elaAddDiag(diags, "title", "warning", 3,
+        "Title repeats the same phrase: " + elaQuoteList(out.repeatedSegments, 2) + ".");
+    } else if (out.repeatedTerms.length){
+      const top = out.repeatedTerms.slice().sort((a, b) => b.count - a.count).slice(0, 2)
+        .map(r => "\u201C" + r.term + "\u201D (" + r.count + "\u00D7)").join(", ");
+      elaAddDiag(diags, "title", "warning", 3, "Title repeats the same word several times: " + top + ".");
+    }
+    if (!out.overLimit){
+      elaAddDiag(diags, "title", "strength", 5, "Title is within the " + ELA_TITLE_LIMIT + "-character limit.");
+    }
+    return out;
+  }
+
+  // ---- B. Tag structure -----------------------------------------
+  function elaAnalyzeTagStructure(tags, diags){
+    const tooLong = [], singleWord = [];
+    tags.forEach(function(t){
+      const len = [...t].length;
+      if (len > ELA_TAG_MAX_CHARS) tooLong.push({ tag: t, length: len });
+      if (!t.includes(" ")) singleWord.push(t);
+    });
+    const count = tags.length;
+    if (count === 0){
+      elaAddDiag(diags, "tags", "issue", 1, "No usable tags were found. TagPulse\u2019s Etsy format uses exactly " + ELA_TAG_COUNT + ".");
+    } else if (count < ELA_TAG_COUNT){
+      elaAddDiag(diags, "tags", "issue", 1,
+        "Only " + elaPlural(count, "tag") + " found; TagPulse\u2019s Etsy format uses exactly " + ELA_TAG_COUNT + ".");
+    } else if (count > ELA_TAG_COUNT){
+      elaAddDiag(diags, "tags", "issue", 1,
+        elaPlural(count, "tag") + " found; TagPulse\u2019s Etsy format uses exactly " + ELA_TAG_COUNT + ".");
+    } else {
+      elaAddDiag(diags, "tags", "strength", 5, "Exactly " + ELA_TAG_COUNT + " usable tags.");
+    }
+    if (tooLong.length){
+      elaAddDiag(diags, "tags", "issue", 1,
+        elaPlural(tooLong.length, "tag") + " over the " + ELA_TAG_MAX_CHARS + "-character limit: " +
+        tooLong.slice(0, 2).map(x => "\u201C" + x.tag + "\u201D (" + x.length + ")").join(", ") +
+        (tooLong.length > 2 ? " and " + (tooLong.length - 2) + " more" : "") + ".");
+    }
+    if (singleWord.length){
+      elaAddDiag(diags, "tags", "issue", 1,
+        elaPlural(singleWord.length, "tag is a single word", "tags are single words") + ": " +
+        elaQuoteList(singleWord, 2) + ". TagPulse expects multi-word phrases.");
+    }
+    if (count > 0 && !tooLong.length && !singleWord.length){
+      elaAddDiag(diags, "tags", "strength", 5, "All tags are within " + ELA_TAG_MAX_CHARS + " characters and multi-word.");
+    }
+    return { count: count, expected: ELA_TAG_COUNT, usable: tags.slice(), tooLong: tooLong, singleWord: singleWord };
+  }
+
+  // ---- C. Duplication / diversity -------------------------------
+  // Pairs are found with the SAME stemmer as findNearDuplicateTagPairs()
+  // (normalizeTagForDuplicateCheck), plus same-words-different-order.
+  // A tag sharing one word with another is never flagged.
+  function elaAnalyzeDuplication(tags, diags){
+    const n = tags.length;
+    const lower = tags.map(t => t.toLowerCase());
+    const norm = tags.map(normalizeTagForDuplicateCheck);
+    const keys = tags.map(t => lsUnique(lsTokens(t)).sort().join(" "));
+    const parent = tags.map((_, i) => i);
+    const find = function(i){ while (parent[i] !== i){ parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    const exact = [], near = [], reordered = [];
+    for (let i = 0; i < n; i++){
+      for (let j = i + 1; j < n; j++){
+        let kind = null;
+        if (lower[i] === lower[j]) kind = exact;
+        else if (norm[i] && norm[i] === norm[j]) kind = near;
+        else if (keys[i] && keys[i] === keys[j]) kind = reordered;
+        if (kind){
+          kind.push([tags[i], tags[j]]);
+          parent[find(i)] = find(j);
+        }
+      }
+    }
+    const groups = new Map();
+    for (let i = 0; i < n; i++){
+      const r = find(i);
+      if (!groups.has(r)) groups.set(r, []);
+      groups.get(r).push(tags[i]);
+    }
+    const variationGroups = Array.from(groups.values()).filter(g => g.length >= 2);
+    const largestGroup = variationGroups.reduce((m, g) => Math.max(m, g.length), 1);
+    const pairText = pairs => pairs.slice(0, 2).map(p => "\u201C" + p[0] + "\u201D / \u201C" + p[1] + "\u201D").join(", ");
+    if (exact.length){
+      elaAddDiag(diags, "duplication", "issue", 2,
+        elaPlural(exact.length, "exact duplicate tag pair") + ": " + pairText(exact) + ".");
+    }
+    if (near.length){
+      elaAddDiag(diags, "duplication", "issue", 2,
+        elaPlural(near.length, "near-duplicate tag pair") + " (same phrase, minor wording change): " + pairText(near) + ".");
+    }
+    if (reordered.length){
+      elaAddDiag(diags, "duplication", "warning", 2,
+        elaPlural(reordered.length, "tag pair") + " use the same words in a different order: " + pairText(reordered) + ".");
+    }
+    if (largestGroup >= 3){
+      const g = variationGroups.find(x => x.length === largestGroup);
+      elaAddDiag(diags, "duplication", "warning", 3,
+        largestGroup + " tags are minor variations of one phrase (" + elaQuoteList(g, 2) + ").");
+    }
+    if (n >= 2 && !exact.length && !near.length && !reordered.length){
+      elaAddDiag(diags, "duplication", "strength", 5, "No duplicate or near-duplicate tags found.");
+    }
+    return {
+      exactDuplicates: exact, nearDuplicates: near, reordered: reordered,
+      largestGroup: largestGroup
+    };
+  }
+
+  // ---- D. Title / tag relationship ------------------------------
+  function elaAnalyzeTitleTagCoverage(title, tags, diags){
+    const titleTokens = lsTokens(title);
+    const titleSet = new Set(titleTokens);
+    const titleTerms = lsUnique(titleTokens).filter(t => t.length >= 3);
+    const n = tags.length;
+    if (!title || !n || !titleTerms.length){
+      return { applicable: false };
+    }
+    const tagTokenLists = tags.map(t => lsTokens(t));
+    const tagUnion = new Set();
+    tagTokenLists.forEach(l => l.forEach(t => tagUnion.add(t)));
+    const reused = titleTerms.filter(t => tagUnion.has(t)).length;
+    const exactPhraseTags = tagTokenLists.filter(l => l.length >= 2 && lsContainsSeq(titleTokens, l)).length;
+    const newTermTags = tagTokenLists.filter(l => l.some(t => !titleSet.has(t))).length;
+    if (n >= 4 && exactPhraseTags / n >= 0.5){
+      elaAddDiag(diags, "coverage", "warning", 3,
+        exactPhraseTags + " of " + n + " tags are phrases copied directly from the title, so they add little new phrasing.");
+    } else if (n >= 4 && newTermTags / n >= 0.5){
+      elaAddDiag(diags, "coverage", "strength", 5,
+        "Tags add wording beyond the title (" + newTermTags + " of " + n + " use words not in the title).");
+    }
+    if (titleTerms.length >= 5 && reused / titleTerms.length < 0.25){
+      elaAddDiag(diags, "coverage", "info", 5,
+        "Tags reuse only " + reused + " of the title\u2019s " + titleTerms.length + " main words.");
+    }
+    return {
+      applicable: true, titleTerms: titleTerms.length, titleTermsInTags: reused,
+      tagsCopiedFromTitle: exactPhraseTags, tagsWithNewWords: newTermTags
+    };
+  }
+
+  // ---- F. Description -------------------------------------------
+  function elaAnalyzeDescription(description, diags){
+    const present = !!description;
+    const out = { present: present, contentWords: 0, placeholder: false, thin: false, repeatedTerms: [] };
+    if (!present){
+      elaAddDiag(diags, "description", "issue", 1, "Description is empty.");
+      return out;
+    }
+    const tokens = lsTokens(description);
+    out.contentWords = tokens.length;
+    out.placeholder = /lorem ipsum/i.test(description) ||
+      ELA_PLACEHOLDER_RE.test(description.replace(/[\s.!?]+$/, ""));
+    out.thin = !out.placeholder && lsUnique(tokens).length < 5;
+    if (out.placeholder){
+      elaAddDiag(diags, "description", "issue", 1, "Description looks like placeholder text.");
+    } else if (out.thin){
+      elaAddDiag(diags, "description", "warning", 3, "Description has very little content.");
+    }
+    if (tokens.length >= 40){
+      elaCountTokens(tokens).forEach(function(c, stem){
+        if (c >= 8 && c / tokens.length >= 0.06){
+          out.repeatedTerms.push({ term: elaDisplayWord(description, stem), count: c });
+        }
+      });
+      if (out.repeatedTerms.length){
+        const r = out.repeatedTerms.slice().sort((a, b) => b.count - a.count)[0];
+        elaAddDiag(diags, "description", "warning", 3,
+          "\u201C" + r.term + "\u201D appears " + r.count + " times in the description, which reads as repetitive.");
+      }
+    }
+    if (!out.placeholder && !out.thin && !out.repeatedTerms.length){
+      elaAddDiag(diags, "description", "strength", 5, "Description has substantive text with no obvious repetition.");
+    }
+    return out;
+  }
+
+  // ---- E. Product idea coverage (optional context) --------------
+  function elaAnalyzeIdeaCoverage(idea, titleSet, tagUnion, descSet, has, diags){
+    const K = lsUnique(lsTokens(idea));
+    if (!idea) return { applicable: false };
+    if (!K.length){
+      elaAddDiag(diags, "context", "info", 5, "The product idea has no checkable words, so product-idea coverage was skipped.");
+      return { applicable: false };
+    }
+    const surfaces = {};
+    const gaps = [];
+    [["title", titleSet, has.title, "Title", 4], ["tags", tagUnion, has.tags, "Tags", 4],
+     ["description", descSet, has.description, "Description", 4]].forEach(function(s){
+      if (!s[2]) return;
+      const missing = K.filter(t => !s[1].has(t));
+      surfaces[s[0]] = { hit: K.length - missing.length, total: K.length,
+        missing: missing.map(t => elaDisplayWord(idea, t)) };
+      if (missing.length) gaps.push({ key: s[0], label: s[3], missing: surfaces[s[0]].missing });
+    });
+    gaps.forEach(function(g){
+      const msg = g.key === "tags"
+        ? "No tag includes: " + g.missing.join(", ") + " (from your product idea)."
+        : g.label + " doesn\u2019t include: " + g.missing.join(", ") + " (from your product idea).";
+      elaAddDiag(diags, "context", g.key === "description" ? "info" : "warning", 4, msg);
+    });
+    if (has.title && has.tags && has.description && !gaps.length){
+      elaAddDiag(diags, "context", "strength", 5, "Your product idea\u2019s words appear in the title, tags, and description.");
+    }
+    return { applicable: true, ideaWords: K.length, surfaces: surfaces };
+  }
+
+  // ---- G. Audience alignment (optional context) -----------------
+  function elaAnalyzeAudience(audience, idea, listingText, listingSet, diags){
+    if (!audience) return { applicable: false };
+    const ideaLower = lsAsText(idea).toLowerCase();
+    const leaked = getAudienceLeakPhrases(audience)
+      .filter(p => ideaLower.indexOf(p) === -1)
+      .filter(function(p){
+        const esc = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return new RegExp("\\b" + esc + "\\b", "i").test(listingText);
+      });
+    const terms = lsUnique(lsTokens(audience)).filter(t => t.length >= 6 && !ELA_AUDIENCE_GENERIC.has(t));
+    let status;
+    if (!terms.length) status = "not-checkable";
+    else status = terms.some(t => listingSet.has(t)) ? "present" : "absent";
+    if (leaked.length){
+      elaAddDiag(diags, "audience", "warning", 4,
+        "The audience label appears as literal listing text (" + elaQuoteList(leaked, 2) + "). Audience works better as context than as a keyword.");
+    }
+    if (status === "present"){
+      const found = terms.filter(t => listingSet.has(t)).map(t => elaDisplayWord(audience, t));
+      elaAddDiag(diags, "audience", "strength", 5, "Audience-specific wording found: " + found.join(", ") + ".");
+    } else if (status === "absent"){
+      elaAddDiag(diags, "audience", "info", 4,
+        "No wording specific to \u201C" + audience + "\u201D was found in the listing.");
+    } else {
+      elaAddDiag(diags, "audience", "info", 5,
+        "\u201C" + audience + "\u201D has no distinctive wording to look for, so the audience check was skipped.");
+    }
+    return { applicable: true, audience: audience, status: status, terms: terms, leakedLabels: leaked };
+  }
+
+  // ---- Product-fact consistency (optional Product Details) ------
+  // Only facts the seller supplied are checked. A conflict is flagged
+  // only when it is established by the supplied value vs. the listing.
+  function elaAnalyzeFacts(pd, titleTagsText, listingSet, diags){
+    const facts = lsSuppliedFacts(pd);
+    const rawPersonalization = lsAsText(pd && pd.personalization);
+    const negPersonalization = !!rawPersonalization && LS_NEGATIVE_FACT.test(rawPersonalization);
+    if (!Object.keys(facts).length && !negPersonalization) return { applicable: false };
+    const out = { applicable: true, reflected: [], notReflected: [], conflicts: [] };
+    const res = Object.keys(facts).length ? lsFactScores(facts, listingSet) : null;
+    if (res){
+      res.fieldScores.forEach(function(f){
+        (f.score >= 0.6 ? out.reflected : out.notReflected).push(f.field);
+      });
+      if (out.notReflected.length){
+        elaAddDiag(diags, "facts", "warning", 4,
+          "Supplied details not clearly reflected in the listing: " +
+          out.notReflected.map(f => LS_FACT_LABELS[f]).join(", ") + ".");
+      } else if (res.avg >= 0.85){
+        elaAddDiag(diags, "facts", "strength", 5, "Your supplied product details are reflected in the listing.");
+      }
+    }
+    const checks = [["color", ELA_COLOR_WORDS, "color"], ["material", ELA_MATERIAL_WORDS, "material"]];
+    checks.forEach(function(c){
+      const supplied = lsUnique(elaRawWords(pd && pd[c[0]]).filter(w => c[1].has(w)));
+      const mentioned = lsUnique(elaRawWords(titleTagsText).filter(w => c[1].has(w)));
+      if (supplied.length && mentioned.length && !mentioned.some(w => supplied.indexOf(w) !== -1)){
+        out.conflicts.push(c[0]);
+        elaAddDiag(diags, "facts", "warning", 4,
+          "Title/tags mention " + mentioned.slice(0, 2).join(", ") + ", but your supplied " + c[2] +
+          " is " + supplied.join(", ") + ". Confirm these match.");
+      }
+    });
+    if (negPersonalization){
+      let signal = false;
+      listingSet.forEach(function(t){ if (LS_PERSONALIZATION_SIGNALS.has(t)) signal = true; });
+      if (signal){
+        out.conflicts.push("personalization");
+        elaAddDiag(diags, "facts", "warning", 4,
+          "You noted no personalization, but the listing uses personalization wording.");
+      }
+    }
+    return out;
+  }
+
+  function elaStatus(diags, cats){
+    let s = "ok";
+    diags.forEach(function(d){
+      if (cats.indexOf(d.category) === -1) return;
+      if (d.severity === "issue") s = "issue";
+      else if (d.severity === "warning" && s !== "issue") s = "attention";
+    });
+    return s;
+  }
+
+  function analyzeExistingEtsyListing(input){
+    input = (input && typeof input === "object") ? input : {};
+    const title = lsAsText(input.title);
+    const description = lsAsText(input.description);
+    const parsedTags = elaParseTags(input.tags);
+    const tags = parsedTags.tags;
+    const idea = lsAsText(input.idea);
+    const audience = lsAsText(input.audience);
+    const pd = (input.productDetails && typeof input.productDetails === "object") ? input.productDetails : {};
+    const diags = [];
+
+    const titleTokens = lsTokens(title);
+    const descSet = new Set(lsTokens(description));
+    const tagUnion = new Set();
+    tags.forEach(t => lsTokens(t).forEach(x => tagUnion.add(x)));
+    const titleSet = new Set(titleTokens);
+    const listingSet = new Set();
+    titleSet.forEach(x => listingSet.add(x));
+    descSet.forEach(x => listingSet.add(x));
+    tagUnion.forEach(x => listingSet.add(x));
+    const has = { title: !!title, tags: tags.length > 0, description: !!description };
+
+    const titleRes = elaAnalyzeTitle(title, diags);
+    const tagRes = elaAnalyzeTagStructure(tags, diags);
+    const dupRes = elaAnalyzeDuplication(tags, diags);
+    const covRes = elaAnalyzeTitleTagCoverage(title, tags, diags);
+    const descRes = elaAnalyzeDescription(description, diags);
+    const ideaRes = elaAnalyzeIdeaCoverage(idea, titleSet, tagUnion, descSet, has, diags);
+    const listingText = [title, description].concat(tags).join(" \n ");
+    const audRes = elaAnalyzeAudience(audience, idea, listingText, listingSet, diags);
+    const factRes = elaAnalyzeFacts(pd, [title].concat(tags).join(" "), listingSet, diags);
+
+    // Dedupe, then order: priority (1 = hard TagPulse rule ... 5 = minor),
+    // then issue > warning > strength > info.
+    const seen = new Set();
+    const diagnostics = diags
+      .filter(function(d){ if (seen.has(d.message)) return false; seen.add(d.message); return true; })
+      .sort((a, b) => (a.priority - b.priority) ||
+        (ELA_SEVERITY_RANK[a.severity] - ELA_SEVERITY_RANK[b.severity]))
+      .slice(0, 14);
+
+    const contextUsed = [];
+    if (idea) contextUsed.push("product idea");
+    if (audience) contextUsed.push("audience");
+    if (factRes.applicable) contextUsed.push("product details");
+    const overview = {
+      title: { status: has.title ? elaStatus(diags, ["title"]) : "issue",
+        text: has.title ? (titleRes.length + " / " + ELA_TITLE_LIMIT + " characters") : "Not provided" },
+      tags: { status: has.tags ? elaStatus(diags, ["tags", "duplication", "coverage"]) : "issue",
+        text: has.tags ? (tagRes.count + " of " + ELA_TAG_COUNT + " tags") : "Not provided" },
+      description: { status: has.description ? elaStatus(diags, ["description"]) : "issue",
+        text: !has.description ? "Empty" : (descRes.placeholder ? "Placeholder text" : "Provided") },
+      context: contextUsed.length
+        ? { status: elaStatus(diags, ["context", "facts", "audience"]), text: contextUsed.join(", ") }
+        : null
+    };
+
+    return {
+      version: 1,
+      inputs: { title: has.title, tags: has.tags, description: has.description,
+        context: { idea: !!idea, audience: !!audience, productDetails: !!factRes.applicable } },
+      title: titleRes,
+      tags: tagRes,
+      description: descRes,
+      duplication: dupRes,
+      titleTagCoverage: covRes,
+      contextualCoverage: ideaRes,
+      audienceAlignment: audRes,
+      factConsistency: factRes,
+      overview: overview,
+      diagnostics: diagnostics
+    };
+  }
+  // ELA_ENGINE_END
+
+  /* ============================================================
+     EXISTING LISTING ANALYSIS - UI (Batch 6, Etsy only)
+     ------------------------------------------------------------
+     Purely local. Nothing here calls fetch(), /api/generate, the
+     credit helpers, or saveHistoryEntry(). The mode switch only
+     shows/hides existing blocks: Generate mode is the untouched
+     #generatorForm flow. The existing Product Details <details>
+     element is MOVED (not copied) into the analyze card while that
+     mode is active and moved back afterwards, so there is one set
+     of Product Details inputs and no duplicate markup.
+     ============================================================ */
+  const etsyModeSwitch = $("etsyModeSwitch");
+  const modeGenerateBtn = $("modeGenerateBtn");
+  const modeAnalyzeBtn = $("modeAnalyzeBtn");
+  const analyzeCard = $("analyzeCard");
+  const analyzeTitleInput = $("analyzeTitleInput");
+  const analyzeTagsInput = $("analyzeTagsInput");
+  const analyzeDescInput = $("analyzeDescInput");
+  const analyzeIdeaInput = $("analyzeIdeaInput");
+  const analyzeAudienceSelect = $("analyzeAudienceSelect");
+  const analyzeProductDetailsSlot = $("analyzeProductDetailsSlot");
+  const analyzeError = $("analyzeError");
+  const analyzeBtn = $("analyzeBtn");
+  const analysisSection = $("analysisSection");
+  const analysisBody = $("analysisBody");
+  const productDetailsToggle = $("productDetailsToggle");
+  const productDetailsHome = productDetailsToggle ? productDetailsToggle.nextElementSibling : null;
+
+  let etsyMode = "generate";
+  let analyzeUIActive = false;
+  let etsyOutputWasVisible = false;
+  let existingListingAnalysis = null; // last result; kept in memory only (not persisted)
+
+  // Audience list comes from the existing audience <select> (single source).
+  Array.from(audienceSelect.options).forEach(function(o){
+    if (o.value === "custom") return;
+    const opt = document.createElement("option");
+    opt.value = o.value || o.textContent;
+    opt.textContent = o.textContent;
+    analyzeAudienceSelect.appendChild(opt);
+  });
+
+  function syncEtsyModeUI(){
+    const isEtsy = categorySelect.value === "Etsy";
+    if (!isEtsy) etsyMode = "generate";
+    const analyze = isEtsy && etsyMode === "analyze";
+    etsyModeSwitch.classList.toggle("hidden", !isEtsy);
+    modeGenerateBtn.classList.toggle("is-active", !analyze);
+    modeAnalyzeBtn.classList.toggle("is-active", analyze);
+    modeGenerateBtn.setAttribute("aria-pressed", String(!analyze));
+    modeAnalyzeBtn.setAttribute("aria-pressed", String(analyze));
+    if (analyze && !analyzeUIActive){
+      analyzeUIActive = true;
+      etsyOutputWasVisible = !outputSection.classList.contains("hidden");
+      outputSection.classList.add("hidden");
+      generatorForm.classList.add("hidden");
+      analyzeCard.classList.remove("hidden");
+      if (productDetailsToggle) analyzeProductDetailsSlot.appendChild(productDetailsToggle);
+    } else if (!analyze && analyzeUIActive){
+      analyzeUIActive = false;
+      analyzeCard.classList.add("hidden");
+      analysisSection.classList.add("hidden");
+      generatorForm.classList.remove("hidden");
+      if (productDetailsToggle && productDetailsHome && productDetailsHome.parentNode){
+        productDetailsHome.parentNode.insertBefore(productDetailsToggle, productDetailsHome);
+      }
+      if (etsyOutputWasVisible) outputSection.classList.remove("hidden");
+      etsyOutputWasVisible = false;
+    }
+  }
+  function setEtsyMode(mode){
+    if (generateBtn.disabled) {
+      showToast("Please wait for the current generation to finish.", "error");
+      return;
+    }
+    etsyMode = mode === "analyze" ? "analyze" : "generate";
+    syncEtsyModeUI();
+  }
+  modeGenerateBtn.addEventListener("click", () => setEtsyMode("generate"));
+  modeAnalyzeBtn.addEventListener("click", () => setEtsyMode("analyze"));
+  categorySelect.addEventListener("change", syncEtsyModeUI);
+  syncEtsyModeUI();
+
+  const ELA_MARKS = { issue: "!", warning: "\u2022", strength: "\u2713", info: "i" };
+  const ELA_CLASSES = { issue: "ls-improve", warning: "ls-improve", strength: "ls-strength", info: "ls-info" };
+  const ELA_CONTEXT_CATS = ["context", "facts", "audience"];
+
+  function elaRenderList(items){
+    const ul = document.createElement("ul");
+    ul.className = "ls-diagnostics";
+    items.forEach(function(d){
+      const li = document.createElement("li");
+      li.className = "ls-diag " + (ELA_CLASSES[d.severity] || "ls-info");
+      const mark = document.createElement("span");
+      mark.className = "ls-diag-mark";
+      mark.textContent = ELA_MARKS[d.severity] || "i";
+      const text = document.createElement("span");
+      text.textContent = d.message;
+      li.appendChild(mark);
+      li.appendChild(text);
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+  function elaHeading(text){
+    const p = document.createElement("p");
+    p.className = "ki-top-heading ela-heading";
+    p.textContent = text;
+    return p;
+  }
+
+  function renderExistingListingAnalysis(a){
+    analysisBody.innerHTML = "";
+    if (!a || typeof a !== "object" || !Array.isArray(a.diagnostics) || !a.overview){
+      analysisSection.classList.add("hidden");
+      return;
+    }
+    // Overview: compact status items.
+    const grid = document.createElement("div");
+    grid.className = "ela-overview";
+    [["Title", a.overview.title], ["Tags", a.overview.tags],
+     ["Description", a.overview.description], ["Context checks", a.overview.context]].forEach(function(pair){
+      const o = pair[1];
+      if (!o) return;
+      const item = document.createElement("div");
+      item.className = "ela-item ela-" + (o.status || "ok");
+      const label = document.createElement("span");
+      label.className = "ela-item-label";
+      label.textContent = pair[0];
+      const val = document.createElement("span");
+      val.className = "ela-item-value";
+      val.textContent = o.text || "";
+      item.appendChild(label);
+      item.appendChild(val);
+      grid.appendChild(item);
+    });
+    analysisBody.appendChild(grid);
+
+    const attention = a.diagnostics.filter(d => d.severity === "issue" || d.severity === "warning");
+    const strengths = a.diagnostics.filter(d => d.severity === "strength");
+    const shown = new Set();
+
+    analysisBody.appendChild(elaHeading("Needs Attention"));
+    if (attention.length){
+      const top = attention.slice(0, 4);
+      top.forEach(d => shown.add(d));
+      analysisBody.appendChild(elaRenderList(top));
+      if (attention.length > top.length){
+        const more = document.createElement("p");
+        more.className = "ls-note";
+        more.textContent = "+ " + (attention.length - top.length) + " more lower-priority finding" +
+          (attention.length - top.length === 1 ? "" : "s") + ".";
+        analysisBody.appendChild(more);
+      }
+    } else {
+      const none = document.createElement("p");
+      none.className = "ki-empty-note";
+      none.textContent = "No problems found with the checks TagPulse can run on this text.";
+      analysisBody.appendChild(none);
+    }
+
+    if (strengths.length){
+      const topS = strengths.slice(0, 3);
+      topS.forEach(d => shown.add(d));
+      analysisBody.appendChild(elaHeading("Strengths"));
+      analysisBody.appendChild(elaRenderList(topS));
+    }
+
+    // Context section: only when optional context was actually supplied.
+    if (a.overview.context){
+      analysisBody.appendChild(elaHeading("Context"));
+      const used = document.createElement("p");
+      used.className = "ki-coverage";
+      used.textContent = "Checked using your " + a.overview.context.text + ".";
+      analysisBody.appendChild(used);
+      const rest = a.diagnostics.filter(d => ELA_CONTEXT_CATS.indexOf(d.category) !== -1 && !shown.has(d));
+      if (rest.length) analysisBody.appendChild(elaRenderList(rest.slice(0, 4)));
+    }
+
+    const note = document.createElement("p");
+    note.className = "ls-note";
+    note.textContent = "Based only on the text you entered. This is not Etsy ranking, search-volume, competition, or sales data.";
+    analysisBody.appendChild(note);
+    analysisSection.classList.remove("hidden");
+  }
+
+  function handleAnalyzeExisting(){
+    analyzeError.classList.remove("show");
+    const input = {
+      title: analyzeTitleInput.value,
+      tags: analyzeTagsInput.value,
+      description: analyzeDescInput.value,
+      idea: analyzeIdeaInput.value,
+      audience: analyzeAudienceSelect.value,
+      productDetails: {
+        material: productMaterialInput.value,
+        color: productColorInput.value,
+        size: productSizeInput.value,
+        personalization: productPersonalizationInput.value,
+        features: productFeaturesInput.value
+      }
+    };
+    if (!input.title.trim() && !input.tags.trim() && !input.description.trim()){
+      analysisSection.classList.add("hidden");
+      analyzeError.classList.add("show");
+      analyzeTitleInput.focus();
+      return;
+    }
+    try {
+      existingListingAnalysis = analyzeExistingEtsyListing(input);
+      renderExistingListingAnalysis(existingListingAnalysis);
+      analysisSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      console.warn("[TagPulse][Etsy] existing listing analysis failed", err);
+      analysisSection.classList.add("hidden");
+      showToast("Couldn't analyze that listing. Please check the text and try again.", "error");
+    }
+  }
+  analyzeBtn.addEventListener("click", handleAnalyzeExisting);
 
   function renderPinterestOutput(parsed, category){
     const title = String(parsed.title).trim();
