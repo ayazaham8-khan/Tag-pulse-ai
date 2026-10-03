@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>TagPulse AI — E-commerce SEO & Tag Generator</title>
-<meta name="description" content="Generate high-ranking titles, 13 exact tags, and listing descriptions for Etsy, digital products, print on demand, and Pinterest.">
+<meta name="description" content="Generate keyword-focused titles, 13 exact tags, and listing descriptions for Etsy, digital products, print on demand, and Pinterest.">
 <meta name="theme-color" content="#f1641e">
 <script>window.lemonSqueezyAffiliateConfig = { store: "tagpulseai" };</script>
 <script src="https://lmsqueezy.com/affiliate.js" defer></script>
@@ -467,6 +467,7 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
   transition:border-color .15s, box-shadow .15s;
 }
 .platform-trigger:hover{ border-color:#d8cfc0; }
+.platform-trigger:disabled{ opacity:.6; cursor:not-allowed; }
 .platform-trigger.is-open{
   border-color:var(--primary);
   box-shadow:0 0 0 3px rgba(241,100,30,0.15);
@@ -1250,7 +1251,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 <main id="mainApp">
   <section class="landing-screen" id="landingScreen">
     <div class="landing-hero">
-      <h2>Get Ranking-Ready Etsy &amp; Pinterest Listings in 1-Click.</h2>
+      <h2>Generate Etsy &amp; Pinterest Listings in 1 Click.</h2>
       <p>Generate a keyword-rich title, 13 targeted SEO tags, and a ready-to-use description in seconds.</p>
       <button type="button" class="btn btn-primary get-started-btn" id="getStartedBtn">Get Started</button>
       <p class="landing-cc-badge">🔓 Get Started Free — No Credit Card, No Strings</p>
@@ -1334,7 +1335,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   <form id="generatorForm" class="card" novalidate>
     <div class="field">
       <label for="keywordInput">Product keyword / title</label>
-      <input type="text" id="keywordInput" placeholder="e.g. minimalist wall art printable">
+      <input type="text" id="keywordInput" maxlength="200" placeholder="e.g. minimalist wall art printable">
       <div class="field-error" id="keywordError">Enter a product keyword to generate SEO for.</div>
       <div class="sample-chips" aria-label="Sample products">
         <button type="button" class="sample-chip" data-sample="Printable Wall Art">Try: Printable Wall Art</button>
@@ -1353,23 +1354,23 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <div class="product-details-body">
         <div class="field">
           <label for="productMaterialInput">Material</label>
-          <input type="text" id="productMaterialInput" placeholder="e.g. genuine leather" autocomplete="off">
+          <input type="text" id="productMaterialInput" maxlength="100" placeholder="e.g. genuine leather" autocomplete="off">
         </div>
         <div class="field">
           <label for="productColorInput">Color</label>
-          <input type="text" id="productColorInput" placeholder="e.g. cognac brown" autocomplete="off">
+          <input type="text" id="productColorInput" maxlength="100" placeholder="e.g. cognac brown" autocomplete="off">
         </div>
         <div class="field">
           <label for="productSizeInput">Size / Dimensions</label>
-          <input type="text" id="productSizeInput" placeholder="e.g. 6 x 8 inches" autocomplete="off">
+          <input type="text" id="productSizeInput" maxlength="100" placeholder="e.g. 6 x 8 inches" autocomplete="off">
         </div>
         <div class="field">
           <label for="productPersonalizationInput">Personalization</label>
-          <input type="text" id="productPersonalizationInput" placeholder="e.g. name can be embossed on the cover" autocomplete="off">
+          <input type="text" id="productPersonalizationInput" maxlength="200" placeholder="e.g. name can be embossed on the cover" autocomplete="off">
         </div>
         <div class="field">
           <label for="productFeaturesInput">Key Features</label>
-          <input type="text" id="productFeaturesInput" placeholder="e.g. refillable, elastic closure" autocomplete="off">
+          <input type="text" id="productFeaturesInput" maxlength="300" placeholder="e.g. refillable, elastic closure" autocomplete="off">
         </div>
       </div>
     </details>
@@ -1423,7 +1424,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     <div class="field custom-reveal-field" id="customAudienceField">
       <label for="customAudienceInput">Describe your target audience</label>
-      <input type="text" id="customAudienceInput" placeholder="Describe your target audience...">
+      <input type="text" id="customAudienceInput" maxlength="100" placeholder="Describe your target audience...">
       <div class="field-error" id="customAudienceError">Please describe your target audience.</div>
     </div>
 
@@ -1452,7 +1453,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     <div class="field custom-reveal-field" id="customGoalField">
       <label for="customGoalInput">Describe your SEO goal</label>
-      <input type="text" id="customGoalInput" placeholder="Describe your SEO goal...">
+      <input type="text" id="customGoalInput" maxlength="100" placeholder="Describe your SEO goal...">
       <div class="field-error" id="customGoalError">Please describe your SEO goal.</div>
     </div>
 
@@ -1461,7 +1462,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         Words to Avoid
         <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span>
       </label>
-      <input type="text" id="wordsToAvoidInput" placeholder="e.g. cheap, free, custom" autocomplete="off">
+      <input type="text" id="wordsToAvoidInput" maxlength="300" placeholder="e.g. cheap, free, custom" autocomplete="off">
       <p class="field-help">Add comma-separated words or phrases you don't want used in the generated listing.</p>
     </div>
 
@@ -1490,7 +1491,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     </div>
     <div class="field">
       <label for="analyzeIdeaInput">Product / listing idea <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span></label>
-      <input type="text" id="analyzeIdeaInput" placeholder="e.g. custom leather journal" autocomplete="off">
+      <input type="text" id="analyzeIdeaInput" maxlength="200" placeholder="e.g. custom leather journal" autocomplete="off">
       <p class="field-help">Optional. Lets TagPulse check that your product's key words appear in the listing.</p>
     </div>
     <div class="field">
@@ -1508,13 +1509,14 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <div class="output-card-head">
         <h3>Existing Listing Analysis</h3>
       </div>
+      <div class="field-error" id="analysisStaleNote" role="status">You changed your listing details after this analysis. Click Analyze Listing again to refresh the results and enable Improve.</div>
       <div id="analysisBody"></div>
       <div class="ela-improve hidden" id="improveArea">
         <p class="ki-top-heading ela-heading">Improve this listing</p>
         <p class="field-help">Generates an improved draft from your listing and context. Uses 1 generation credit.</p>
         <div class="field">
           <label for="improveWordsInput">Words to avoid <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span></label>
-          <input type="text" id="improveWordsInput" placeholder="e.g. cheap, free, custom" autocomplete="off">
+          <input type="text" id="improveWordsInput" maxlength="300" placeholder="e.g. cheap, free, custom" autocomplete="off">
         </div>
         <button type="button" class="btn btn-primary generate-btn" id="improveBtn"><span id="improveBtnLabel">Improve This Listing</span></button>
       </div>
@@ -1644,7 +1646,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <button type="button" class="modal-close" data-close>✕</button>
     </div>
     <div class="modal-body">
-      <p>TagPulse AI is a focused tool for sellers on Etsy, Pinterest, and print-on-demand and digital-product platforms who want ranking-ready titles, tags, and descriptions without hours of manual keyword research.</p>
+      <p>TagPulse AI is a focused tool for sellers on Etsy, Pinterest, and print-on-demand and digital-product platforms who want keyword-focused titles, tags, and descriptions without hours of manual keyword research.</p>
       <p>Describe your product once, and the tool returns a keyword-rich title under 140 characters, 13 exact-match SEO tags, and a ready-to-edit description — in one pass.</p>
       <p>Questions or feedback? Reach us at <a href="mailto:tagpulse.ai@gmail.com">tagpulse.ai@gmail.com</a>.</p>
     </div>
@@ -1741,8 +1743,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         <div><strong>1 credit = 1 complete SEO pack</strong><br>Title + 13 tags + description.</div>
       </div>
 
-      <p class="trust-row"><span class="trust-stars">★★★★★</span> <span class="trust-text">Trusted by 200+ Etsy &amp; Pinterest Sellers</span></p>
-      <p class="refund-badge">✓ 7-Day Money-Back Guarantee</p>
+      <p class="trust-row" style="margin-bottom:16px;"><span class="trust-text">Secure checkout by Lemon Squeezy</span></p>
 
       <p class="license-safety-note">🔒 Pro activates automatically after a successful payment. Keep your Lemon Squeezy license key as a backup in case you clear your browser data, switch browsers, or use TagPulse on another device.</p>
 
@@ -2119,6 +2120,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   function selectPlatform(name){
+    if (generateBtn.disabled) return; // locked while a generation is in flight
     categorySelect.value = name;
     categorySelect.dispatchEvent(new Event("change", { bubbles: true }));
     closePlatformMenu();
@@ -2147,6 +2149,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   platformTrigger.addEventListener("click", () => {
+    if (platformTrigger.disabled) return;
     if (platformMenu.classList.contains("hidden")) openPlatformMenu();
     else closePlatformMenu();
   });
@@ -2714,6 +2717,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   function openHistoryEntry(index){
+    // Batch 8: reopening an entry switches platform/mode, so it is held
+    // back while a generation is in flight (same rule as the platform picker).
+    if (generateBtn.disabled) {
+      showToast("Please wait for the current generation to finish.", "error");
+      return;
+    }
     const items = getHistory();
     const item = items[index];
     if (!item) return;
@@ -3152,9 +3161,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       customGoalError.classList.remove("show");
     }
 
-    setGenerating(true);
-    hideAllOutputSections();
-
     const wordsToAvoid = wordsToAvoidInput.value
       .split(",")
       .map(word => word.trim())
@@ -3221,85 +3227,61 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     const etsyResponseShape =
       category === "Etsy" ? "etsy_intelligence" : undefined;
 
-    if (category === "Etsy") {
-      etsyStage = "request-1";
-      console.log("[TagPulse][Etsy] request #1 starting", { hasProductDetails: hasProductDetails });
-    }
+    // Batch 8: the in-flight lock is taken immediately before the try/finally
+    // that always releases it (nothing between here and the try can throw
+    // after the lock is set).
+    setGenerating(true);
+    hideAllOutputSections();
 
     try {
-      const result = await callGenerateWithNetworkRetry(prompt, firstRequestId, hasProductDetails, undefined, etsyResponseShape);
-
-      if (category === "Etsy") {
-        console.log("[TagPulse][Etsy] request #1 completed", { status: result.status });
-      }
-
-      if (result.status === 402) {
-        applyServerState(result.data);
-        if (!isPro) {
-          openModal(paywallModal);
-        }
-        showToast(result.data.error || "You're out of credits.", "error");
-        return;
-      }
-
       const outputType = getOutputType(category);
-      let parsed = extractJSON(result.data.text);
-      let serverState = result.data;
+      let parsed;
+      let serverState;
 
       if (category === "Etsy") {
+        // Batch 8: request #1, parse/validation handling and the single free
+        // retry live in runEtsyGeneration() (shared with Improve This Listing).
+        const eg = await runEtsyGeneration({
+          kind: "generate",
+          prompt: prompt,
+          buildRetryPrompt: (errors) => buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, errors),
+          hasProductDetails: hasProductDetails,
+          shape: etsyResponseShape,
+          wordsToAvoid: wordsToAvoid,
+          audience: audience,
+          productContextText: productContextText,
+          finalFailureMessage: "The AI couldn't produce a valid Etsy listing after a retry. Please try again or adjust your inputs.",
+          onStage: (stage) => { etsyStage = stage; }
+        });
 
-        // Real, blocking validation (format + the mechanical checks
-        // described in the spec) — never render an invalid Etsy
-        // result. On failure, retry exactly once with the specific
-        // validation failures fed back to the model as a correction
-        // instruction.
-        let validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
-
-        console.log(
-          "[TagPulse][Etsy] first validation " + (validation.valid ? "passed" : "failed"),
-          validation.valid ? undefined : validation.errors
-        );
-
-        if (!validation.valid) {
-
-          const retryPrompt = buildEtsyPrompt(
-            keyword,
-            productDetails,
-            audience,
-            seoGoal,
-            wordsToAvoid,
-            validation.errors
-          );
-
-          etsyStage = "request-2-retry";
-          console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: hasProductDetails });
-
-          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId, etsyResponseShape);
-
-          console.log("[TagPulse][Etsy] retry (request #2) completed", { status: retryResult.status });
-
-          if (retryResult.status === 402) {
-            applyServerState(retryResult.data);
-            if (!isPro) {
-              openModal(paywallModal);
-            }
-            showToast(retryResult.data.error || "You're out of credits.", "error");
-            return;
+        if (eg.paywalled) {
+          applyServerState(eg.data);
+          if (!isPro) {
+            openModal(paywallModal);
           }
-
-          serverState = retryResult.data;
-          parsed = extractJSON(retryResult.data.text);
-          validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
-
-          console.log(
-            "[TagPulse][Etsy] retry validation " + (validation.valid ? "passed" : "failed"),
-            validation.valid ? undefined : validation.errors
-          );
-
-          if (!validation.valid) {
-            throw new Error("The AI couldn't produce a valid Etsy listing after a retry. Please try again or adjust your inputs.");
-          }
+          showToast(eg.data.error || "You're out of credits.", "error");
+          return;
         }
+
+        parsed = eg.parsed;
+        serverState = eg.serverState;
+      } else {
+        const result = await callGenerateWithNetworkRetry(prompt, firstRequestId, hasProductDetails, undefined, etsyResponseShape);
+
+        if (result.status === 402) {
+          applyServerState(result.data);
+          if (!isPro) {
+            openModal(paywallModal);
+          }
+          showToast(result.data.error || "You're out of credits.", "error");
+          return;
+        }
+
+        parsed = extractJSON(result.data.text);
+        serverState = result.data;
+      }
+
+      if (category === "Etsy") {
 
         // Batch 2: deterministic, non-blocking Keyword Intelligence
         // post-processing. Runs only once validation above has
@@ -3467,7 +3449,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         ? (" [id: " + err.requestId + (typeof err.elapsedMs === "number" ? ", " + err.elapsedMs + "ms" : "") + "]")
         : "";
 
-      showToast(baseMessage + retrySuffix + diagSuffix, "error");
+      const resumeSuffix = err.resumeHint ? " " + err.resumeHint : "";
+
+      showToast(baseMessage + retrySuffix + diagSuffix + resumeSuffix, "error");
     } finally {
       setGenerating(false);
     }
@@ -3951,6 +3935,18 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       return { status: 402, data: data, requestId: requestId, elapsedMs: elapsedMs };
     }
 
+    // Batch 8: the ONE 409 that means "this same request ID is still being
+    // processed on the server". It is not a failure — the caller keeps
+    // asking for the SAME request ID (see callGenerateWithNetworkRetry).
+    // Any other 409 (e.g. "could not be verified") stays an ordinary error.
+    if (res.status === 409 && isRequestInProgressResponse(data)) {
+      const err = new Error(data.error || "Your previous request for this generation is still processing.");
+      err.requestId = requestId;
+      err.elapsedMs = elapsedMs;
+      err.requestInProgress = true;
+      throw err;
+    }
+
     if (!res.ok) {
       const err = new Error(data.error || "AI generation failed (" + res.status + ").");
       err.requestId = requestId;
@@ -4003,30 +3999,190 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
    * call is bounded to at most one extra attempt of its own,
    * regardless of how many times it's invoked overall.
    */
+  function isRequestInProgressResponse(data){
+    if (!data || typeof data !== "object") return false;
+    if (data.code === "request_in_progress") return true;
+    // Backend without the code field: match only the exact existing sentence.
+    return typeof data.error === "string" &&
+      /previous request for this generation is still processing/i.test(data.error);
+  }
+
+  // Batch 8 — bounded, same-ID resend rules.
+  //  * A request ID is never re-sent later than REQUEST_RESEND_WINDOW_MS after
+  //    its first send. The server treats an in_progress row older than 60s as
+  //    abandoned and would re-run it, so staying well inside that window
+  //    guarantees a resend can only ever REPLAY or WAIT, never re-run.
+  //  * "Still processing" answers (HTTP 409 + request_in_progress) are polled
+  //    at most MAX_IN_PROGRESS_POLLS times. Each poll is the same request ID,
+  //    costs no credit and no Groq call while the original is running.
+  const REQUEST_RESEND_WINDOW_MS = 45000;
+  const IN_PROGRESS_POLL_DELAY_MS = 1500;
+  const MAX_IN_PROGRESS_POLLS = 8;
+
   async function callGenerateWithNetworkRetry(prompt, requestId, hasProductDetails, retryOf, responseShape){
     requestId = requestId || generateDiagnosticRequestId();
+    const startedAt = Date.now();
+    let networkResent = false;   // exactly one automatic network-level resend, as before
+    let polls = 0;
 
-    try {
-      return await callGenerate(prompt, requestId, hasProductDetails, retryOf, responseShape);
-
-    } catch (err) {
-      if (!err.networkLevelFailure) {
-        throw err;
-      }
-
-      console.log("[TagPulse] network-level failure — retrying once with the same request ID", { requestId: requestId, elapsedMs: err.elapsedMs });
-      generateBtnLabel.innerHTML = '<span class="spinner"></span> Connection interrupted — retrying…';
-
+    for (;;) {
       try {
         const result = await callGenerate(prompt, requestId, hasProductDetails, retryOf, responseShape);
-        generateBtnLabel.innerHTML = '<span class="spinner"></span> Generating…';
+        if (networkResent || polls > 0) {
+          generateBtnLabel.innerHTML = '<span class="spinner"></span> Generating…';
+        }
         return result;
 
-      } catch (retryErr) {
-        retryErr.networkRetryExhausted = true;
-        throw retryErr;
+      } catch (err) {
+        const canResend = (Date.now() - startedAt) < REQUEST_RESEND_WINDOW_MS;
+
+        if (err.requestInProgress) {
+          if (canResend && polls < MAX_IN_PROGRESS_POLLS) {
+            polls++;
+            console.log("[TagPulse] original request still processing — checking the same request ID again", { requestId: requestId, poll: polls });
+            generateBtnLabel.innerHTML = '<span class="spinner"></span> Still working on your request…';
+            await new Promise(resolve => setTimeout(resolve, IN_PROGRESS_POLL_DELAY_MS));
+            continue;
+          }
+          err.inProgressTimedOut = true;
+          err.message = "This generation is taking longer than usual. Please wait a moment and try again.";
+          throw err;
+        }
+
+        if (err.networkLevelFailure && !networkResent && canResend) {
+          networkResent = true;
+          console.log("[TagPulse] network-level failure — retrying once with the same request ID", { requestId: requestId, elapsedMs: err.elapsedMs });
+          generateBtnLabel.innerHTML = '<span class="spinner"></span> Connection interrupted — retrying…';
+          continue;
+        }
+
+        if (networkResent) err.networkRetryExhausted = true;
+        throw err;
       }
     }
+  }
+
+  /* ============================================================
+     ETSY GENERATION WITH ONE BOUNDED FREE RETRY (Batch 8)
+     ------------------------------------------------------------
+     Shared by "Create New Listing" and "Improve This Listing".
+     One logical generation = request #1 (1 credit) + at most ONE
+     free validation retry (retry_of = request #1, recognised by the
+     server, never charged). Rules:
+       * unparseable / invalid first response -> the free retry
+         (a parse failure used to throw straight to the error toast
+         with the credit already spent);
+       * retry returns invalid output or cannot be parsed -> final
+         failure, NO third model call, nothing rendered or saved;
+       * the retry itself fails in transit (429 / timeout / 5xx /
+         network / still-processing) -> the logical request is kept in
+         memory so ONE later click with identical inputs re-sends the
+         SAME retry request ID (free) instead of starting a new paid
+         generation. A second failure ends it.
+     No retry loops: model-attempt IDs per logical generation are
+     request #1 and its single retry ID, nothing else.
+     ============================================================ */
+  const ETSY_PARSE_FAILURE_ERROR = "The response was not valid JSON. Return ONLY a single raw JSON object in exactly the required format.";
+  const PENDING_FIRST_TTL_MS = 5 * 60 * 1000;  // server keeps a completed request replayable; keep resumes well inside the free-retry window
+  const PENDING_RETRY_TTL_MS = 8 * 60 * 1000;  // server's free-retry window is 10 minutes after request #1 completed
+  const RESUME_HINT_FIRST = "Press the button again with the same inputs to pick up this same request — it won't use another credit.";
+  const RESUME_HINT_RETRY = "Your credit for this listing is already counted. Press the button again with the same inputs to finish it — no extra credit will be used.";
+  let pendingLogicalRequest = null;
+
+  function takePendingLogicalRequest(kind, prompt){
+    const p = pendingLogicalRequest;
+    pendingLogicalRequest = null; // always consumed; only a fresh failure re-arms it
+    if (!p) return null;
+    if (p.kind !== kind || p.prompt !== prompt) return null;
+    if (p.userId !== getAuthenticatedUserId()) return null;
+    if (Date.now() > p.expiresAt) return null;
+    return p;
+  }
+
+  function evaluateEtsyResponseText(text, o){
+    let parsed;
+    try {
+      parsed = extractJSON(text);
+    } catch (parseErr) {
+      console.log("[TagPulse][Etsy] response could not be parsed — using the free validation retry");
+      return { parsed: null, errors: [ETSY_PARSE_FAILURE_ERROR] };
+    }
+    const validation = validateEtsyOutput(parsed, o.wordsToAvoid, o.audience, o.productContextText);
+    return { parsed: parsed, errors: validation.valid ? null : validation.errors };
+  }
+
+  // Resolves { parsed, serverState } or { paywalled: true, data }.
+  // Throws on any failure; never renders or saves anything itself.
+  async function runEtsyGeneration(o){
+    const prior = takePendingLogicalRequest(o.kind, o.prompt);
+    let firstRequestId, retryRequestId, stage, retryPrompt, firstCompletedAt;
+    if (prior) {
+      firstRequestId = prior.firstRequestId;
+      retryRequestId = prior.retryRequestId;
+      stage = prior.stage;
+      retryPrompt = prior.retryPrompt || null;
+      firstCompletedAt = prior.firstCompletedAt || 0;
+    } else {
+      // The first request is the paid one. The retry names it (retry_of) and
+      // uses an ID derived from it so the server recognises it as free.
+      firstRequestId = generateDiagnosticRequestId() + "-1";
+      retryRequestId = firstRequestId + "-retry";
+      stage = "first";
+      retryPrompt = null;
+      firstCompletedAt = 0;
+    }
+    const startedAt = Date.now();
+    const base = { kind: o.kind, prompt: o.prompt, userId: getAuthenticatedUserId(), firstRequestId: firstRequestId, retryRequestId: retryRequestId };
+    // Re-arm for ONE later resume only (a resumed attempt that fails again is final).
+    const remember = function(extra, err, hint){
+      if (prior) return;
+      pendingLogicalRequest = Object.assign({}, base, extra);
+      err.resumeHint = hint;
+    };
+
+    let serverState;
+
+    if (stage === "first") {
+      o.onStage("request-1");
+      console.log("[TagPulse][Etsy] request #1 starting", { hasProductDetails: o.hasProductDetails });
+      let first;
+      try {
+        first = await callGenerateWithNetworkRetry(o.prompt, firstRequestId, o.hasProductDetails, undefined, o.shape);
+      } catch (err) {
+        if (err.requestInProgress || err.networkLevelFailure) {
+          remember({ stage: "first", expiresAt: startedAt + PENDING_FIRST_TTL_MS }, err, RESUME_HINT_FIRST);
+        }
+        throw err;
+      }
+      console.log("[TagPulse][Etsy] request #1 completed", { status: first.status });
+      if (first.status === 402) return { paywalled: true, data: first.data };
+
+      serverState = first.data;
+      firstCompletedAt = Date.now();
+      const firstEval = evaluateEtsyResponseText(first.data.text, o);
+      console.log("[TagPulse][Etsy] first validation " + (firstEval.errors ? "failed" : "passed"), firstEval.errors || undefined);
+      if (!firstEval.errors) return { parsed: firstEval.parsed, serverState: serverState };
+      retryPrompt = o.buildRetryPrompt(firstEval.errors);
+    }
+
+    // Free validation retry (same logical generation, never charged).
+    o.onStage("request-2-retry");
+    console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: o.hasProductDetails, resumed: !!prior });
+    let second;
+    try {
+      second = await callGenerateWithNetworkRetry(retryPrompt, retryRequestId, o.hasProductDetails, firstRequestId, o.shape);
+    } catch (err) {
+      remember({ stage: "retry", retryPrompt: retryPrompt, firstCompletedAt: firstCompletedAt, expiresAt: firstCompletedAt + PENDING_RETRY_TTL_MS }, err, RESUME_HINT_RETRY);
+      throw err;
+    }
+    console.log("[TagPulse][Etsy] retry (request #2) completed", { status: second.status });
+    if (second.status === 402) return { paywalled: true, data: second.data };
+
+    serverState = second.data;
+    const secondEval = evaluateEtsyResponseText(second.data.text, o);
+    console.log("[TagPulse][Etsy] retry validation " + (secondEval.errors ? "failed" : "passed"), secondEval.errors || undefined);
+    if (secondEval.errors) throw new Error(o.finalFailureMessage);
+    return { parsed: secondEval.parsed, serverState: serverState };
   }
 
   function extractJSON(text){
@@ -5368,6 +5524,18 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     analyzeAudienceSelect.appendChild(opt);
   });
 
+  // Batch 8: Product Details are context-specific. The same five inputs are
+  // shared by "Create New Listing" and "Analyze Existing Listing", so each
+  // mode keeps its own values and a mode switch swaps them — what was typed
+  // for one workflow can never silently become an authoritative fact in the
+  // other.
+  const PD_INPUTS = [productMaterialInput, productColorInput, productSizeInput, productPersonalizationInput, productFeaturesInput];
+  const pdStash = { generate: ["", "", "", "", ""], analyze: ["", "", "", "", ""] };
+  function swapProductDetails(fromMode, toMode){
+    pdStash[fromMode] = PD_INPUTS.map(el => el.value);
+    PD_INPUTS.forEach((el, i) => { el.value = pdStash[toMode][i]; });
+  }
+
   function syncEtsyModeUI(){
     const isEtsy = categorySelect.value === "Etsy";
     if (!isEtsy) etsyMode = "generate";
@@ -5379,6 +5547,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     modeAnalyzeBtn.setAttribute("aria-pressed", String(analyze));
     if (analyze && !analyzeUIActive){
       analyzeUIActive = true;
+      swapProductDetails("generate", "analyze");
       etsyOutputWasVisible = !outputSection.classList.contains("hidden");
       outputSection.classList.add("hidden");
       generatorForm.classList.add("hidden");
@@ -5386,6 +5555,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       if (productDetailsToggle) analyzeProductDetailsSlot.appendChild(productDetailsToggle);
     } else if (!analyze && analyzeUIActive){
       analyzeUIActive = false;
+      swapProductDetails("analyze", "generate");
       analyzeCard.classList.add("hidden");
       analysisSection.classList.add("hidden");
       if (improvedOutputActive) { clearImprovedResult(); etsyOutputWasVisible = false; } // improved view replaced the Create output in the shared DOM
@@ -5515,6 +5685,45 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     updateImproveArea(a);
   }
 
+  // Batch 8: stale-analysis protection. The analysis is only valid for the
+  // exact inputs it ran on. Any later edit marks it stale (hides Improve and
+  // shows a note); handleImproveExisting() ALSO re-checks the live values
+  // against this signature, so it can never run from a stale snapshot even
+  // if an input changed without firing an event (autofill, IME, paste).
+  const analysisStaleNote = $("analysisStaleNote");
+  let analysisInputSignature = null;
+  let analysisMarkedStale = false;
+
+  function currentAnalysisInputSignature(){
+    return JSON.stringify([
+      analyzeTitleInput.value, analyzeTagsInput.value, analyzeDescInput.value,
+      analyzeIdeaInput.value, analyzeAudienceSelect.value,
+      productMaterialInput.value, productColorInput.value, productSizeInput.value,
+      productPersonalizationInput.value, productFeaturesInput.value
+    ]);
+  }
+  function isAnalysisStale(){
+    return analysisMarkedStale || analysisInputSignature === null ||
+      analysisInputSignature !== currentAnalysisInputSignature();
+  }
+  function markAnalysisStale(){
+    if (!existingListingAnalysis) return;
+    analysisMarkedStale = true;
+    improveArea.classList.add("hidden");
+    analysisStaleNote.classList.add("show");
+  }
+  function onAnalysisInputChanged(){
+    if (!analyzeUIActive || !existingListingAnalysis || analysisMarkedStale) return;
+    if (isAnalysisStale()) markAnalysisStale();
+  }
+  [analyzeTitleInput, analyzeTagsInput, analyzeDescInput, analyzeIdeaInput,
+   productMaterialInput, productColorInput, productSizeInput,
+   productPersonalizationInput, productFeaturesInput].forEach(function(el){
+    el.addEventListener("input", onAnalysisInputChanged);
+  });
+  analyzeAudienceSelect.addEventListener("input", onAnalysisInputChanged);
+  analyzeAudienceSelect.addEventListener("change", onAnalysisInputChanged);
+
   function handleAnalyzeExisting(){
     if (improveInFlight) return;
     analyzeError.classList.remove("show");
@@ -5549,6 +5758,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           size: input.productDetails.size.trim(), personalization: input.productDetails.personalization.trim(),
           features: input.productDetails.features.trim() }
       };
+      // A fresh analysis replaces the old snapshot and is valid for the
+      // values visible right now.
+      analysisInputSignature = currentAnalysisInputSignature();
+      analysisMarkedStale = false;
+      analysisStaleNote.classList.remove("show");
       renderExistingListingAnalysis(existingListingAnalysis);
       analysisSection.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
@@ -5610,11 +5824,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     const analysis = existingListingAnalysis;
     if (!src || !analysis) return;
 
-    improveInFlight = true;
-    improveBtn.disabled = true;
-    improveBtnLabel.textContent = "Improving…";
-    setGenerating(true);          // shared in-flight guard (also blocks the mode switch)
-    clearImprovedResult();
+    // Batch 8: never generate from a stale analysis — no request, no credit.
+    if (isAnalysisStale()) {
+      markAnalysisStale();
+      showToast("Your listing details changed since the analysis. Please analyze again before improving.", "error");
+      return;
+    }
 
     const category = "Etsy";
     const keyword = (src.idea || src.title || src.tags.slice(0, 5).join(", ") || src.description).slice(0, 200);
@@ -5633,40 +5848,39 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         .filter(d => d.severity === "issue" || d.severity === "warning")
         .slice(0, 8).map(d => d.message)
     };
-    // Same ID scheme as handleGenerate: the validation retry is part of
-    // the SAME logical generation and is recognised server-side (no 2nd charge).
-    const generationId = generateDiagnosticRequestId();
-    const firstRequestId = generationId + "-1";
-    const validationRetryRequestId = firstRequestId + "-retry";
     const shape = "etsy_intelligence";
+
+    // Lock taken immediately before the try/finally that always releases it.
+    improveInFlight = true;
+    improveBtn.disabled = true;
+    improveBtnLabel.textContent = "Improving…";
+    setGenerating(true);          // shared in-flight guard (also blocks the mode switch + platform picker)
+    clearImprovedResult();
+
     try {
       const prompt = buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, undefined, improveContext);
-      const result = await callGenerateWithNetworkRetry(prompt, firstRequestId, hasProductDetails, undefined, shape);
-      if (result.status === 402) {
-        applyServerState(result.data);
+      // Same bounded request/credit flow as Create: request #1 (1 credit) +
+      // at most one free validation retry; see runEtsyGeneration().
+      const eg = await runEtsyGeneration({
+        kind: "improve",
+        prompt: prompt,
+        buildRetryPrompt: (errors) => buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, errors, improveContext),
+        hasProductDetails: hasProductDetails,
+        shape: shape,
+        wordsToAvoid: wordsToAvoid,
+        audience: audience,
+        productContextText: productContextText,
+        finalFailureMessage: "The AI couldn't produce a valid improved listing after a retry. Please try again.",
+        onStage: function(){}
+      });
+      if (eg.paywalled) {
+        applyServerState(eg.data);
         if (!isPro) openModal(paywallModal);
-        showToast(result.data.error || "You're out of credits.", "error");
+        showToast(eg.data.error || "You're out of credits.", "error");
         return;
       }
-      let parsed = extractJSON(result.data.text);
-      let serverState = result.data;
-      let validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
-      if (!validation.valid) {
-        const retryPrompt = buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, validation.errors, improveContext);
-        const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId, shape);
-        if (retryResult.status === 402) {
-          applyServerState(retryResult.data);
-          if (!isPro) openModal(paywallModal);
-          showToast(retryResult.data.error || "You're out of credits.", "error");
-          return;
-        }
-        serverState = retryResult.data;
-        parsed = extractJSON(retryResult.data.text);
-        validation = validateEtsyOutput(parsed, wordsToAvoid, audience, productContextText);
-        if (!validation.valid) {
-          throw new Error("The AI couldn't produce a valid improved listing after a retry. Please try again.");
-        }
-      }
+      const parsed = eg.parsed;
+      const serverState = eg.serverState;
       // Same deterministic, non-blocking post-processing as a normal Etsy
       // generation, so the saved history entry has the same payload shape.
       try {
@@ -5710,7 +5924,8 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     } catch (err) {
       console.error("[TagPulse][Etsy] improve failed", { requestId: err.requestId, elapsedMs: err.elapsedMs, message: err.message });
       const retrySuffix = err.networkRetryExhausted ? " (automatic retry also failed)" : "";
-      showToast((err.message || "Something went wrong. Please try again.") + retrySuffix, "error");
+      const resumeSuffix = err.resumeHint ? " " + err.resumeHint : "";
+      showToast((err.message || "Something went wrong. Please try again.") + retrySuffix + resumeSuffix, "error");
     } finally {
       improveInFlight = false;
       improveBtn.disabled = false;
@@ -6108,6 +6323,38 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      part of the product is never flagged as a "leak".
      ------------------------------------------------------------ */
 
+  /* ------------------------------------------------------------
+     WORDS-TO-AVOID MATCHING (Etsy validator only — Batch 8)
+     ------------------------------------------------------------
+     Whole-word / whole-phrase matching on normalized text instead of a
+     raw substring test. Both sides are lower-cased and every run of
+     non-letter/non-digit characters (spaces, hyphens, commas, quotes,
+     apostrophes, slashes ...) becomes a single space, so "Dog-Mom" and
+     "dog mom" are the same phrase, and a blocked term only matches when
+     it appears as complete word(s): "art" matches "art" / "ART" /
+     "art," but not "party", "heart" or "artwork"; "cat" does not match
+     "cathedral" or "bobcat". Plain string padding is used (no dynamic
+     RegExp), so special characters in a term can never break it. A term
+     with no letters/digits at all (e.g. "&") keeps the legacy raw
+     substring behaviour. Each field (title, description, every tag) is
+     checked on its own so a phrase can't match across two fields.
+     ------------------------------------------------------------ */
+  function normalizeAvoidText(text){
+    return String(text == null ? "" : text)
+      .toLowerCase()
+      .replace(/[^\p{L}\p{M}\p{N}]+/gu, " ")
+      .trim();
+  }
+
+  function containsAvoidedTerm(fieldText, term){
+    const needle = normalizeAvoidText(term);
+    if (!needle) {
+      const raw = String(term == null ? "" : term).trim().toLowerCase();
+      return !!raw && String(fieldText == null ? "" : fieldText).toLowerCase().includes(raw);
+    }
+    return (" " + normalizeAvoidText(fieldText) + " ").includes(" " + needle + " ");
+  }
+
   function validateEtsyOutput(parsed, wordsToAvoid, audience, productContext){
     const errors = [];
 
@@ -6170,9 +6417,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     const haystack = [title, description].concat(trimmedTags).join(" \n ").toLowerCase();
 
     if (Array.isArray(wordsToAvoid) && wordsToAvoid.length) {
+      const avoidFields = [title, description].concat(trimmedTags);
       wordsToAvoid.forEach(word => {
         const w = String(word || "").trim().toLowerCase();
-        if (w && haystack.includes(w)) {
+        if (w && avoidFields.some(field => containsAvoidedTerm(field, w))) {
           errors.push('The word "' + String(word).trim() + '" appears in the output but is on your Words to Avoid list.');
         }
       });
@@ -6423,6 +6671,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
   function setGenerating(isLoading){
     generateBtn.disabled = isLoading;
+    // Batch 8: the top-level platform picker is locked for the whole time
+    // ANY generation / improve request is in flight (setGenerating(false)
+    // runs in the finally{} of both handlers, so every terminal state
+    // restores it).
+    platformTrigger.disabled = isLoading;
+    if (isLoading) closePlatformMenu();
     generateBtnLabel.innerHTML = isLoading
       ? '<span class="spinner"></span> Generating…'
       : '⚡ Generate Optimized Tags';
