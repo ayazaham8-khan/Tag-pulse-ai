@@ -93,6 +93,16 @@ const GROQ_MAX_COMPLETION_TOKENS = 3072;
 
 const GROQ_TIMEOUT_MS = 30000;
 
+// Server-side cap on the prompt string (characters). Measured against the
+// real prompt builders in public/index.html: the largest legitimate prompts
+// (an Improve validation-retry carrying 8 issues + the full clipped listing
+// snapshot + every input at its maxlength) are ~24,000 characters, normal
+// Etsy/Pinterest/Digital prompts are ~8,000-10,000, so 32,000 leaves
+// comfortable headroom. Anything larger is rejected BEFORE idempotency
+// claim, credit reservation and the Groq call (see step 5 below), so an
+// oversized request can never cost a credit or shared Groq tokens.
+const MAX_PROMPT_CHARS = 32000;
+
 // FREE_CREDITS (a new free account's starting balance) is imported at
 // the top of this file from ../_shared/free-credits.js, so /api/generate
 // and /api/pro-status always agree on it.
@@ -297,6 +307,24 @@ export async function onRequestPost(context) {
       );
     }
 
+    if (prompt.length > MAX_PROMPT_CHARS) {
+
+      console.warn(
+        "[TagPulse][generate] prompt rejected as oversized — no credit reserved, no Groq call",
+        { requestId: requestId, promptLength: prompt.length, limit: MAX_PROMPT_CHARS }
+      );
+
+      return jsonResponse(
+        {
+          error:
+            "Your request is too long. Please shorten your inputs and try again. No credit was used.",
+          code: "prompt_too_large"
+        },
+        413,
+        corsHeaders
+      );
+    }
+
 
     console.log(
       "[TagPulse][generate] request received",
@@ -386,7 +414,8 @@ export async function onRequestPost(context) {
       return jsonResponse(
         {
           error:
-            "Your previous request for this generation is still processing. Please wait a moment and try again."
+            "Your previous request for this generation is still processing. Please wait a moment and try again.",
+          code: "request_in_progress"
         },
         409,
         corsHeaders
