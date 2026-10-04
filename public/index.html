@@ -65,66 +65,71 @@ a{ color:inherit; }
   --shadow-sm:0 1px 2px rgba(34,38,43,.05), 0 1px 3px rgba(34,38,43,.07);
   --shadow-md:0 6px 16px rgba(34,38,43,.09), 0 2px 6px rgba(34,38,43,.05);
   --shadow-lg:0 24px 60px rgba(34,38,43,.2);
-  --container:760px;
+  --container:720px;
 }
 
 /* ============================================================
    HEADER
    ============================================================ */
-.site-header{
+ .site-header{
   position:sticky; top:0; z-index:20;
-  background:rgba(250,249,247,0.92);
+  background:rgba(250,249,247,0.94);
   backdrop-filter:blur(8px);
   border-bottom:1px solid var(--border);
-  padding:14px 20px;
+  padding:12px 20px;
 }
 .site-header-inner{
   max-width:var(--container);
   margin:0 auto;
   display:flex;
   align-items:center;
-  gap:12px;
+  gap:10px;
 }
 .brand-mark{
-  width:38px; height:38px; flex:0 0 auto;
-  border-radius:10px;
-  background:linear-gradient(155deg, var(--primary), var(--primary-dark));
+  width:34px; height:34px; flex:0 0 auto;
+  border-radius:9px;
+  background:var(--primary);
   display:flex; align-items:center; justify-content:center;
-  box-shadow:var(--shadow-sm);
 }
-.brand-mark svg{ width:20px; height:20px; }
+.brand-mark svg{ width:19px; height:19px; }
 .brand-text{ min-width:0; }
 .brand-text h1{
-  font-size:16.5px; font-weight:800; letter-spacing:-0.01em; color:var(--ink);
+  font-size:16px; font-weight:800; letter-spacing:-0.01em; color:var(--ink);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .brand-text p{
-  font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:0.01em;
+  font-size:11.5px; color:var(--muted); font-weight:500;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .header-actions{ margin-left:auto; flex:0 0 auto; display:flex; align-items:center; gap:8px; }
 .credits-pill{
-  background:var(--primary-tint); color:var(--primary-dark);
-  font-size:10.5px; font-weight:800; letter-spacing:0.01em;
-  padding:6px 10px; border-radius:999px; white-space:nowrap;
-  box-shadow:0 1px 3px rgba(241,100,30,0.15);
+  background:transparent; color:var(--ink-soft);
+  font-size:12px; font-weight:700;
+  padding:6px 4px; white-space:nowrap; flex:0 0 auto;
 }
-.credits-pill.is-pro{ background:var(--ink); color:#fff; }
+.credits-pill.is-pro{ background:var(--ink); color:#fff; padding:6px 10px; border-radius:999px; }
 .upgrade-btn{
   background:var(--ink); color:#fff; border:none;
-  font-size:10.5px; font-weight:800; letter-spacing:0.04em;
-  padding:7px 11px; border-radius:999px; white-space:nowrap;
+  font-size:12px; font-weight:700;
+  min-height:34px; padding:7px 14px; border-radius:999px; white-space:nowrap;
   transition:background .15s;
 }
 .upgrade-btn:hover{ background:#33393f; }
-
+.header-cta{
+  background:var(--primary); color:#fff; border:none;
+  font-size:13.5px; font-weight:700;
+  min-height:38px; padding:8px 20px; border-radius:999px; white-space:nowrap;
+  transition:background .15s;
+}
+.header-cta:hover{ background:var(--primary-dark); }
 .history-btn{
-  background:#f4f1eb; color:var(--ink); border:1px solid var(--border);
-  font-size:10.5px; font-weight:800; letter-spacing:0.03em;
-  padding:7px 11px; border-radius:999px; white-space:nowrap;
+  background:transparent; color:var(--ink); border:1px solid var(--border);
+  font-size:12px; font-weight:700;
+  min-height:34px; padding:7px 13px; border-radius:999px; white-space:nowrap;
   transition:background .15s, border-color .15s, color .15s;
 }
 .history-btn:hover{ background:#fff; border-color:#d8cfc0; color:var(--primary-dark); }
+.site-header button:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
 
 .history-empty{
   text-align:center;
@@ -236,7 +241,7 @@ a{ color:inherit; }
   line-height:1.08;
   font-weight:900;
   letter-spacing:-0.035em;
-  max-width:13ch;
+  max-width:16ch;
   margin:0 auto 16px;
 }
 .landing-hero p{
@@ -346,7 +351,7 @@ body.authenticated .landing-screen{
 body.authenticated .generator-page{
   display:block;
 }
-main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
+main{ max-width:var(--container); margin:0 auto; padding:36px 18px 56px; }
 
 .hero{ margin-bottom:22px; }
 .hero h2{ font-size:23px; font-weight:800; letter-spacing:-0.015em; margin-bottom:6px; }
@@ -382,28 +387,28 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 .card{
   background:var(--card);
   border:1px solid var(--border);
-  border-radius:var(--radius-md);
-  box-shadow:var(--shadow-sm);
-  padding:22px;
+  border-radius:var(--radius-lg);
+  box-shadow:0 1px 2px rgba(34,38,43,.04);
+  padding:28px;
 }
 .card + .card{ margin-top:16px; }
 
 /* ============================================================
    FORM
    ============================================================ */
-.field{ margin-bottom:18px; }
+.field{ margin-bottom:20px; }
 .field:last-child{ margin-bottom:0; }
 .field label{
   display:flex; align-items:center; gap:6px;
-  font-size:13px; font-weight:700; color:var(--ink-soft);
-  margin-bottom:8px;
+  font-size:13px; font-weight:600; color:var(--ink-soft);
+  margin-bottom:7px;
 }
 .field input[type="text"], .field select{
   width:100%;
   padding:13px 14px;
-  border:1.5px solid var(--border);
-  border-radius:var(--radius-sm);
-  background:var(--bg);
+  border:1px solid #e4ded5;
+  border-radius:10px;
+  background:#fff;
   color:var(--ink);
   transition:border-color .15s, box-shadow .15s;
   appearance:none; -webkit-appearance:none;
@@ -426,47 +431,70 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
    Native <details>/<summary> — no extra JS needed for the
    open/close behavior itself.
    ============================================================ */
-.product-details-toggle{
-  margin-bottom:18px;
-  border:1.5px solid var(--border);
-  border-radius:var(--radius-sm);
-  background:var(--bg);
-  overflow:hidden;
+ .product-details-toggle{
+  margin-bottom:20px;
 }
 .product-details-toggle summary{
   cursor:pointer;
   list-style:none;
-  padding:13px 14px;
-  font-size:13px; font-weight:700; color:var(--ink-soft);
+  min-height:44px;
+  font-size:13px; font-weight:600; color:var(--ink-soft);
   display:flex; align-items:center; justify-content:space-between; gap:8px;
 }
 .product-details-toggle summary::-webkit-details-marker{ display:none; }
 .product-details-toggle summary::after{
-  content:"+"; font-size:16px; font-weight:800; color:var(--muted);
-  transition:transform .15s ease;
+  content:"+"; font-size:18px; font-weight:600; color:var(--muted);
 }
 .product-details-toggle[open] summary::after{ content:"–"; }
+.product-details-toggle summary:focus-visible{ outline:2px solid var(--primary); outline-offset:3px; border-radius:6px; }
 .product-details-toggle .product-details-body{
-  padding:4px 14px 14px;
-  border-top:1.5px solid var(--border);
+  padding:2px 0 4px 14px;
+  border-left:2px solid var(--border);
 }
 .product-details-toggle .field{ margin-top:14px; margin-bottom:0; }
-.product-details-hint{ font-size:11.5px; color:var(--muted); padding:12px 14px 0; line-height:1.4; }
+.product-details-hint{ font-size:12px; color:var(--muted); padding:0 0 4px; line-height:1.4; }
+
+/* ============================================================
+   REFINE LISTING (optional settings, collapsed by default)
+   Native <details>/<summary>: keyboard + screen-reader support
+   comes for free, and opening it makes no network request.
+   ============================================================ */
+.refine{
+  border-top:1px solid var(--border);
+  margin:4px 0 22px;
+}
+.refine > summary{
+  cursor:pointer; list-style:none;
+  min-height:52px;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  font-size:14px; font-weight:700; color:var(--ink);
+}
+.refine > summary::-webkit-details-marker{ display:none; }
+.refine > summary .refine-opt{ font-weight:500; color:var(--muted); margin-left:6px; margin-right:auto; }
+.refine > summary::after{
+  content:"+"; font-size:20px; font-weight:500; color:var(--muted); line-height:1;
+}
+.refine[open] > summary::after{ content:"–"; }
+.refine > summary:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; border-radius:6px; }
+.refine-body{ padding:4px 0 2px; }
+.refine-body > .field:last-child{ margin-bottom:0; }
 
 .platform-picker{ position:relative; }
 .platform-trigger{
   width:100%;
   display:flex; align-items:center; gap:10px;
-  padding:12px 14px;
-  border:1.5px solid var(--border);
-  border-radius:var(--radius-sm);
-  background:var(--bg);
+  min-height:46px;
+  padding:11px 14px;
+  border:1px solid #e4ded5;
+  border-radius:10px;
+  background:#fff;
   color:var(--ink);
-  font-size:14px; font-weight:700; font-family:inherit;
+  font-size:15px; font-weight:600; font-family:inherit;
   cursor:pointer;
   transition:border-color .15s, box-shadow .15s;
 }
 .platform-trigger:hover{ border-color:#d8cfc0; }
+.platform-trigger:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
 .platform-trigger:disabled{ opacity:.6; cursor:not-allowed; }
 .platform-trigger.is-open{
   border-color:var(--primary);
@@ -512,16 +540,21 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 .platform-menu-icon svg{ width:20px; height:20px; display:block; }
 .platform-menu-label{ flex:1; }
 
-.sample-chips{
-  display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;
+ .sample-chips{
+  display:flex; flex-wrap:wrap; align-items:center; gap:2px 12px; margin-top:8px;
+  font-size:12px; color:var(--muted);
 }
+.sample-lead{ font-weight:500; }
 .sample-chip{
-  appearance:none; border:1px solid var(--border); background:#fff; color:var(--ink-soft);
-  border-radius:999px; padding:6px 9px; font-size:10.5px; font-weight:700;
-  transition:background .15s, border-color .15s, color .15s, transform .12s;
+  appearance:none; border:0; background:none; color:var(--ink-soft);
+  padding:6px 0; font-size:12px; font-weight:600;
+  text-decoration:underline; text-decoration-color:#d8cfc0; text-underline-offset:3px;
+  transition:color .15s;
 }
-.sample-chip:hover{ border-color:#f4b88f; background:var(--primary-tint); color:var(--primary-dark); }
-.sample-chip:active{ transform:translateY(1px); }
+.sample-chip:hover{ color:var(--primary-dark); text-decoration-color:currentColor; }
+.sample-chip:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; border-radius:4px; }
+.keyword-field label{ font-size:15px; font-weight:700; color:var(--ink); margin-bottom:9px; }
+.keyword-field input[type="text"]{ font-size:17px; padding:15px 16px; border-radius:12px; }
 .risk-alert{
   display:none; align-items:flex-start; gap:9px;
   background:#fff8df; border:1px solid #ead48a; color:#6a5810;
@@ -540,13 +573,6 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 }
 .custom-reveal-field.show{ max-height:140px; opacity:1; margin-bottom:18px !important; }
 
-.cta-banner{ text-align:center; padding:4px 12px 18px; }
-.cta-banner h3{
-  font-size:16.5px; font-weight:800; color:var(--ink); letter-spacing:-0.01em;
-  margin-bottom:6px;
-}
-.cta-banner p{ font-size:12.5px; color:var(--muted); max-width:46ch; margin:0 auto; line-height:1.5; }
-
 .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 @media (max-width:560px){ .grid-2{ grid-template-columns:1fr; } }
 
@@ -559,11 +585,12 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
   width:100%;
 }
 .btn:active{ transform:translateY(1px) scale(.995); }
-.btn-primary{ background:var(--primary); color:#fff; box-shadow:0 6px 16px rgba(241,100,30,0.32); }
+.btn-primary{ background:var(--primary); color:#fff; box-shadow:0 4px 12px rgba(241,100,30,0.22); }
 .btn-primary:hover{ background:var(--primary-dark); }
 .btn-primary:disabled{ opacity:.62; cursor:not-allowed; box-shadow:none; }
 
-.generate-btn{ margin-top:6px; font-size:16px; padding:16px 18px; }
+.generate-btn{ margin-top:0; font-size:16px; padding:16px 18px; border-radius:12px; min-height:54px; }
+.btn:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
 
 .spinner{
   width:16px; height:16px;
@@ -588,21 +615,6 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 }
 .credits-banner p{ font-size:13px; color:var(--ink); flex:1; min-width:200px; }
 .credits-banner .btn{ width:auto; padding:10px 16px; font-size:13px; }
-
-.affiliate-banner{
-  max-width:var(--container);
-  margin:8px auto 0;
-  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
-  background:linear-gradient(135deg, var(--primary-tint), #fff5ec);
-  border:1.5px solid #f8cba9;
-  border-radius:var(--radius-md);
-  padding:16px 20px;
-}
-.affiliate-banner-text{ display:flex; align-items:center; gap:12px; flex:1; min-width:220px; }
-.affiliate-banner-icon{ font-size:26px; flex:0 0 auto; }
-.affiliate-banner-title{ font-size:14px; font-weight:800; color:var(--ink); margin-bottom:2px; }
-.affiliate-banner-sub{ font-size:12px; color:var(--ink-soft); }
-.affiliate-banner-btn{ width:auto; padding:11px 18px; font-size:13.5px; white-space:nowrap; }
 
 .affiliate-steps{ list-style:none; margin:12px 0 16px; }
 .affiliate-steps li{
@@ -787,21 +799,23 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
    ============================================================ */
 .field textarea{
   width:100%; padding:13px 14px; line-height:1.5; resize:vertical;
-  border:1.5px solid var(--border); border-radius:var(--radius-sm);
-  background:var(--bg); color:var(--ink);
+  border:1px solid #e4ded5; border-radius:10px;
+  background:#fff; color:var(--ink);
   transition:border-color .15s, box-shadow .15s;
 }
 .field textarea:hover{ border-color:#d8cfc0; }
 .field textarea:focus{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(241,100,30,0.15); outline:none; }
 .mode-switch{
-  display:flex; gap:6px; margin-bottom:14px; padding:5px;
-  background:var(--card); border:1px solid var(--border); border-radius:var(--radius-md);
+  display:flex; gap:2px; margin-bottom:16px; padding:3px;
+  background:#efebe4; border-radius:12px;
 }
 .mode-btn{
   flex:1; border:0; background:transparent; color:var(--ink-soft);
-  font-size:13px; font-weight:700; padding:10px 8px; border-radius:var(--radius-sm);
+  font-size:13.5px; font-weight:600; min-height:40px; padding:8px 8px; border-radius:9px;
+  transition:background .15s, color .15s;
 }
-.mode-btn.is-active{ background:var(--primary-tint); color:var(--primary-dark); }
+.mode-btn.is-active{ background:#fff; color:var(--ink); font-weight:700; box-shadow:0 1px 2px rgba(34,38,43,.1); }
+.mode-btn:focus-visible{ outline:2px solid var(--primary); outline-offset:1px; }
 #analyzeCard + #analysisSection{ margin-top:16px; }
 .ela-overview{ display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:8px; margin-bottom:16px; }
 .ela-item{ border:1px solid var(--border); border-left-width:3px; border-radius:var(--radius-sm); background:var(--bg); padding:9px 11px; display:flex; flex-direction:column; gap:2px; }
@@ -828,9 +842,10 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
   box-shadow:var(--shadow-lg);
   display:flex; align-items:center; gap:8px;
   max-width:90vw;
-  transition:transform .3s cubic-bezier(.22,1,.36,1);
+  opacity:0; pointer-events:none;
+  transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .2s ease;
 }
-#toast.show{ transform:translateX(-50%) translateY(0); }
+#toast.show{ transform:translateX(-50%) translateY(0); opacity:1; }
 #toast.error{ background:var(--danger); }
 #toast.success{ background:var(--success); }
 #toast .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.9; flex:0 0 auto; }
@@ -887,6 +902,13 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 .price-regular{ font-size:12.5px; color:var(--muted); margin-bottom:2px; }
 .price-regular s{ text-decoration:line-through; }
 
+.first50-note{
+  display:flex; flex-direction:column; gap:2px;
+  background:var(--primary-tint); border:1px solid #f8d9c4; border-left:3px solid var(--primary);
+  border-radius:10px; padding:11px 14px; margin:0 0 16px;
+}
+.first50-note strong{ font-size:13.5px; font-weight:800; color:var(--ink); }
+.first50-note span{ font-size:12.5px; color:var(--ink-soft); line-height:1.45; }
 .pricing-tiers{
   display:grid; grid-template-columns:1fr 1fr; gap:10px;
   margin:6px 0 16px;
@@ -986,10 +1008,11 @@ main{ max-width:var(--container); margin:0 auto; padding:28px 18px 60px; }
 /* ============================================================
    FOOTER
    ============================================================ */
-footer{ border-top:1px solid var(--border); padding:26px 20px 40px; text-align:center; }
+footer{ border-top:1px solid var(--border); padding:22px 20px 34px; text-align:center; }
 .footer-links{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
 .footer-links button, .footer-links a{ background:none; border:none; font-size:12.5px; font-weight:700; color:var(--ink-soft); text-decoration:underline; text-underline-offset:3px; }
 .footer-links button:hover, .footer-links a:hover{ color:var(--primary-dark); }
+.footer-links button:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; border-radius:4px; }
 .footer-dot{ color:var(--border); }
 footer .fine{ font-size:11.5px; color:var(--muted); }
 footer .fine a{ color:var(--muted); text-decoration:underline; }
@@ -1001,222 +1024,59 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
    changed.
    ============================================================ */
 @media (max-width:560px){
-
   .site-header{
     padding:10px 12px;
   }
-
   .site-header-inner{
     width:100%;
     gap:8px;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
   }
-
-  .brand-mark{
-    width:36px;
-    height:36px;
+  .brand-mark{ width:32px; height:32px; }
+  .brand-mark svg{ width:18px; height:18px; }
+  .brand-text{ flex:1 1 auto; min-width:0; }
+  .brand-text h1{ font-size:15.5px; }
+  .brand-text p{ display:none; }
+  /* signed in: actions move to their own compact row under the brand */
+  body.authenticated .site-header-inner{ flex-wrap:wrap; }
+  body.authenticated .header-actions{
+    width:100%; min-width:0; margin-left:0;
+    justify-content:flex-end; gap:6px;
   }
-
-  .brand-mark svg{
-    width:19px;
-    height:19px;
-  }
-
-  .brand-text{
-    flex:1 1 auto;
-    min-width:0;
-  }
-
-  .brand-text h1{
-    font-size:15px;
-  }
-
-  .brand-text p{
-    font-size:10px;
-  }
-
-  .header-actions{
-    width:100%;
-    min-width:0;
-    margin-left:0;
-    justify-content:flex-end;
-    gap:6px;
-    padding-top:2px;
-  }
-
-  .credits-pill,
-  .upgrade-btn,
-  .history-btn{
-    font-size:10px;
-    padding:7px 9px;
-  }
-
-  .credits-pill{
-    margin-right:auto;
-    max-width:110px;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-
-  #accountBtn{
-    max-width:150px;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-
+  .credits-pill{ margin-right:auto; padding-left:0; }
+  #accountBtn{ flex:0 1 auto; min-width:0; max-width:170px; overflow:hidden; text-overflow:ellipsis; }
   main{
     width:100%;
-    max-width:760px;
-    padding:18px 12px 48px;
+    max-width:720px;
+    padding:20px 12px 44px;
   }
-
-  .generator-page{
-    width:100%;
-    min-width:0;
-  }
-
-  .generator-page .card{
-    width:100%;
-    max-width:none;
-    padding:18px 16px;
-  }
-
-  .field{
-    margin-bottom:16px;
-  }
-
-  .field input[type="text"],
-  .field select{
-    width:100%;
-    min-width:0;
-  }
-
-  .sample-chips{
-    gap:6px;
-  }
-
-  .sample-chip{
-    max-width:100%;
-  }
-
-  .cta-banner{
-    padding:2px 6px 16px;
-  }
-
-  .cta-banner h3{
-    font-size:15.5px;
-  }
-
-  .cta-banner p{
-    font-size:12px;
-  }
-
-  .generate-btn{
-    width:100%;
-    min-height:54px;
-    padding:15px 14px;
-  }
-
-  .credits-banner{
-    align-items:stretch;
-  }
-
-  .credits-banner p{
-    min-width:0;
-  }
-
-  .credits-banner .btn{
-    width:100%;
-  }
-
-  .output-card-head{
-    flex-wrap:wrap;
-    align-items:center;
-  }
-
-  .output-card-head h3{
-    min-width:0;
-    flex:1 1 auto;
-  }
-
-  .copy-btn{
-    flex:0 0 auto;
-  }
-
-  .listing-preview{
-    align-items:flex-start;
-  }
-
-  .listing-preview-body{
-    min-width:0;
-  }
-
-  .tag-limit-note{
-    line-height:1.45;
-  }
-
-  .raw-box{
-    min-height:78px;
-  }
-
-  .modal-panel{
-    width:100%;
-    max-width:none;
-    padding:22px 16px 20px;
-  }
-
-  .history-action-btn{
-    min-height:38px;
-  }
-
+  .generator-page{ width:100%; min-width:0; }
+  .generator-page .card{ width:100%; max-width:none; padding:20px 16px; border-radius:16px; }
+  .field{ margin-bottom:18px; }
+  .field input[type="text"], .field select{ width:100%; min-width:0; }
+  .keyword-field input[type="text"]{ font-size:16.5px; }
+  .generate-btn{ width:100%; min-height:52px; padding:14px; }
+  .credits-banner{ align-items:stretch; }
+  .credits-banner p{ min-width:0; }
+  .credits-banner .btn{ width:100%; }
+  .output-card-head{ flex-wrap:wrap; align-items:center; }
+  .output-card-head h3{ min-width:0; flex:1 1 auto; }
+  .copy-btn{ flex:0 0 auto; }
+  .listing-preview{ align-items:flex-start; }
+  .listing-preview-body{ min-width:0; }
+  .tag-limit-note{ line-height:1.45; }
+  .raw-box{ min-height:78px; }
+  .modal-panel{ width:100%; max-width:none; padding:22px 16px 20px; }
+  .history-action-btn{ min-height:38px; }
 }
-
 @media (max-width:380px){
-
-  .brand-text p{
-    display:none;
-  }
-
-  .credits-pill{
-    max-width:92px;
-  }
-
-  #accountBtn{
-    max-width:115px;
-  }
-
-  .history-btn,
-  .upgrade-btn{
-    padding-left:8px;
-    padding-right:8px;
-  }
-
-  .generator-page .card{
-    padding:16px 14px;
-  }
-
-  .field input[type="text"],
-  .field select{
-    padding-left:12px;
-    padding-right:12px;
-  }
-
-  .sample-chip{
-    font-size:10px;
-    padding:6px 8px;
-  }
-
-  .output-card-head h3{
-    font-size:13px;
-  }
-
-  .copy-btn{
-    font-size:11px;
-    padding:7px 10px;
-  }
-
+  #accountBtn{ max-width:120px; }
+  .history-btn, .upgrade-btn{ padding-left:11px; padding-right:11px; }
+  .generator-page .card{ padding:18px 14px; }
+  .field input[type="text"], .field select{ padding-left:12px; padding-right:12px; }
+  .output-card-head h3{ font-size:13px; }
+  .copy-btn{ font-size:11px; padding:7px 10px; }
 }
-
 </style>
 </head>
 <body>
@@ -1236,11 +1096,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <p>E-commerce SEO &amp; Tag Generator</p>
     </div>
     <div class="header-actions">
-      <span class="credits-pill" id="creditsPill">Sign in to start</span>
-      <button type="button" class="upgrade-btn" id="signInBtn">Sign in</button>
-      <button type="button" class="upgrade-btn hidden" id="accountBtn">Account</button>
+      <span class="credits-pill hidden" id="creditsPill"></span>
       <button type="button" class="history-btn hidden" id="historyBtn">History</button>
-      <button type="button" class="upgrade-btn" id="upgradeBtn">Upgrade</button>
+      <button type="button" class="upgrade-btn hidden" id="upgradeBtn">Upgrade</button>
+      <button type="button" class="upgrade-btn hidden" id="accountBtn">Account</button>
+      <button type="button" class="header-cta" id="signInBtn">Sign up</button>
     </div>
   </div>
 </header>
@@ -1273,7 +1133,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
           </div>
         </div>
         <button type="button" class="demo-generate-btn" id="demoGenerateBtn" tabindex="-1">
-          <span id="demoGenerateBtnLabel">⚡ Generate Optimized Tags</span>
+          <span id="demoGenerateBtnLabel">Generate Listing</span>
         </button>
         <div class="demo-results hidden" id="demoResults">
           <div class="demo-product-line">
@@ -1333,14 +1193,15 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   </div>
 
   <form id="generatorForm" class="card" novalidate>
-    <div class="field">
+    <div class="field keyword-field">
       <label for="keywordInput">Product keyword / title</label>
-      <input type="text" id="keywordInput" maxlength="200" placeholder="e.g. minimalist wall art printable">
+      <input type="text" id="keywordInput" maxlength="200" placeholder="e.g. Dog Mom Sweatshirt" autocomplete="off">
       <div class="field-error" id="keywordError">Enter a product keyword to generate SEO for.</div>
       <div class="sample-chips" aria-label="Sample products">
-        <button type="button" class="sample-chip" data-sample="Printable Wall Art">Try: Printable Wall Art</button>
-        <button type="button" class="sample-chip" data-sample="Custom Soccer Hoodie">Try: Custom Soccer Hoodie</button>
-        <button type="button" class="sample-chip" data-sample="Wedding Planner Template">Try: Wedding Planner</button>
+        <span class="sample-lead">Try:</span>
+        <button type="button" class="sample-chip" data-sample="Printable Wall Art">Printable Wall Art</button>
+        <button type="button" class="sample-chip" data-sample="Custom Soccer Hoodie">Custom Soccer Hoodie</button>
+        <button type="button" class="sample-chip" data-sample="Wedding Planner Template">Wedding Planner</button>
       </div>
       <div class="risk-alert" id="riskAlert" role="status" aria-live="polite">
         <span class="risk-icon">⚠</span>
@@ -1348,35 +1209,8 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       </div>
     </div>
 
-    <details class="product-details-toggle" id="productDetailsToggle">
-      <summary>Product details <span style="font-weight:600;color:var(--muted);">(optional — improves accuracy)</span></summary>
-      <p class="product-details-hint">Anything you fill in here is used as a real product fact. Anything left blank is treated as unknown and won't be guessed at.</p>
-      <div class="product-details-body">
-        <div class="field">
-          <label for="productMaterialInput">Material</label>
-          <input type="text" id="productMaterialInput" maxlength="100" placeholder="e.g. genuine leather" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="productColorInput">Color</label>
-          <input type="text" id="productColorInput" maxlength="100" placeholder="e.g. cognac brown" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="productSizeInput">Size / Dimensions</label>
-          <input type="text" id="productSizeInput" maxlength="100" placeholder="e.g. 6 x 8 inches" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="productPersonalizationInput">Personalization</label>
-          <input type="text" id="productPersonalizationInput" maxlength="200" placeholder="e.g. name can be embossed on the cover" autocomplete="off">
-        </div>
-        <div class="field">
-          <label for="productFeaturesInput">Key Features</label>
-          <input type="text" id="productFeaturesInput" maxlength="300" placeholder="e.g. refillable, elastic closure" autocomplete="off">
-        </div>
-      </div>
-    </details>
-
     <div class="field">
-      <label for="categorySelect">Platform / category</label>
+      <label for="categorySelect">Platform</label>
       <div class="platform-picker" id="platformPicker">
         <button type="button" class="platform-trigger" id="platformTrigger" aria-haspopup="listbox" aria-expanded="false">
           <span class="platform-trigger-icon" id="platformTriggerIcon"></span>
@@ -1395,84 +1229,98 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       </select>
     </div>
 
-    <div class="field">
-      <label for="audienceSelect">Who are you targeting?</label>
-      <div class="platform-picker" id="audiencePicker">
-        <button type="button" class="platform-trigger" id="audienceTrigger" aria-haspopup="listbox" aria-expanded="false">
-          <span class="platform-trigger-icon" id="audienceTriggerIcon"></span>
-          <span class="platform-trigger-label" id="audienceTriggerLabel">General Consumers</span>
-          <svg class="platform-trigger-chevron" viewBox="0 0 14 9" fill="none"><path d="M1 1l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="platform-menu hidden" id="audienceMenu" role="listbox"></div>
+    <details class="refine" id="refineDetails">
+      <summary>Refine listing <span class="refine-opt">(optional)</span></summary>
+      <div class="refine-body">
+
+        <details class="product-details-toggle" id="productDetailsToggle">
+          <summary>Product details</summary>
+          <p class="product-details-hint">Used as real product facts. Anything left blank is treated as unknown and never guessed.</p>
+          <div class="product-details-body">
+            <div class="field">
+              <label for="productMaterialInput">Material</label>
+              <input type="text" id="productMaterialInput" maxlength="100" placeholder="e.g. genuine leather" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="productColorInput">Color</label>
+              <input type="text" id="productColorInput" maxlength="100" placeholder="e.g. cognac brown" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="productSizeInput">Size / Dimensions</label>
+              <input type="text" id="productSizeInput" maxlength="100" placeholder="e.g. 6 x 8 inches" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="productPersonalizationInput">Personalization</label>
+              <input type="text" id="productPersonalizationInput" maxlength="200" placeholder="e.g. name can be embossed on the cover" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="productFeaturesInput">Key Features</label>
+              <input type="text" id="productFeaturesInput" maxlength="300" placeholder="e.g. refillable, elastic closure" autocomplete="off">
+            </div>
+          </div>
+        </details>
+
+        <div class="field">
+          <label for="audienceSelect">Who is this for?</label>
+          <div class="platform-picker" id="audiencePicker">
+            <button type="button" class="platform-trigger" id="audienceTrigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="platform-trigger-icon" id="audienceTriggerIcon"></span>
+              <span class="platform-trigger-label" id="audienceTriggerLabel">General Consumers</span>
+              <svg class="platform-trigger-chevron" viewBox="0 0 14 9" fill="none"><path d="M1 1l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="platform-menu hidden" id="audienceMenu" role="listbox"></div>
+          </div>
+          <select id="audienceSelect" class="hidden" tabindex="-1" aria-hidden="true">
+            <option>General Consumers</option>
+            <option>Online Shoppers</option>
+            <option>Etsy Shoppers</option>
+            <option>Pinterest Users</option>
+            <option>Instagram Users</option>
+            <option>TikTok Users</option>
+            <option>Small Business Owners</option>
+            <option>Entrepreneurs</option>
+            <option>Bloggers &amp; Content Creators</option>
+            <option>B2B / Professionals</option>
+            <option>Local Customers</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+
+        <div class="field custom-reveal-field" id="customAudienceField">
+          <label for="customAudienceInput">Describe your target audience</label>
+          <input type="text" id="customAudienceInput" maxlength="100" placeholder="Describe your target audience...">
+          <div class="field-error" id="customAudienceError">Please describe your target audience.</div>
+        </div>
+
+        <div class="field">
+          <label for="seoGoalSelect">SEO focus</label>
+          <div class="platform-picker" id="goalPicker">
+            <button type="button" class="platform-trigger" id="goalTrigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="platform-trigger-icon" id="goalTriggerIcon"></span>
+              <span class="platform-trigger-label" id="goalTriggerLabel">Find the most relevant searches</span>
+              <svg class="platform-trigger-chevron" viewBox="0 0 14 9" fill="none"><path d="M1 1l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="platform-menu hidden" id="goalMenu" role="listbox"></div>
+          </div>
+          <select id="seoGoalSelect" class="hidden" tabindex="-1" aria-hidden="true">
+            <option>Find the most relevant searches</option>
+            <option>Expand niche search coverage</option>
+            <option>Match specific buyer intent</option>
+            <option>Emphasize product features</option>
+          </select>
+          <p class="field-help">Choose what TagPulse should prioritize in your listing.</p>
+        </div>
+
+        <div class="field">
+          <label for="wordsToAvoidInput">Words to avoid</label>
+          <input type="text" id="wordsToAvoidInput" maxlength="300" placeholder="e.g. cheap, free, custom" autocomplete="off">
+        </div>
+
       </div>
-      <select id="audienceSelect" class="hidden" tabindex="-1" aria-hidden="true">
-        <option>General Consumers</option>
-        <option>Online Shoppers</option>
-        <option>Etsy Shoppers</option>
-        <option>Pinterest Users</option>
-        <option>Instagram Users</option>
-        <option>TikTok Users</option>
-        <option>Small Business Owners</option>
-        <option>Entrepreneurs</option>
-        <option>Bloggers &amp; Content Creators</option>
-        <option>B2B / Professionals</option>
-        <option>Local Customers</option>
-        <option value="custom">Custom</option>
-      </select>
-      <p class="field-help">We'll tailor tone and keywords to this audience.</p>
-    </div>
-
-    <div class="field custom-reveal-field" id="customAudienceField">
-      <label for="customAudienceInput">Describe your target audience</label>
-      <input type="text" id="customAudienceInput" maxlength="100" placeholder="Describe your target audience...">
-      <div class="field-error" id="customAudienceError">Please describe your target audience.</div>
-    </div>
-
-    <div class="field">
-      <label for="seoGoalSelect">What's your SEO goal?</label>
-      <div class="platform-picker" id="goalPicker">
-        <button type="button" class="platform-trigger" id="goalTrigger" aria-haspopup="listbox" aria-expanded="false">
-          <span class="platform-trigger-icon" id="goalTriggerIcon"></span>
-          <span class="platform-trigger-label" id="goalTriggerLabel">Get More Traffic</span>
-          <svg class="platform-trigger-chevron" viewBox="0 0 14 9" fill="none"><path d="M1 1l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="platform-menu hidden" id="goalMenu" role="listbox"></div>
-      </div>
-      <select id="seoGoalSelect" class="hidden" tabindex="-1" aria-hidden="true">
-        <option>Get More Traffic</option>
-        <option>Increase Sales</option>
-        <option>Drive Product Purchases</option>
-        <option>Generate Leads</option>
-        <option>Build Brand Awareness</option>
-        <option>Grow Organic Reach</option>
-        <option>Improve Search Visibility</option>
-        <option value="custom">Custom</option>
-      </select>
-      <p class="field-help">This shapes which keywords and angle we prioritize.</p>
-    </div>
-
-    <div class="field custom-reveal-field" id="customGoalField">
-      <label for="customGoalInput">Describe your SEO goal</label>
-      <input type="text" id="customGoalInput" maxlength="100" placeholder="Describe your SEO goal...">
-      <div class="field-error" id="customGoalError">Please describe your SEO goal.</div>
-    </div>
-
-    <div class="field">
-      <label for="wordsToAvoidInput">
-        Words to Avoid
-        <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span>
-      </label>
-      <input type="text" id="wordsToAvoidInput" maxlength="300" placeholder="e.g. cheap, free, custom" autocomplete="off">
-      <p class="field-help">Add comma-separated words or phrases you don't want used in the generated listing.</p>
-    </div>
-
-    <div class="cta-banner">
-      <h3>Your SEO, handled in one click.</h3>
-      <p>Tell us what you're selling, who you're targeting, and what you want to achieve. TagPulse AI handles the SEO work for you.</p>
-    </div>
+    </details>
 
     <button type="submit" class="btn btn-primary generate-btn" id="generateBtn">
-      <span id="generateBtnLabel">⚡ Generate Optimized Tags</span>
+      <span id="generateBtnLabel">Generate Listing</span>
     </button>
   </form>
 
@@ -1616,22 +1464,13 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 <!-- ============================================================
      FOOTER
      ============================================================ -->
-<div class="affiliate-banner">
-  <div class="affiliate-banner-text">
-    <span class="affiliate-banner-icon">🤝</span>
-    <div>
-      <p class="affiliate-banner-title">Earn 50% commission — every sale, every time</p>
-      <p class="affiliate-banner-sub">Share your link. Earn up to $12 per Pro sale you refer.</p>
-    </div>
-  </div>
-  <button type="button" class="btn btn-primary affiliate-banner-btn" id="affiliateInfoBtn">Become an Affiliate</button>
-</div>
-
 <footer>
   <div class="footer-links">
     <button type="button" id="aboutLink">About Us</button>
     <span class="footer-dot">·</span>
     <button type="button" id="privacyLink">Privacy Policy</button>
+    <span class="footer-dot">·</span>
+    <button type="button" id="affiliateInfoBtn">Affiliate</button>
   </div>
   <p class="fine">TagPulse AI · Contact: <a href="mailto:tagpulse.ai@gmail.com">tagpulse.ai@gmail.com</a></p>
 </footer>
@@ -1707,7 +1546,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <button type="button" class="modal-close" data-close>✕</button>
     </div>
     <div class="modal-body">
-      <p>Pick the plan that fits how much you sell. Both are one-time payments — no subscription, no expiration.</p>
+      <p>Pick the plan that fits how much you sell. Both are one-time payments — no subscription.</p>
+
+      <div class="first50-note" id="first50Note">
+        <strong>First 50 users</strong>
+        <span>Credits purchased by our first 50 users never expire.</span>
+      </div>
 
       <div class="pricing-tiers">
         <div class="pricing-tier">
@@ -1795,7 +1639,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <button type="button" class="modal-close" data-close>✕</button>
     </div>
     <div class="modal-body">
-      <p id="authMessage">Enter your email and we'll send you a secure sign-in link.</p>
+      <p id="authMessage">New or returning? Enter your email and we'll send you a secure sign-in link.</p>
 
       <div id="authError" class="paywall-error"></div>
 
@@ -1918,9 +1762,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const customAudienceInput = $("customAudienceInput");
   const customAudienceError = $("customAudienceError");
   const seoGoalSelect  = $("seoGoalSelect");
-  const customGoalField = $("customGoalField");
-  const customGoalInput = $("customGoalInput");
-  const customGoalError = $("customGoalError");
   const wordsToAvoidInput = $("wordsToAvoidInput");
   const generateBtn    = $("generateBtn");
   const generateBtnLabel = $("generateBtnLabel");
@@ -2046,15 +1887,19 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      only the presentation changed.
      ============================================================ */
   const GOAL_CATALOG = {
-    "Get More Traffic":          { group: "Visibility & Awareness", icon: PLATFORM_ICONS.trendUp,   accent: "#f1641e" },
-    "Grow Organic Reach":        { group: "Visibility & Awareness", icon: PLATFORM_ICONS.reach,     accent: "#f1641e" },
-    "Improve Search Visibility": { group: "Visibility & Awareness", icon: PLATFORM_ICONS.search,    accent: "#f1641e" },
-    "Build Brand Awareness":     { group: "Visibility & Awareness", icon: PLATFORM_ICONS.megaphone, accent: "#f1641e" },
-    "Increase Sales":            { group: "Sales & Conversion",     icon: PLATFORM_ICONS.dollar,    accent: "#6366f1" },
-    "Drive Product Purchases":   { group: "Sales & Conversion",     icon: PLATFORM_ICONS.cart,      accent: "#6366f1" },
-    "Generate Leads":            { group: "Sales & Conversion",     icon: PLATFORM_ICONS.funnel,    accent: "#6366f1" },
-    "Custom":                    { group: "Other",                  icon: PLATFORM_ICONS.pencil,    accent: "#8a8f98", value: "custom" }
+    "Find the most relevant searches": { group: "", icon: PLATFORM_ICONS.search,    accent: "#6b7280" },
+    "Expand niche search coverage":    { group: "", icon: PLATFORM_ICONS.reach,     accent: "#6b7280" },
+    "Match specific buyer intent":     { group: "", icon: PLATFORM_ICONS.funnel,    accent: "#6b7280" },
+    "Emphasize product features":      { group: "", icon: PLATFORM_ICONS.tag,       accent: "#6b7280" }
   };
+  const DEFAULT_SEO_FOCUS = "Find the most relevant searches";
+
+  // Batch 9: older saved/history entries stored the previous SEO-goal
+  // wording (or free text from the removed "Custom" goal). Anything that is
+  // not one of the current options safely falls back to the default.
+  function normalizeSeoFocus(value){
+    return Object.prototype.hasOwnProperty.call(GOAL_CATALOG, value) ? value : DEFAULT_SEO_FOCUS;
+  }
 
   /* ============================================================
      CUSTOM PLATFORM PICKER
@@ -2280,10 +2125,12 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     });
 
     seenGroups.forEach(groupName => {
-      const heading = document.createElement("div");
-      heading.className = "platform-menu-heading";
-      heading.textContent = groupName;
-      goalMenu.appendChild(heading);
+      if (groupName) {
+        const heading = document.createElement("div");
+        heading.className = "platform-menu-heading";
+        heading.textContent = groupName;
+        goalMenu.appendChild(heading);
+      }
 
       byGroup[groupName].forEach(name => {
         const cfg = GOAL_CATALOG[name];
@@ -2405,20 +2252,26 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   function updateAuthUI(){
     const signedIn = !!authUser;
     document.body.classList.toggle("authenticated", signedIn);
+    // Batch 9: signed out shows only the "Sign up" entry point; every
+    // signed-in control (credits, History, Upgrade, Account) is hidden.
     signInBtn.classList.toggle("hidden", signedIn);
     accountBtn.classList.toggle("hidden", !signedIn);
     historyBtn.classList.toggle("hidden", !signedIn);
+    upgradeBtn.classList.toggle("hidden", !signedIn);
+    creditsPill.classList.toggle("hidden", !signedIn);
 
     if (signedIn) {
       const email = authUser.email || "Account";
       accountBtn.textContent =
         email.length > 20 ? email.slice(0, 17) + "…" : email;
-      creditsPill.textContent = credits === null ? "Signed in" : creditsPill.textContent;
+      if (credits === null && !isPro) {
+        creditsPill.textContent = "Signed in";
+      } else {
+        renderCredits();
+      }
     } else {
       accountBtn.textContent = "Account";
-      if (credits === null) {
-        creditsPill.textContent = "Sign in to start";
-      }
+      creditsPill.textContent = "";
     }
   }
 
@@ -2503,7 +2356,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   function openSignInModal(){
     openModal(authModal);
     authTitle.textContent = "Get started with TagPulse AI";
-    authMessage.textContent = "Enter your email and we'll send you a secure sign-in link.";
+    authMessage.textContent = "New or returning? Enter your email and we'll send you a secure sign-in link.";
     emailStep.classList.remove("hidden");
     emailSentStep.classList.add("hidden");
     accountStep.classList.add("hidden");
@@ -2580,7 +2433,8 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       keywordInput.value = chip.getAttribute("data-sample") || "";
       categorySelect.value = "Etsy";
       audienceSelect.value = "Etsy Shoppers";
-      seoGoalSelect.value = "Get More Traffic";
+      seoGoalSelect.value = DEFAULT_SEO_FOCUS;
+      syncGoalTrigger();
       keywordError.classList.remove("show");
       updateRiskAlert(keywordInput.value);
       keywordInput.focus();
@@ -2734,7 +2588,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     syncEtsyModeUI();
     audienceSelect.value = item.audience || audienceSelect.value;
     syncAudienceTrigger();
-    seoGoalSelect.value = item.seoGoal || seoGoalSelect.value;
+    seoGoalSelect.value = normalizeSeoFocus(item.seoGoal);
     syncGoalTrigger();
     wordsToAvoidInput.value = Array.isArray(item.wordsToAvoid)
       ? item.wordsToAvoid.join(", ")
@@ -2746,14 +2600,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     } else {
       customAudienceField.classList.remove("show");
       customAudienceInput.value = "";
-    }
-
-    if (seoGoalSelect.value === "custom") {
-      customGoalField.classList.add("show");
-      customGoalInput.value = item.seoGoal || "";
-    } else {
-      customGoalField.classList.remove("show");
-      customGoalInput.value = "";
     }
 
     const outputType = item.outputType || "standard";
@@ -2823,11 +2669,13 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
   function renderCredits(){
     if (!authUser) {
-      creditsPill.textContent = "Sign in to start";
+      creditsPill.textContent = "";
       creditsPill.classList.remove("is-pro");
+      creditsPill.classList.add("hidden");
       creditsBanner.classList.add("hidden");
       return;
     }
+    creditsPill.classList.remove("hidden");
     if (isPro) {
       creditsPill.textContent = "PRO — Active";
       creditsPill.classList.add("is-pro");
@@ -3026,16 +2874,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
   });
 
-  seoGoalSelect.addEventListener("change", () => {
-    const isCustom = seoGoalSelect.value === "custom";
-    customGoalField.classList.toggle("show", isCustom);
-    customGoalError.classList.remove("show");
-    if (isCustom) {
-      setTimeout(() => customGoalInput.focus(), 150);
-    } else {
-      customGoalInput.value = "";
-    }
-  });
 
   /* ============================================================
      PAYWALL / LICENSE VERIFICATION
@@ -3139,27 +2977,19 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     const category = categorySelect.value;
 
+    // Audience is optional too. "Custom" with nothing typed no longer blocks
+    // generation (the field sits inside the collapsed "Refine listing"
+    // section, where an error could not even be seen) — it simply falls back
+    // to the default audience.
     let audience = audienceSelect.value;
     if (audience === "custom") {
-      audience = customAudienceInput.value.trim();
-      if (!audience) {
-        customAudienceError.classList.add("show");
-        customAudienceInput.focus();
-        return;
-      }
-      customAudienceError.classList.remove("show");
+      audience = customAudienceInput.value.trim() || "General Consumers";
     }
+    customAudienceError.classList.remove("show");
 
-    let seoGoal = seoGoalSelect.value;
-    if (seoGoal === "custom") {
-      seoGoal = customGoalInput.value.trim();
-      if (!seoGoal) {
-        customGoalError.classList.add("show");
-        customGoalInput.focus();
-        return;
-      }
-      customGoalError.classList.remove("show");
-    }
+    // SEO focus is optional: it always has a value (defaulting to the first
+    // option), so it can never block generation.
+    const seoGoal = normalizeSeoFocus(seoGoalSelect.value);
 
     const wordsToAvoid = wordsToAvoidInput.value
       .split(",")
@@ -5788,7 +5618,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   const improveBtn = $("improveBtn");
   const improveBtnLabel = $("improveBtnLabel");
   const improvedBanner = $("improvedBanner");
-  const IMPROVE_SEO_GOAL = "Improve Search Visibility"; // an existing SEO-goal option
+  const IMPROVE_SEO_GOAL = "Improve Search Visibility"; // fixed Improve instruction (unchanged); not a UI option any more
   let improveInFlight = false;
   let improveSource = null;          // inputs snapshotted when the analysis ran
   let improvedOutputActive = false;  // improved result currently occupies #outputSection
@@ -6679,7 +6509,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     if (isLoading) closePlatformMenu();
     generateBtnLabel.innerHTML = isLoading
       ? '<span class="spinner"></span> Generating…'
-      : '⚡ Generate Optimized Tags';
+      : 'Generate Listing';
   }
 
   /* ============================================================
@@ -6783,7 +6613,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   if (!demoTypedText || !demoGenerateBtn || !demoGenerateBtnLabel || !demoResults) return;
 
   const DEMO_KEYWORD = "Vintage Leather Journal";
-  const DEFAULT_BTN_LABEL = "⚡ Generate Optimized Tags";
+  const DEFAULT_BTN_LABEL = "Generate Listing";
   let timers = [];
   let running = false;
 
