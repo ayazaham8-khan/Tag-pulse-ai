@@ -432,27 +432,47 @@ main{ max-width:var(--container); margin:0 auto; padding:36px 18px 56px; }
    open/close behavior itself.
    ============================================================ */
  .product-details-toggle{
-  margin-bottom:20px;
+  margin-bottom:16px;
 }
 .product-details-toggle summary{
   cursor:pointer;
   list-style:none;
-  min-height:44px;
-  font-size:13px; font-weight:600; color:var(--ink-soft);
-  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  min-height:56px;
+  padding:9px 12px;
+  background:#f7f4ee;
+  border:1px solid #e4ded5;
+  border-radius:12px;
+  display:flex; align-items:center; gap:12px;
+  transition:background .15s, border-color .15s;
+  -webkit-tap-highlight-color:transparent;
 }
+.product-details-toggle summary:hover{ background:#f2eee7; border-color:#d8cfc0; }
 .product-details-toggle summary::-webkit-details-marker{ display:none; }
+.pd-icon{
+  flex:0 0 auto; width:32px; height:32px; border-radius:9px;
+  background:#fff; border:1px solid #e4ded5; color:var(--primary);
+  display:flex; align-items:center; justify-content:center;
+}
+.pd-icon svg{ width:17px; height:17px; }
+.pd-text{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.pd-title{ font-size:14px; font-weight:700; color:var(--ink); line-height:1.25; }
+.pd-sub{ font-size:12px; font-weight:500; color:var(--muted); line-height:1.3; }
 .product-details-toggle summary::after{
-  content:"+"; font-size:18px; font-weight:600; color:var(--muted);
+  content:"+"; flex:0 0 auto;
+  width:28px; height:28px; border-radius:50%;
+  background:#fff; border:1px solid #e4ded5;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-weight:500; line-height:1; color:var(--ink-soft);
 }
 .product-details-toggle[open] summary::after{ content:"–"; }
-.product-details-toggle summary:focus-visible{ outline:2px solid var(--primary); outline-offset:3px; border-radius:6px; }
+.product-details-toggle summary:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
 .product-details-toggle .product-details-body{
   padding:2px 0 4px 14px;
+  margin-left:16px;
   border-left:2px solid var(--border);
 }
 .product-details-toggle .field{ margin-top:14px; margin-bottom:0; }
-.product-details-hint{ font-size:12px; color:var(--muted); padding:0 0 4px; line-height:1.4; }
+.product-details-hint{ font-size:12px; color:var(--muted); padding:10px 0 2px 32px; margin:0; line-height:1.4; }
 
 /* ============================================================
    REFINE LISTING (optional settings, collapsed by default)
@@ -460,24 +480,30 @@ main{ max-width:var(--container); margin:0 auto; padding:36px 18px 56px; }
    comes for free, and opening it makes no network request.
    ============================================================ */
 .refine{
-  border-top:1px solid var(--border);
-  margin:4px 0 22px;
+  border-top:1px solid #efebe4;
+  margin:2px 0 18px;
 }
 .refine > summary{
   cursor:pointer; list-style:none;
-  min-height:52px;
+  min-height:48px;
   display:flex; align-items:center; justify-content:space-between; gap:10px;
-  font-size:14px; font-weight:700; color:var(--ink);
+  font-size:13.5px; font-weight:600; color:var(--ink-soft);
 }
 .refine > summary::-webkit-details-marker{ display:none; }
 .refine > summary .refine-opt{ font-weight:500; color:var(--muted); margin-left:6px; margin-right:auto; }
 .refine > summary::after{
-  content:"+"; font-size:20px; font-weight:500; color:var(--muted); line-height:1;
+  content:"+"; font-size:19px; font-weight:500; color:var(--muted); line-height:1;
 }
 .refine[open] > summary::after{ content:"–"; }
 .refine > summary:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; border-radius:6px; }
-.refine-body{ padding:4px 0 2px; }
+.refine-body{ padding:2px 0 0; }
 .refine-body > .field:last-child{ margin-bottom:0; }
+/* inside Refine, everything except Product details is deliberately quieter */
+.refine-body > .field{ margin-bottom:14px; }
+.refine-body > .field > label{ font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:6px; }
+.refine-body > .field .platform-trigger{ min-height:44px; padding:9px 12px; font-size:14px; font-weight:500; }
+.refine-body > .field input[type="text"]{ padding:11px 12px; font-size:14px; }
+.refine-body > .field .field-help{ font-size:11.5px; margin-top:6px; }
 
 .platform-picker{ position:relative; }
 .platform-trigger{
@@ -540,19 +566,6 @@ main{ max-width:var(--container); margin:0 auto; padding:36px 18px 56px; }
 .platform-menu-icon svg{ width:20px; height:20px; display:block; }
 .platform-menu-label{ flex:1; }
 
- .sample-chips{
-  display:flex; flex-wrap:wrap; align-items:center; gap:2px 12px; margin-top:8px;
-  font-size:12px; color:var(--muted);
-}
-.sample-lead{ font-weight:500; }
-.sample-chip{
-  appearance:none; border:0; background:none; color:var(--ink-soft);
-  padding:6px 0; font-size:12px; font-weight:600;
-  text-decoration:underline; text-decoration-color:#d8cfc0; text-underline-offset:3px;
-  transition:color .15s;
-}
-.sample-chip:hover{ color:var(--primary-dark); text-decoration-color:currentColor; }
-.sample-chip:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; border-radius:4px; }
 .keyword-field label{ font-size:15px; font-weight:700; color:var(--ink); margin-bottom:9px; }
 .keyword-field input[type="text"]{ font-size:17px; padding:15px 16px; border-radius:12px; }
 .risk-alert{
@@ -1197,12 +1210,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <label for="keywordInput">Product keyword / title</label>
       <input type="text" id="keywordInput" maxlength="200" placeholder="e.g. Dog Mom Sweatshirt" autocomplete="off">
       <div class="field-error" id="keywordError">Enter a product keyword to generate SEO for.</div>
-      <div class="sample-chips" aria-label="Sample products">
-        <span class="sample-lead">Try:</span>
-        <button type="button" class="sample-chip" data-sample="Printable Wall Art">Printable Wall Art</button>
-        <button type="button" class="sample-chip" data-sample="Custom Soccer Hoodie">Custom Soccer Hoodie</button>
-        <button type="button" class="sample-chip" data-sample="Wedding Planner Template">Wedding Planner</button>
-      </div>
       <div class="risk-alert" id="riskAlert" role="status" aria-live="polite">
         <span class="risk-icon">⚠</span>
         <div><strong>Potential brand / trademark term detected</strong><span id="riskAlertText"></span> Check that you have the right to use it before listing or selling.</div>
@@ -1234,7 +1241,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       <div class="refine-body">
 
         <details class="product-details-toggle" id="productDetailsToggle">
-          <summary>Product details</summary>
+          <summary>
+            <span class="pd-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5.5h10M6 10h10M6 14.5h6"/><circle cx="3" cy="5.5" r=".6" fill="currentColor"/><circle cx="3" cy="10" r=".6" fill="currentColor"/><circle cx="3" cy="14.5" r=".6" fill="currentColor"/></svg></span>
+            <span class="pd-text"><span class="pd-title">Product details</span><span class="pd-sub">Optional details improve accuracy</span></span>
+          </summary>
           <p class="product-details-hint">Used as real product facts. Anything left blank is treated as unknown and never guessed.</p>
           <div class="product-details-body">
             <div class="field">
@@ -2427,19 +2437,6 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   }
 
   keywordInput.addEventListener("input", () => updateRiskAlert(keywordInput.value));
-
-  document.querySelectorAll("[data-sample]").forEach(chip => {
-    chip.addEventListener("click", () => {
-      keywordInput.value = chip.getAttribute("data-sample") || "";
-      categorySelect.value = "Etsy";
-      audienceSelect.value = "Etsy Shoppers";
-      seoGoalSelect.value = DEFAULT_SEO_FOCUS;
-      syncGoalTrigger();
-      keywordError.classList.remove("show");
-      updateRiskAlert(keywordInput.value);
-      keywordInput.focus();
-    });
-  });
 
   function getTagLimitInfo(category){
     switch (category) {
