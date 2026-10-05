@@ -566,6 +566,21 @@ main{ max-width:var(--container); margin:0 auto; padding:36px 18px 56px; }
 .platform-menu-icon svg{ width:20px; height:20px; display:block; }
 .platform-menu-label{ flex:1; }
 
+.kw-input-wrap{ position:relative; }
+.kw-suggest{
+  position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:40;
+  list-style:none; margin:0; padding:4px;
+  background:#fff; border:1px solid #e4ded5; border-radius:12px;
+  box-shadow:0 8px 24px rgba(34,38,43,.12);
+}
+.kw-suggest li{
+  min-height:44px; padding:10px 12px; border-radius:8px;
+  display:flex; align-items:center;
+  font-size:15px; font-weight:500; color:var(--ink); cursor:pointer;
+}
+.kw-suggest li:hover, .kw-suggest li[aria-selected="true"]{ background:#f7f4ee; }
+.kw-context{ margin-top:8px; display:flex; flex-direction:column; gap:2px; font-size:12.5px; line-height:1.4; color:var(--muted); }
+.kw-context #kwContextLabels{ font-weight:600; color:var(--ink-soft); }
 .keyword-field label{ font-size:15px; font-weight:700; color:var(--ink); margin-bottom:9px; }
 .keyword-field input[type="text"]{ font-size:17px; padding:15px 16px; border-radius:12px; }
 .risk-alert{
@@ -1208,7 +1223,11 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   <form id="generatorForm" class="card" novalidate>
     <div class="field keyword-field">
       <label for="keywordInput">Product keyword / title</label>
-      <input type="text" id="keywordInput" maxlength="200" placeholder="e.g. Dog Mom Sweatshirt" autocomplete="off">
+      <div class="kw-input-wrap">
+        <input type="text" id="keywordInput" maxlength="200" placeholder="e.g. Dog Mom Sweatshirt" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="kwSuggest" aria-haspopup="listbox">
+        <ul class="kw-suggest hidden" id="kwSuggest" role="listbox" aria-label="Keyword suggestions"></ul>
+      </div>
+      <div class="kw-context hidden" id="kwContext" aria-live="polite"><span id="kwContextLabels"></span><span id="kwContextPersona" class="hidden"></span></div>
       <div class="field-error" id="keywordError">Enter a product keyword to generate SEO for.</div>
       <div class="risk-alert" id="riskAlert" role="status" aria-live="polite">
         <span class="risk-icon">⚠</span>
@@ -1246,25 +1265,26 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
             <span class="pd-text"><span class="pd-title">Product details</span><span class="pd-sub">Optional details improve accuracy</span></span>
           </summary>
           <p class="product-details-hint">Used as real product facts. Anything left blank is treated as unknown and never guessed.</p>
-          <div class="product-details-body">
-            <div class="field">
-              <label for="productMaterialInput">Material</label>
+          <p class="product-details-hint hidden" id="pdInactiveNote">Details you entered for a different product type are saved separately and won't be used.</p>
+          <div class="product-details-body" id="pdBody">
+            <div class="field" id="pdField_material">
+              <label for="productMaterialInput" id="pdLabel_material">Material</label>
               <input type="text" id="productMaterialInput" maxlength="100" placeholder="e.g. genuine leather" autocomplete="off">
             </div>
-            <div class="field">
-              <label for="productColorInput">Color</label>
+            <div class="field" id="pdField_color">
+              <label for="productColorInput" id="pdLabel_color">Color</label>
               <input type="text" id="productColorInput" maxlength="100" placeholder="e.g. cognac brown" autocomplete="off">
             </div>
-            <div class="field">
-              <label for="productSizeInput">Size / Dimensions</label>
+            <div class="field" id="pdField_size">
+              <label for="productSizeInput" id="pdLabel_size">Size / Dimensions</label>
               <input type="text" id="productSizeInput" maxlength="100" placeholder="e.g. 6 x 8 inches" autocomplete="off">
             </div>
-            <div class="field">
-              <label for="productPersonalizationInput">Personalization</label>
+            <div class="field" id="pdField_personalization">
+              <label for="productPersonalizationInput" id="pdLabel_personalization">Personalization</label>
               <input type="text" id="productPersonalizationInput" maxlength="200" placeholder="e.g. name can be embossed on the cover" autocomplete="off">
             </div>
-            <div class="field">
-              <label for="productFeaturesInput">Key Features</label>
+            <div class="field" id="pdField_features">
+              <label for="productFeaturesInput" id="pdLabel_features">Key Features</label>
               <input type="text" id="productFeaturesInput" maxlength="300" placeholder="e.g. refillable, elastic closure" autocomplete="off">
             </div>
           </div>
@@ -1874,7 +1894,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      still the actual source of truth for .value.
      ============================================================ */
   const AUDIENCE_CATALOG = {
-    "General Consumers":            { group: "General",                icon: PLATFORM_ICONS.people,     accent: "#f1641e" },
+    "General Consumers":            { group: "General",                icon: PLATFORM_ICONS.people,     accent: "#f1641e", display: "General shoppers" },
     "Online Shoppers":               { group: "General",                icon: PLATFORM_ICONS.bag,        accent: "#f1641e" },
     "Local Customers":               { group: "General",                icon: PLATFORM_ICONS.house,      accent: "#f1641e" },
     "Etsy Shoppers":                 { group: "Platform Audiences",      icon: PLATFORM_ICONS.tag,        accent: "#f1641e" },
@@ -1897,18 +1917,34 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      only the presentation changed.
      ============================================================ */
   const GOAL_CATALOG = {
-    "Find the most relevant searches": { group: "", icon: PLATFORM_ICONS.search,    accent: "#6b7280" },
-    "Expand niche search coverage":    { group: "", icon: PLATFORM_ICONS.reach,     accent: "#6b7280" },
-    "Match specific buyer intent":     { group: "", icon: PLATFORM_ICONS.funnel,    accent: "#6b7280" },
-    "Emphasize product features":      { group: "", icon: PLATFORM_ICONS.tag,       accent: "#6b7280" }
+    "Find the most relevant searches":      { group: "", icon: PLATFORM_ICONS.search, accent: "#6b7280" },
+    "Expand niche search coverage":         { group: "", icon: PLATFORM_ICONS.reach,  accent: "#6b7280" },
+    "Match specific buyer intent":          { group: "", icon: PLATFORM_ICONS.funnel, accent: "#6b7280" },
+    "Emphasize product features":           { group: "", icon: PLATFORM_ICONS.tag,    accent: "#6b7280" },
+    "Target personalization searches":      { group: "", icon: PLATFORM_ICONS.search, accent: "#6b7280" },
+    "Match gift-related buyer intent":      { group: "", icon: PLATFORM_ICONS.funnel, accent: "#6b7280" },
+    "Target format-specific searches":      { group: "", icon: PLATFORM_ICONS.search, accent: "#6b7280" },
+    "Match digital-product buyer intent":   { group: "", icon: PLATFORM_ICONS.funnel, accent: "#6b7280" },
+    "Target wedding-related searches":      { group: "", icon: PLATFORM_ICONS.search, accent: "#6b7280" },
+    "Match occasion-specific buyer intent": { group: "", icon: PLATFORM_ICONS.funnel, accent: "#6b7280" },
+    "Target pet-related searches":          { group: "", icon: PLATFORM_ICONS.search, accent: "#6b7280" },
+    "Match pet-owner buyer intent":         { group: "", icon: PLATFORM_ICONS.funnel, accent: "#6b7280" }
   };
   const DEFAULT_SEO_FOCUS = "Find the most relevant searches";
 
-  // Batch 9: older saved/history entries stored the previous SEO-goal
-  // wording (or free text from the removed "Custom" goal). Anything that is
-  // not one of the current options safely falls back to the default.
+  // Batch 10 state. Declared here because the pickers below read it; the
+  // Product Context Engine section (end of this script) owns and updates it.
+  //   pcGoalList  = the automatic option set for the current keyword (index 0 = default)
+  //   pcGoalShown = what the SEO-focus menu currently lists (set + a retained manual pick)
+  let pcPersonaLabel = null, pcAudienceManual = false, pcGoalManual = false, pcManualGoal = "";
+  let pcGoalList = ["Find the most relevant searches", "Expand niche search coverage", "Match specific buyer intent", "Emphasize product features"];
+  let pcGoalShown = pcGoalList.slice();
+
+  // Older saved/history entries stored previous SEO wording (or free text from
+  // the removed "Custom" goal). Anything that is not a known option safely
+  // falls back to the current default.
   function normalizeSeoFocus(value){
-    return Object.prototype.hasOwnProperty.call(GOAL_CATALOG, value) ? value : DEFAULT_SEO_FOCUS;
+    return Object.prototype.hasOwnProperty.call(GOAL_CATALOG, value) ? value : pcGoalList[0];
   }
 
   /* ============================================================
@@ -2044,6 +2080,24 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       byGroup[cfg.group].push(name);
     });
 
+    // Batch 10: the buyer persona detected from the keyword is offered first.
+    if (pcPersonaLabel) {
+      const heading = document.createElement("div");
+      heading.className = "platform-menu-heading";
+      heading.textContent = "Suggested for this product";
+      audienceMenu.appendChild(heading);
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "platform-menu-option";
+      option.setAttribute("role", "option");
+      option.dataset.value = pcPersonaLabel;
+      option.innerHTML =
+        '<span class="platform-menu-icon" style="color:#f1641e">' + PLATFORM_ICONS.people + '</span>' +
+        '<span class="platform-menu-label">' + escapeHTML(pcPersonaLabel) + '</span>';
+      option.addEventListener("click", () => selectAudience(pcPersonaLabel, pcPersonaLabel));
+      audienceMenu.appendChild(option);
+    }
+
     seenGroups.forEach(groupName => {
       const heading = document.createElement("div");
       heading.className = "platform-menu-heading";
@@ -2059,7 +2113,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
         option.dataset.value = cfg.value || name;
         option.innerHTML =
           '<span class="platform-menu-icon" style="color:' + cfg.accent + '">' + cfg.icon + '</span>' +
-          '<span class="platform-menu-label">' + escapeHTML(name) + '</span>';
+          '<span class="platform-menu-label">' + escapeHTML(cfg.display || name) + '</span>';
         option.addEventListener("click", () => selectAudience(cfg.value || name, name));
         audienceMenu.appendChild(option);
       });
@@ -2069,19 +2123,26 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   function selectAudience(value, label){
     audienceSelect.value = value;
     audienceSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    pcMarkAudienceChoice(value);
     closeAudienceMenu();
   }
 
   function syncAudienceTrigger(){
     const currentValue = audienceSelect.value;
-    const name = Object.keys(AUDIENCE_CATALOG).find(
-      key => (AUDIENCE_CATALOG[key].value || key) === currentValue
-    );
-    const cfg = name ? AUDIENCE_CATALOG[name] : null;
-    if (!cfg) return;
-    audienceTriggerIcon.innerHTML = cfg.icon;
-    audienceTriggerIcon.style.color = cfg.accent;
-    audienceTriggerLabel.textContent = name;
+    if (pcPersonaLabel && currentValue === pcPersonaLabel) {
+      audienceTriggerIcon.innerHTML = PLATFORM_ICONS.people;
+      audienceTriggerIcon.style.color = "#f1641e";
+      audienceTriggerLabel.textContent = pcPersonaLabel;
+    } else {
+      const name = Object.keys(AUDIENCE_CATALOG).find(
+        key => (AUDIENCE_CATALOG[key].value || key) === currentValue
+      );
+      const cfg = name ? AUDIENCE_CATALOG[name] : null;
+      if (!cfg) return;
+      audienceTriggerIcon.innerHTML = cfg.icon;
+      audienceTriggerIcon.style.color = cfg.accent;
+      audienceTriggerLabel.textContent = cfg.display || name;
+    }
     audienceMenu.querySelectorAll(".platform-menu-option").forEach(btn => {
       btn.classList.toggle("is-selected", btn.dataset.value === currentValue);
     });
@@ -2122,58 +2183,35 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
      ============================================================ */
   function buildGoalMenu(){
     goalMenu.innerHTML = "";
-    const seenGroups = [];
-    const byGroup = {};
-
-    Object.keys(GOAL_CATALOG).forEach(name => {
-      const cfg = GOAL_CATALOG[name];
-      if (!byGroup[cfg.group]) {
-        byGroup[cfg.group] = [];
-        seenGroups.push(cfg.group);
-      }
-      byGroup[cfg.group].push(name);
-    });
-
-    seenGroups.forEach(groupName => {
-      if (groupName) {
-        const heading = document.createElement("div");
-        heading.className = "platform-menu-heading";
-        heading.textContent = groupName;
-        goalMenu.appendChild(heading);
-      }
-
-      byGroup[groupName].forEach(name => {
-        const cfg = GOAL_CATALOG[name];
-        const option = document.createElement("button");
-        option.type = "button";
-        option.className = "platform-menu-option";
-        option.setAttribute("role", "option");
-        option.dataset.value = cfg.value || name;
-        option.innerHTML =
-          '<span class="platform-menu-icon" style="color:' + cfg.accent + '">' + cfg.icon + '</span>' +
-          '<span class="platform-menu-label">' + escapeHTML(name) + '</span>';
-        option.addEventListener("click", () => selectGoal(cfg.value || name, name));
-        goalMenu.appendChild(option);
-      });
+    pcGoalShown.forEach(name => {
+      const cfg = GOAL_CATALOG[name] || GOAL_CATALOG[DEFAULT_SEO_FOCUS];
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "platform-menu-option";
+      option.setAttribute("role", "option");
+      option.dataset.value = name;
+      option.innerHTML =
+        '<span class="platform-menu-icon" style="color:' + cfg.accent + '">' + cfg.icon + '</span>' +
+        '<span class="platform-menu-label">' + escapeHTML(name) + '</span>';
+      option.addEventListener("click", () => selectGoal(name, name));
+      goalMenu.appendChild(option);
     });
   }
 
   function selectGoal(value, label){
     seoGoalSelect.value = value;
     seoGoalSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    pcMarkGoalChoice(value);
     closeGoalMenu();
   }
 
   function syncGoalTrigger(){
     const currentValue = seoGoalSelect.value;
-    const name = Object.keys(GOAL_CATALOG).find(
-      key => (GOAL_CATALOG[key].value || key) === currentValue
-    );
-    const cfg = name ? GOAL_CATALOG[name] : null;
+    const cfg = GOAL_CATALOG[currentValue];
     if (!cfg) return;
     goalTriggerIcon.innerHTML = cfg.icon;
     goalTriggerIcon.style.color = cfg.accent;
-    goalTriggerLabel.textContent = name;
+    goalTriggerLabel.textContent = currentValue;
     goalMenu.querySelectorAll(".platform-menu-option").forEach(btn => {
       btn.classList.toggle("is-selected", btn.dataset.value === currentValue);
     });
@@ -2583,10 +2621,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     categorySelect.value = item.category || categorySelect.value;
     syncPlatformTrigger();
     syncEtsyModeUI();
-    audienceSelect.value = item.audience || audienceSelect.value;
-    syncAudienceTrigger();
-    seoGoalSelect.value = normalizeSeoFocus(item.seoGoal);
-    syncGoalTrigger();
+    pcRestoreFromHistory(item);   // re-derives the context from the keyword, then restores the saved audience / SEO focus
     wordsToAvoidInput.value = Array.isArray(item.wordsToAvoid)
       ? item.wordsToAvoid.join(", ")
       : (item.wordsToAvoid || "");
@@ -2972,6 +3007,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     }
     keywordError.classList.remove("show");
 
+    // Batch 10: make sure the (local) product context matches the keyword
+    // exactly as it is right now — also covers autofill / programmatic edits.
+    pcApplyContext();
+
     const category = categorySelect.value;
 
     // Audience is optional too. "Custom" with nothing typed no longer blocks
@@ -2993,13 +3032,9 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       .map(word => word.trim())
       .filter(Boolean);
 
-    const productDetails = {
-      material: productMaterialInput.value.trim(),
-      color: productColorInput.value.trim(),
-      size: productSizeInput.value.trim(),
-      personalization: productPersonalizationInput.value.trim(),
-      features: productFeaturesInput.value.trim()
-    };
+    // Batch 10: only the fields of the CURRENT Product Details profile are
+    // read (seller-entered text only; nothing is ever auto-filled).
+    const productDetails = pcCollectProductDetails();
 
     const productContextText = [
       keyword,
@@ -5351,18 +5386,8 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     analyzeAudienceSelect.appendChild(opt);
   });
 
-  // Batch 8: Product Details are context-specific. The same five inputs are
-  // shared by "Create New Listing" and "Analyze Existing Listing", so each
-  // mode keeps its own values and a mode switch swaps them — what was typed
-  // for one workflow can never silently become an authoritative fact in the
-  // other.
-  const PD_INPUTS = [productMaterialInput, productColorInput, productSizeInput, productPersonalizationInput, productFeaturesInput];
-  const pdStash = { generate: ["", "", "", "", ""], analyze: ["", "", "", "", ""] };
-  function swapProductDetails(fromMode, toMode){
-    pdStash[fromMode] = PD_INPUTS.map(el => el.value);
-    PD_INPUTS.forEach((el, i) => { el.value = pdStash[toMode][i]; });
-  }
-
+  // Product Details per mode / profile are handled by the Product Context
+  // Engine section (swapProductDetails() lives there since Batch 10).
   function syncEtsyModeUI(){
     const isEtsy = categorySelect.value === "Etsy";
     if (!isEtsy) etsyMode = "generate";
@@ -6588,6 +6613,699 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
     toast.className = "show" + (type ? " " + type : "");
     toastTimer = setTimeout(() => { toast.classList.remove("show"); }, 3800);
   }
+
+  /* ============================================================
+     PRODUCT CONTEXT ENGINE  (Batch 10)
+     ------------------------------------------------------------
+     Everything in this section runs in the browser only: no
+     network request, no Groq call, no credit, no database, no
+     external library. It reads the Product Keyword and quietly
+     adapts the optional "Refine listing" controls:
+
+       getProductContext(keyword)  -> product type / format /
+           categories / buyer persona / Product Details profile /
+           SEO-focus options  (heuristic, deterministic, explainable)
+       getKeywordSuggestions(text) -> up to 5 curated completions
+
+     It NEVER invents product facts: nothing is ever auto-filled
+     into a Product Details field, and only the fields of the
+     CURRENT profile are read when a generation request is built.
+     When the signals are weak it falls back to the generic
+     (pre-Batch-10) controls instead of guessing.
+
+     Layout of this section:
+       A. data tables (signals, personas, detail profiles, SEO sets,
+          suggestion catalog) — edit these to extend the engine
+       B. pure functions (no DOM)
+       C. UI glue (suggestions list, context line, audience /
+          SEO focus / Product Details adaptation)
+     ============================================================ */
+
+  /* ---------------- A. DATA TABLES ---------------- */
+
+  // Words that end in "s" but are not plurals (never folded to a singular).
+  const PC_NO_DEPLURAL = { canvas: 1, bus: 1, gas: 1, lens: 1, plus: 1, chaos: 1, yes: 1 };
+
+  // Signal definitions. Words are stored in singular form (plurals are folded
+  // when matching); "phrases" must match as consecutive words; "exclude"
+  // phrases are masked out before matching (so "baby blue" is a colour, not a baby).
+  const PC_SIGNAL_SPECS = {
+    // ---- product FORMAT ----
+    digitalStrong: { words: ["printable", "digital", "download", "downloadable", "template", "worksheet", "pdf", "canva", "editable", "svg", "png", "clipart", "goodnotes"], phrases: ["instant download"] },
+    digitalWeak:   { words: ["planner", "tracker", "invitation", "checklist"], phrases: ["wall art", "art print"] },   // can be physical too -> never decides alone
+
+    // ---- physical PRODUCT CATEGORIES (strong evidence of a physical item) ----
+    apparel:     { words: ["shirt", "tshirt", "tee", "sweatshirt", "hoodie", "crewneck", "sweater", "apparel", "jacket", "dress", "hat", "beanie", "sock", "pajama", "onesie", "legging", "jogger", "bodysuit", "romper", "cardigan", "jersey", "pullover"], phrases: ["tank top", "long sleeve", "baseball cap"] },
+    jewelry:     { words: ["necklace", "bracelet", "ring", "earring", "pendant", "anklet", "charm", "jewelry", "jewellery", "choker", "brooch", "bangle"], exclude: ["key ring", "ring bearer", "ring binder", "ring light", "ring holder"] },
+    homeDecor:   { words: ["decor", "decoration", "sign", "plaque", "pillow", "vase", "frame", "wreath", "tapestry", "rug", "canvas", "curtain", "blanket", "doormat", "coaster", "ornament", "lantern", "mirror"], phrases: ["wall hanging", "home decor", "wall decor", "table runner", "candle holder"], exclude: ["zodiac sign", "star sign", "birth sign"] },
+    drinkware:   { words: ["mug", "tumbler", "cup", "bottle", "stein"], phrases: ["wine glass", "shot glass", "pint glass"] },
+    bags:        { words: ["tote", "bag", "backpack", "pouch", "purse", "wallet", "clutch", "satchel"] },
+    accessories: { words: ["keychain", "bandana", "scarf", "lanyard", "patch"], phrases: ["key chain", "phone case", "hair clip"] },
+    stationery:  { words: ["notebook", "journal", "notepad", "stationery", "sticker", "bookmark", "postcard"], phrases: ["greeting card", "note card", "thank you card"] },
+    homeGoods:   { words: ["candle", "soap", "towel", "apron", "diffuser"], phrases: ["wax melt", "cutting board", "bath bomb", "mason jar"] },
+    petProduct:  { words: ["collar", "leash", "harness"], phrases: ["dog bed", "pet bed", "dog bowl", "pet bowl", "dog toy", "cat toy", "dog tag", "pet tag", "pet carrier", "dog treat"] },
+    gardenProduct: { words: ["planter"], phrases: ["plant pot", "garden flag", "garden stake", "plant stand", "plant marker", "garden sign", "plant label"] },
+
+    // ---- NICHES (who / what it is about) ----
+    dog:      { words: ["dog", "puppy", "pup", "doggo", "corgi", "dachshund", "labrador", "poodle", "retriever", "husky", "bulldog", "chihuahua", "pug", "beagle", "pitbull"] },
+    cat:      { words: ["cat", "kitten", "kitty"] },
+    pet:      { words: ["pet", "paw"], phrases: ["fur baby", "fur mom", "fur mama", "fur dad"] },
+    garden:   { words: ["garden", "gardening", "gardener", "houseplant", "succulent"], phrases: ["plant mom", "plant dad", "plant lady", "plant lover", "plant care", "plant tracker", "plant journal", "house plant"] },
+    wedding:  { words: ["wedding", "bride", "bridal", "groom", "bachelorette", "bridesmaid", "groomsman", "groomsmen", "engagement"], phrases: ["bridal shower", "bride to be", "wedding party"] },
+    event:    { words: ["anniversary"] },
+    teacher:  { words: ["teacher", "classroom", "homeschool", "preschool", "kindergarten"] },
+    book:     { words: ["book", "bookish", "bookworm", "bookmark", "reader", "reading"], phrases: ["book lover"], exclude: ["guest book", "address book", "recipe book", "coloring book", "colouring book", "baby book", "photo book", "sketch book", "sticker book", "activity book", "drawing book", "scrap book", "log book", "reading glasses"] },
+    baby:     { words: ["baby", "newborn", "nursery", "toddler", "infant", "kid", "child", "children"], phrases: ["baby shower"], exclude: ["baby blue", "baby pink", "baby yoda", "baby breath"] },
+    business: { words: ["business", "entrepreneur", "freelancer", "boss", "ceo", "seller"], phrases: ["small business", "side hustle", "etsy seller", "online business"], exclude: ["best seller", "bestseller"] },
+    fitness:  { words: ["fitness", "gym", "workout", "yoga", "runner", "running", "crossfit", "weightlifting", "pilates", "marathon"], phrases: ["personal trainer", "weight lifting"] },
+    travel:   { words: ["travel", "traveler", "traveller", "trip", "vacation", "wanderlust"], phrases: ["road trip"], exclude: ["travel mug", "travel tumbler", "travel cup", "travel coffee", "travel bottle"] },
+    mom:      { words: ["mom", "mama", "mamma", "mother", "mommy", "mum"] },
+    dad:      { words: ["dad", "daddy", "father", "papa"] },
+    holiday:  { words: ["christmas", "xmas", "halloween", "thanksgiving", "easter", "valentine", "hanukkah", "holiday"], phrases: ["new year", "st patrick", "fourth of july", "4th of july", "independence day"] },
+
+    // ---- modifiers ----
+    personalizedStrong: { words: ["personalized", "personalised", "personalization", "personalisation", "custom", "customized", "customised", "customizable", "monogram", "monogrammed", "engraved", "engraving"], phrases: ["custom name"] },
+    personalizedWeak:   { words: ["name", "initial", "photo"] },
+    gift:               { words: ["gift"] },
+    chainJewelry:       { words: ["necklace", "pendant", "bracelet", "anklet", "choker", "chain"] }
+  };
+
+  // Kind of digital product (first match wins) — used for the label and the
+  // Product Details profile.
+  const PC_DIGITAL_KINDS = [
+    { id: "invitation", label: "Invitation", profile: "digitalTemplate", spec: { words: ["invitation"] } },
+    { id: "template",   label: "Template",   profile: "digitalTemplate", spec: { words: ["template"] } },
+    { id: "planner",    label: "Planner",    profile: "digitalDoc",      spec: { words: ["planner"] } },
+    { id: "tracker",    label: "Tracker",    profile: "digitalDoc",      spec: { words: ["tracker"] } },
+    { id: "worksheet",  label: "Worksheet",  profile: "digitalDoc",      spec: { words: ["worksheet", "checklist"] } },
+    { id: "art",        label: "Wall art",   profile: "digitalArt",      spec: { words: ["clipart", "svg", "png", "sticker", "graphic", "illustration", "watercolor", "poster", "artwork", "print"], phrases: ["wall art", "art print"] } }
+  ];
+
+  const PC_CATEGORY_ORDER  = ["apparel", "jewelry", "homeDecor", "drinkware", "bags", "accessories", "stationery", "petProduct", "gardenProduct", "homeGoods"];
+  const PC_CATEGORY_LABELS = { apparel: "Apparel", jewelry: "Jewelry", homeDecor: "Home decor", drinkware: "Drinkware", bags: "Bags", accessories: "Accessories", stationery: "Stationery", petProduct: "Pet products", gardenProduct: "Garden products", homeGoods: "Home goods" };
+
+  // Niche labels for the small context line (first match wins, max one shown).
+  const PC_NICHE_LABELS = [["pet", "Pet"], ["garden", "Garden"], ["wedding", "Wedding"], ["event", "Event"], ["teacher", "Teachers"], ["book", "Books"], ["baby", "Baby & kids"], ["business", "Business"], ["fitness", "Fitness"], ["travel", "Travel"], ["holiday", "Holiday"]];
+
+  // Buyer personas — ordered, most specific first. Only STRONG niche signals
+  // create a persona; weak evidence leaves it null ("General shoppers").
+  const PC_PERSONA_DOG = "Dog owners & pet lovers";
+  const PC_PERSONA_CAT = "Cat owners & cat lovers";
+  const PC_PERSONA_PET = "Pet owners & pet lovers";
+  const PC_PERSONA_ORDER = [
+    ["garden",   "Gardeners & plant lovers"],
+    ["wedding",  "Brides & engaged couples"],
+    ["teacher",  "Teachers & educators"],
+    ["book",     "Readers & book lovers"],
+    ["baby",     "Parents & new parents"],
+    ["business", "Small business owners & entrepreneurs"],
+    ["fitness",  "Fitness enthusiasts"],
+    ["travel",   "Travelers"],
+    ["mom",      "Moms & gift buyers"],
+    ["dad",      "Dads & gift buyers"],
+    ["holiday",  "Holiday shoppers & gift buyers"]
+  ];
+  const PC_PERSONA_PERSONAL_GIFT = "Gift buyers looking for personalized products";
+  const PC_DEFAULT_AUDIENCE = "General Consumers";   // existing prompt value; shown as "General shoppers"
+
+  // Product Details fields (id -> label / placeholder). The first five are the
+  // original inputs (their values map 1:1 to the original prompt facts); the
+  // rest are additional seller-entered facts that are sent as labelled
+  // "Label: value" text inside the existing "Key features" fact.
+  const PC_FIELD_DEFS = {
+    material:        { label: "Material", ph: "e.g. genuine leather" },
+    color:           { label: "Color", ph: "e.g. cognac brown" },
+    size:            { label: "Size / Dimensions", ph: "e.g. 6 x 8 inches" },
+    personalization: { label: "Personalization", ph: "e.g. name can be embossed on the cover" },
+    features:        { label: "Key Features", ph: "e.g. refillable, elastic closure" },
+    fileType:        { label: "File type / format", ph: "e.g. PDF, PNG, JPG", max: 100 },
+    pageCount:       { label: "Page count", ph: "e.g. 40 pages", max: 60 },
+    editable:        { label: "Editable?", ph: "e.g. Yes, editable in Canva", max: 100 },
+    included:        { label: "Included sections / files", ph: "e.g. monthly, weekly and daily pages", max: 200 },
+    software:        { label: "Software / app compatibility", ph: "e.g. GoodNotes, Canva, Acrobat", max: 150 },
+    includedSizes:   { label: "Included sizes", ph: "e.g. 5x7, 8x10, 11x14", max: 120 },
+    fileCount:       { label: "Number of files / prints", ph: "e.g. 5 prints", max: 60 },
+    chainLength:     { label: "Chain length", ph: "e.g. 16–18 inch adjustable", max: 100 },
+    style:           { label: "Style", ph: "e.g. boho, minimalist", max: 100 }
+  };
+  const PC_LEGACY_IDS = ["material", "color", "size", "personalization", "features"];
+  const PC_EXTRA_IDS  = ["fileType", "pageCount", "editable", "included", "software", "includedSizes", "fileCount", "chainLength", "style"];
+
+  // Product Details profiles. A field written "id?flag" only shows when
+  // ctx[flag] is true. "over" customises a field's label / placeholder.
+  const PC_PROFILES = {
+    basic:    { fields: ["material", "color", "size", "personalization", "features"] },
+    apparel:  { fields: ["material", "color", "size", "personalization", "features"], over: { material: { ph: "e.g. cotton-poly fleece" }, size: { label: "Size / fit", ph: "e.g. unisex S–3XL, relaxed fit" } } },
+    jewelry:  { fields: ["material", "color", "chainLength?chainJewelry", "size", "personalization", "features"], over: { color: { label: "Color / finish", ph: "e.g. gold, rose gold, silver" }, size: { label: "Size / dimensions", ph: "e.g. pendant 15 mm" } } },
+    homeDecor:{ fields: ["material", "color", "size", "style", "personalization?personalized", "features"], over: { size: { label: "Dimensions", ph: "e.g. 12 x 16 inches" } } },
+    digitalDoc:      { fields: ["fileType", "pageCount", "size", "editable", "included", "software", "features"], over: { size: { label: "Size / dimensions", ph: "e.g. US Letter, A4, A5" }, features: { ph: "e.g. instant download, print at home" } } },
+    digitalArt:      { fields: ["fileType", "includedSizes", "fileCount", "editable", "features"], over: { features: { ph: "e.g. instant download, high resolution" } } },
+    digitalTemplate: { fields: ["fileType", "editable", "software", "included", "size", "personalization", "features"], over: { size: { label: "Size / dimensions", ph: "e.g. 5x7 in, A5" }, included: { label: "Included files / pages", ph: "e.g. front and back, 3 color options" }, personalization: { label: "Personalization / customization", ph: "e.g. names, date, colors" }, features: { ph: "e.g. instant download, 3 color options" } } }
+  };
+
+  // SEO-focus option sets. Index 0 is the automatic default. These are
+  // optimisation instructions for the generator — not promises about rankings.
+  const PC_SEO_SETS = {
+    general:      ["Find the most relevant searches", "Expand niche search coverage", "Match specific buyer intent", "Emphasize product features"],
+    personalized: ["Target personalization searches", "Match gift-related buyer intent", "Expand niche search coverage", "Emphasize product features"],
+    digital:      ["Target format-specific searches", "Match digital-product buyer intent", "Expand niche search coverage", "Emphasize product features"],
+    wedding:      ["Target wedding-related searches", "Match occasion-specific buyer intent", "Expand niche search coverage", "Emphasize product features"],
+    pet:          ["Target pet-related searches", "Match pet-owner buyer intent", "Expand niche search coverage", "Emphasize product features"]
+  };
+
+  // Curated keyword suggestions (display text). Order = ranking within a match tier.
+  const PC_KEYWORD_SUGGESTIONS = [
+    // popular mix first, so a single letter shows variety
+    "Personalized Name Necklace", "Dog Mom Sweatshirt", "Printable Wedding Planner", "Digital Planner", "Boho Wall Decor", "Personalized Coffee Mug",
+    "Custom Dog Collar", "Garden Planner Printable", "Wedding Invitation Template", "Personalized Tote Bag", "Printable Wall Art", "Dog Lover Gift",
+    // pets
+    "Dog Memorial Gift", "Dog Bandana", "Dog Mom Mug", "Dog Dad T-Shirt", "Personalized Dog Leash", "Custom Pet Portrait", "Cat Mom Sweatshirt", "Cat Lover Gift", "Personalized Pet Bowl", "Pet Memorial Gift",
+    // apparel & POD
+    "Personalized Hoodie", "Custom Embroidered Sweatshirt", "Retro Graphic Tee", "Funny Teacher T-Shirt", "Mama Bear Sweatshirt", "Gym Motivation Tank Top", "Boho Crewneck Sweatshirt", "Custom Soccer Hoodie", "Vintage Band T-Shirt", "Christmas Family Pajamas",
+    // jewelry
+    "Birthstone Necklace", "Initial Bracelet", "Custom Engraved Ring", "Dainty Gold Earrings", "Pearl Pendant Necklace", "Mom Birthstone Necklace",
+    // home decor
+    "Modern Wall Art Print", "Farmhouse Wall Sign", "Personalized Family Name Sign", "Macrame Wall Hanging", "Ceramic Flower Vase", "Throw Pillow Cover", "Daisy Wall Art",
+    // mugs / drinkware / bags / accessories / stationery
+    "Funny Coffee Mug", "Insulated Tumbler", "Custom Wine Glass", "Canvas Tote Bag", "Custom Makeup Bag", "Monogrammed Tote Bag", "Custom Keychain", "Personalized Leather Wallet", "Custom Phone Case",
+    "Personalized Notebook", "Leather Journal", "Custom Notepad", "Vinyl Sticker Pack", "Handmade Greeting Cards", "Desk Organizer",
+    // gifts
+    "Personalized Gift for Mom", "Gift for Dad", "Teacher Appreciation Gift", "Bridesmaid Proposal Gift", "Personalized Photo Gift", "Housewarming Gift", "Soy Candle Gift Set", "Birthday Gift for Her",
+    // garden & wedding
+    "Garden Plant Markers", "Succulent Planter", "Garden Flag", "Gardener Gift", "Plant Mom Mug", "Wedding Welcome Sign", "Bridal Shower Favors", "Custom Wedding Cake Topper", "Bridesmaid Tote Bag", "Engagement Gift for Couples",
+    // digital
+    "Editable Birthday Invitation", "Printable Budget Planner", "Printable Botanical Wall Art", "Habit Tracker Printable", "Meal Planner Printable", "Teacher Worksheet Bundle", "Printable Kids Worksheets", "Canva Social Media Template", "Resume Template", "Printable Baby Shower Games",
+    "Digital Download Wall Art", "Cleaning Checklist Printable", "Notion Budget Template", "Printable Coloring Pages", "Digital Sticker Bundle", "Dog Training Planner Printable", "Pet Care Binder Printable", "Fitness Planner Printable", "Reading Log Printable", "Printable Travel Itinerary"
+  ];
+
+  /* ---------------- B. PURE FUNCTIONS (no DOM) ---------------- */
+
+  function pcTokens(text){
+    return String(text == null ? "" : text).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim().split(" ").filter(Boolean);
+  }
+
+  // Light plural folding: dogs->dog, stories->story, dresses->dress; "canvas" stays.
+  function pcStem(tok){
+    if (PC_NO_DEPLURAL[tok]) return tok;
+    if (tok.length > 4 && tok.slice(-3) === "ies") return tok.slice(0, -3) + "y";
+    if (tok.length > 5 && tok.slice(-4) === "sses") return tok.slice(0, -2);
+    if (tok.length > 3 && tok.slice(-1) === "s" && tok.slice(-2) !== "ss") return tok.slice(0, -1);
+    return tok;
+  }
+
+  function pcCompile(spec){
+    return {
+      words: new Set((spec.words || []).map(pcStem)),
+      phrases: (spec.phrases || []).map(p => pcTokens(p).map(pcStem)),
+      exclude: (spec.exclude || []).map(p => pcTokens(p).map(pcStem))
+    };
+  }
+  function pcWindowAt(arr, seq, i){
+    for (let j = 0; j < seq.length; j++) if (arr[i + j] !== seq[j]) return false;
+    return true;
+  }
+  function pcMask(stems, excludes){
+    if (!excludes.length) return stems;
+    const out = stems.slice();
+    excludes.forEach(seq => {
+      for (let i = 0; i + seq.length <= stems.length; i++) {
+        if (pcWindowAt(stems, seq, i)) for (let j = 0; j < seq.length; j++) out[i + j] = null;
+      }
+    });
+    return out;
+  }
+  function pcMatches(stems, def){
+    const s = pcMask(stems, def.exclude);
+    for (let i = 0; i < s.length; i++) if (s[i] && def.words.has(s[i])) return true;
+    for (let p = 0; p < def.phrases.length; p++) {
+      const seq = def.phrases[p];
+      for (let i = 0; i + seq.length <= s.length; i++) if (pcWindowAt(s, seq, i)) return true;
+    }
+    return false;
+  }
+
+  const PC_SIGNALS = {};
+  Object.keys(PC_SIGNAL_SPECS).forEach(k => { PC_SIGNALS[k] = pcCompile(PC_SIGNAL_SPECS[k]); });
+  PC_DIGITAL_KINDS.forEach(k => { k.def = pcCompile(k.spec); });
+
+  /**
+   * Interpret a Product Keyword. Deterministic and side-effect free.
+   * opts.platform (optional) is only a TIE-BREAKER for the format when the
+   * keyword itself doesn't say whether the product is digital or physical.
+   */
+  function getProductContext(keyword, opts){
+    opts = opts || {};
+    const stems = pcTokens(keyword).map(pcStem);
+    const has = id => pcMatches(stems, PC_SIGNALS[id]);
+
+    const digitalStrong = has("digitalStrong");
+    const digitalWeak = has("digitalWeak");
+    const categories = PC_CATEGORY_ORDER.filter(has);
+    const physicalStrong = categories.length > 0;
+
+    const n = {};
+    ["dog", "cat", "pet", "garden", "wedding", "event", "teacher", "book", "baby", "business", "fitness", "travel", "mom", "dad", "holiday"].forEach(id => { n[id] = has(id); });
+    const personalizedStrong = has("personalizedStrong");
+    const personalized = personalizedStrong || has("personalizedWeak");
+    const gift = has("gift");
+
+    // ---- format ----
+    let format = "unknown", formatFromKeyword = true;
+    if (digitalStrong) format = "digital";
+    else if (physicalStrong) format = "physical";
+    else {
+      formatFromKeyword = false;
+      if (opts.platform === "Digital / Printable") format = "digital";
+      else if (opts.platform === "Print on Demand") format = "physical";
+    }
+    const productType = format === "digital" ? "Digital / Printable" : format === "physical" ? "Physical" : "Generic";
+
+    // ---- digital kind ----
+    let digitalKind = null;
+    if (format === "digital") {
+      for (let i = 0; i < PC_DIGITAL_KINDS.length; i++) {
+        if (pcMatches(stems, PC_DIGITAL_KINDS[i].def)) { digitalKind = PC_DIGITAL_KINDS[i]; break; }
+      }
+    }
+
+    // ---- buyer persona (strong niche evidence only) ----
+    let buyerPersona = null;
+    if (n.dog && n.cat) buyerPersona = PC_PERSONA_PET;
+    else if (n.dog) buyerPersona = PC_PERSONA_DOG;
+    else if (n.cat) buyerPersona = PC_PERSONA_CAT;
+    else if (n.pet) buyerPersona = PC_PERSONA_PET;
+    if (!buyerPersona) {
+      for (let i = 0; i < PC_PERSONA_ORDER.length; i++) {
+        if (n[PC_PERSONA_ORDER[i][0]]) { buyerPersona = PC_PERSONA_ORDER[i][1]; break; }
+      }
+    }
+    if (!buyerPersona && personalizedStrong && gift) buyerPersona = PC_PERSONA_PERSONAL_GIFT;
+
+    // ---- Product Details profile ----
+    let detailsProfile = "basic";
+    if (format === "digital") detailsProfile = digitalKind ? digitalKind.profile : "digitalDoc";
+    else if (format === "physical") {
+      if (categories.indexOf("apparel") >= 0) detailsProfile = "apparel";
+      else if (categories.indexOf("jewelry") >= 0) detailsProfile = "jewelry";
+      else if (categories.indexOf("homeDecor") >= 0) detailsProfile = "homeDecor";
+    }
+
+    // ---- SEO focus set ----
+    let seoProfile = "general";
+    if (format === "digital") seoProfile = "digital";
+    else if (n.wedding || n.event) seoProfile = "wedding";
+    else if (n.dog || n.cat || n.pet) seoProfile = "pet";
+    else if (personalized) seoProfile = "personalized";
+
+    // ---- labels for the small context line (max 3) ----
+    const nicheEntry = PC_NICHE_LABELS.find(e => e[0] === "pet" ? (n.dog || n.cat || n.pet) : n[e[0]]);
+    const nicheLabel = nicheEntry ? nicheEntry[1] : null;
+    const labels = [];
+    if (format === "digital" && formatFromKeyword) {
+      labels.push("Digital / Printable");
+      if (digitalKind) labels.push(digitalKind.label);
+      if (nicheLabel) labels.push(nicheLabel);
+      else if (personalized) labels.push("Personalized");
+    } else if (format === "physical" && formatFromKeyword) {
+      if (categories.length) labels.push(PC_CATEGORY_LABELS[categories[0]]);
+      if (personalized) labels.push("Personalized");
+      if (nicheLabel) labels.push(nicheLabel);
+    } else {
+      if (nicheLabel) labels.push(nicheLabel);
+      if (personalized && labels.length) labels.push("Personalized");
+    }
+
+    const confidence = (formatFromKeyword && format !== "unknown") || buyerPersona || nicheLabel ? "high" : "low";
+
+    return {
+      keyword: String(keyword == null ? "" : keyword),
+      productType: productType,
+      format: format,
+      formatFromKeyword: formatFromKeyword && format !== "unknown",
+      categories: categories,
+      signals: { digitalStrong: digitalStrong, digitalWeak: digitalWeak, personalized: personalized, gift: gift, niches: Object.keys(n).filter(k => n[k]) },
+      digitalKind: digitalKind ? digitalKind.id : null,
+      personalized: personalized,
+      chainJewelry: has("chainJewelry"),
+      buyerPersona: buyerPersona,
+      confidence: confidence,
+      labels: labels.slice(0, 3),
+      detailsProfile: detailsProfile,
+      seoProfile: seoProfile,
+      seoFocusOptions: PC_SEO_SETS[seoProfile].slice()
+    };
+  }
+
+  // Ordered, resolved Product Details fields for a context.
+  function pcDetailFieldsFor(ctx){
+    const prof = PC_PROFILES[ctx.detailsProfile] || PC_PROFILES.basic;
+    const over = prof.over || {};
+    const out = [];
+    prof.fields.forEach(spec => {
+      let id = spec, flag = null;
+      const q = spec.indexOf("?");
+      if (q > 0) { id = spec.slice(0, q); flag = spec.slice(q + 1); }
+      if (flag && !ctx[flag]) return;
+      const base = PC_FIELD_DEFS[id];
+      const o = over[id] || {};
+      let ph = o.ph || base.ph;
+      if (id === "personalization" && ctx.personalized) ph = "What can be customized? e.g. name, date, photo";
+      out.push({ id: id, label: o.label || base.label, ph: ph });
+    });
+    return out;
+  }
+
+  const PC_SUGGEST_INDEX = (function(){
+    const seen = {}, out = [];
+    PC_KEYWORD_SUGGESTIONS.forEach(text => {
+      const words = pcTokens(text), norm = words.join(" ");
+      if (!norm || seen[norm]) return;
+      seen[norm] = true;
+      out.push({ text: text, norm: norm, words: words, order: out.length });
+    });
+    return out;
+  })();
+
+  // Up to `max` curated completions. Prefix matches first, then word-prefix
+  // matches, then (3+ chars) substring matches. Long, already-specific
+  // keywords only get exact-prefix completions, so the list never turns
+  // into noise.
+  function getKeywordSuggestions(query, max){
+    max = max || 5;
+    const qt = pcTokens(query);
+    if (!qt.length) return [];
+    const q = qt.join(" ");
+    if (q.length > 40) return [];
+    const longQuery = qt.length >= 4;
+    const hits = [];
+    PC_SUGGEST_INDEX.forEach(e => {
+      if (e.norm === q) return;
+      let tier = 0;
+      if (e.norm.indexOf(q) === 0) tier = 1;
+      else if (!longQuery) {
+        const used = {};
+        const allPrefix = qt.every(t => {
+          for (let i = 0; i < e.words.length; i++) {
+            if (!used[i] && e.words[i].indexOf(t) === 0) { used[i] = true; return true; }
+          }
+          return false;
+        });
+        if (allPrefix) tier = 2;
+        else if (q.length >= 3 && e.norm.indexOf(q) >= 0) tier = 3;
+      }
+      if (tier) hits.push({ e: e, tier: tier });
+    });
+    hits.sort((a, b) => a.tier - b.tier || a.e.order - b.e.order);
+    return hits.slice(0, max).map(h => h.e.text);
+  }
+
+  /* ---------------- C. UI GLUE ---------------- */
+
+  const kwSuggest = $("kwSuggest");
+  const kwContext = $("kwContext");
+  const kwContextLabels = $("kwContextLabels");
+  const kwContextPersona = $("kwContextPersona");
+  const pdBody = $("pdBody");
+  const pdInactiveNote = $("pdInactiveNote");
+  const PC_LEGACY_INPUTS = { material: productMaterialInput, color: productColorInput, size: productSizeInput, personalization: productPersonalizationInput, features: productFeaturesInput };
+  const pcStaticAudienceValues = Object.keys(AUDIENCE_CATALOG).map(k => AUDIENCE_CATALOG[k].value || k);
+  const pdEls = {};          // field id -> { wrap, label, input }
+  const pdStore = {};        // profile key -> { field id -> value }  (values never cross profiles)
+  let pcReady = false;
+  let pcCtx = getProductContext("", {});
+  let pcShownKey = null;     // which store key the Product Details inputs currently show
+  let pcActiveFields = [];   // fields of the layout currently shown (only these are ever sent)
+  let pcOptEl = null;        // the dynamic "suggested persona" <option>
+  let kwItems = [], kwActive = -1, kwSkipSuggest = false;
+
+  function pcReadAll(){
+    const o = {};
+    Object.keys(pdEls).forEach(id => { o[id] = pdEls[id].input.value; });
+    return o;
+  }
+
+  function pcLayout(fields){
+    pcActiveFields = fields;
+    const on = {};
+    fields.forEach(f => { on[f.id] = true; });
+    Object.keys(pdEls).forEach(id => {
+      if (!on[id]) pdEls[id].wrap.classList.add("hidden");
+    });
+    fields.forEach(f => {
+      const el = pdEls[f.id];
+      el.label.textContent = f.label;
+      el.input.placeholder = f.ph;
+      el.wrap.classList.remove("hidden");
+      pdBody.appendChild(el.wrap);     // re-appending keeps the profile's field order
+    });
+  }
+
+  function pcUpdateInactiveNote(){
+    const other = pcShownKey !== "analyze" && Object.keys(pdStore).some(k =>
+      k !== pcShownKey && k !== "analyze" &&
+      Object.keys(pdStore[k]).some(id => String(pdStore[k][id] || "").trim()));
+    pdInactiveNote.classList.toggle("hidden", !other);
+  }
+
+  // Show the Product Details of `key` ("analyze" or a Create profile id).
+  // The inputs hold ONE profile's values at a time; the others are parked in
+  // pdStore, so a value typed for one product type can never be sent as a
+  // fact for another.
+  function pcShowDetails(key, fields){
+    if (!pcReady) return;
+    if (pcShownKey !== key) {
+      if (pcShownKey !== null) pdStore[pcShownKey] = pcReadAll();
+      pcShownKey = key;
+      const vals = pdStore[key] || {};
+      Object.keys(pdEls).forEach(id => { pdEls[id].input.value = vals[id] || ""; });
+    }
+    pcLayout(fields);
+    pcUpdateInactiveNote();
+  }
+
+  // Used by the Create/Analyze mode switch (replaces the Batch 8 two-bucket stash).
+  function swapProductDetails(fromMode, toMode){
+    if (toMode === "analyze") pcShowDetails("analyze", pcDetailFieldsFor({ detailsProfile: "basic" }));
+    else pcShowDetails(pcCtx.detailsProfile, pcDetailFieldsFor(pcCtx));
+  }
+
+  // The ONLY place Product Details are read for generation: active fields only.
+  function pcCollectProductDetails(){
+    const out = { material: "", color: "", size: "", personalization: "", features: "" };
+    const extras = [];
+    pcActiveFields.forEach(f => {
+      const v = String(pdEls[f.id].input.value || "").trim();
+      if (!v) return;
+      if (PC_LEGACY_IDS.indexOf(f.id) >= 0) out[f.id] = v;
+      else extras.push(f.label.replace(/\?$/, "") + ": " + v);
+    });
+    if (extras.length) out.features = [out.features].concat(extras).filter(Boolean).join("; ");
+    return out;
+  }
+
+  /* ---- audience (buyer persona) ---- */
+  function pcAutoAudience(){ return pcPersonaLabel || PC_DEFAULT_AUDIENCE; }
+
+  function pcSetPersonaOption(label){
+    if (pcOptEl && pcOptEl.parentNode) pcOptEl.parentNode.removeChild(pcOptEl);
+    pcOptEl = null;
+    if (label) {
+      const o = document.createElement("option");
+      o.value = label; o.textContent = label;
+      audienceSelect.insertBefore(o, audienceSelect.firstChild);
+      pcOptEl = o;
+    }
+  }
+
+  function pcSyncPersona(ctx){
+    const label = ctx.buyerPersona || null;
+    if (label !== pcPersonaLabel) {
+      pcSetPersonaOption(label);
+      pcPersonaLabel = label;
+      buildAudienceMenu();
+    }
+    if (!pcAudienceManual) {
+      if (audienceSelect.value !== pcAutoAudience()) audienceSelect.value = pcAutoAudience();
+      customAudienceField.classList.remove("show");
+      customAudienceInput.value = "";
+    }
+    syncAudienceTrigger();
+  }
+
+  // Called when the person picks an audience in the menu.
+  function pcMarkAudienceChoice(value){
+    pcAudienceManual = value !== pcAutoAudience();
+    pcRenderContext(pcCtx);
+  }
+
+  function pcRestoreAudience(saved){
+    const known = pcStaticAudienceValues.concat(pcPersonaLabel ? [pcPersonaLabel] : []);
+    if (!saved) { pcAudienceManual = false; audienceSelect.value = pcAutoAudience(); }
+    else if (known.indexOf(saved) >= 0) { audienceSelect.value = saved; pcAudienceManual = saved !== pcAutoAudience(); }
+    else { audienceSelect.value = "custom"; pcAudienceManual = true; }   // saved free-text audience
+    syncAudienceTrigger();
+  }
+
+  /* ---- SEO focus ---- */
+  function pcSyncSeo(ctx){
+    const list = ctx.seoFocusOptions.slice();
+    const shown = list.slice();
+    if (pcGoalManual && pcManualGoal && shown.indexOf(pcManualGoal) < 0) shown.push(pcManualGoal);
+    pcGoalList = list;
+    if (shown.join("|") !== pcGoalShown.join("|")) {
+      pcGoalShown = shown;
+      seoGoalSelect.innerHTML = "";
+      shown.forEach(name => {
+        const o = document.createElement("option");
+        o.value = name; o.textContent = name;
+        seoGoalSelect.appendChild(o);
+      });
+      buildGoalMenu();
+    }
+    seoGoalSelect.value = (pcGoalManual && pcManualGoal) ? pcManualGoal : list[0];
+    syncGoalTrigger();
+  }
+
+  function pcMarkGoalChoice(value){
+    pcGoalManual = value !== pcGoalList[0];
+    pcManualGoal = pcGoalManual ? value : "";
+  }
+
+  function pcRestoreSeoFocus(saved){
+    const v = Object.prototype.hasOwnProperty.call(GOAL_CATALOG, saved) ? saved : pcGoalList[0];
+    pcGoalManual = v !== pcGoalList[0];
+    pcManualGoal = pcGoalManual ? v : "";
+    pcSyncSeo(pcCtx);
+  }
+
+  /* ---- small context line under the keyword ---- */
+  function pcRenderContext(ctx){
+    const show = !analyzeUIActive && ctx.confidence === "high" && (ctx.labels.length > 0 || ctx.buyerPersona);
+    kwContext.classList.toggle("hidden", !show);
+    if (!show) return;
+    kwContextLabels.textContent = ctx.labels.join(" · ");
+    kwContextLabels.classList.toggle("hidden", !ctx.labels.length);
+    const personaShown = !!ctx.buyerPersona && !pcAudienceManual;
+    kwContextPersona.textContent = personaShown ? "For: " + ctx.buyerPersona : "";
+    kwContextPersona.classList.toggle("hidden", !personaShown);
+  }
+
+  /* ---- the single entry point: keyword (or platform) changed ---- */
+  function pcApplyContext(){
+    if (!pcReady) return;
+    const ctx = getProductContext(keywordInput.value, { platform: categorySelect.value });
+    pcCtx = ctx;
+    pcRenderContext(ctx);
+    if (analyzeUIActive) return;          // Analyze mode keeps its own, unchanged controls
+    pcShowDetails(ctx.detailsProfile, pcDetailFieldsFor(ctx));
+    pcSyncPersona(ctx);
+    pcSyncSeo(ctx);
+  }
+
+  // History: re-derive the context from the restored keyword, then restore the saved choices.
+  function pcRestoreFromHistory(item){
+    pcAudienceManual = false; pcGoalManual = false; pcManualGoal = "";
+    pcApplyContext();
+    pcRestoreAudience(item.audience);
+    pcRestoreSeoFocus(item.seoGoal);
+    pcRenderContext(pcCtx);
+  }
+
+  /* ---- keyword suggestions list (combobox / listbox) ---- */
+  function kwHide(){
+    kwItems = []; kwActive = -1;
+    kwSuggest.classList.add("hidden");
+    kwSuggest.innerHTML = "";
+    keywordInput.setAttribute("aria-expanded", "false");
+    keywordInput.removeAttribute("aria-activedescendant");
+  }
+  function kwSetActive(i){
+    kwActive = i;
+    const lis = kwSuggest.children;
+    for (let k = 0; k < lis.length; k++) lis[k].setAttribute("aria-selected", k === i ? "true" : "false");
+    if (i >= 0) keywordInput.setAttribute("aria-activedescendant", "kwOpt-" + i);
+    else keywordInput.removeAttribute("aria-activedescendant");
+  }
+  function kwRender(items){
+    kwSuggest.innerHTML = "";
+    kwItems = items; kwActive = -1;
+    if (!items.length) { kwHide(); return; }
+    items.forEach((text, i) => {
+      const li = document.createElement("li");
+      li.id = "kwOpt-" + i;
+      li.setAttribute("role", "option");
+      li.setAttribute("aria-selected", "false");
+      li.textContent = text;
+      li.addEventListener("mousedown", e => e.preventDefault());   // keep focus in the input
+      li.addEventListener("click", () => kwChoose(text));
+      kwSuggest.appendChild(li);
+    });
+    kwSuggest.classList.remove("hidden");
+    keywordInput.setAttribute("aria-expanded", "true");
+  }
+  function kwUpdate(){ kwRender(getKeywordSuggestions(keywordInput.value, 5)); }
+  function kwChoose(text){
+    kwSkipSuggest = true;
+    keywordInput.value = text;
+    keywordInput.dispatchEvent(new Event("input", { bubbles: true }));   // risk alert + context refresh; never generates
+    kwSkipSuggest = false;
+    kwHide();
+    keywordInput.focus();
+  }
+
+  function pcInit(){
+    // Original five inputs: reuse their DOM nodes.
+    PC_LEGACY_IDS.forEach(id => {
+      pdEls[id] = { wrap: $("pdField_" + id), label: $("pdLabel_" + id), input: PC_LEGACY_INPUTS[id] };
+    });
+    // Additional fields: created once, hidden until a profile uses them.
+    PC_EXTRA_IDS.forEach(id => {
+      const def = PC_FIELD_DEFS[id];
+      const wrap = document.createElement("div");
+      wrap.className = "field";
+      wrap.classList.add("hidden");
+      const label = document.createElement("label");
+      label.setAttribute("for", "pdInput_" + id);
+      label.textContent = def.label;
+      const input = document.createElement("input");
+      input.type = "text"; input.id = "pdInput_" + id;
+      input.maxLength = def.max || 100;
+      input.placeholder = def.ph;
+      input.setAttribute("autocomplete", "off");
+      wrap.appendChild(label); wrap.appendChild(input);
+      pdBody.appendChild(wrap);
+      pdEls[id] = { wrap: wrap, label: label, input: input };
+    });
+    pcReady = true;
+    pcShowDetails("basic", pcDetailFieldsFor(pcCtx));
+    pcApplyContext();
+
+    keywordInput.addEventListener("input", function(){
+      if (!kwSkipSuggest) kwUpdate();
+      pcApplyContext();
+    });
+    keywordInput.addEventListener("keydown", function(e){
+      const open = !kwSuggest.classList.contains("hidden");
+      if (e.key === "ArrowDown") {
+        if (!open) { kwUpdate(); if (!kwItems.length) return; }
+        kwSetActive((kwActive + 1) % kwItems.length);
+        e.preventDefault();
+      } else if (e.key === "ArrowUp" && open) {
+        kwSetActive(kwActive <= 0 ? kwItems.length - 1 : kwActive - 1);
+        e.preventDefault();
+      } else if (e.key === "Enter" && open && kwActive >= 0) {
+        e.preventDefault();
+        kwChoose(kwItems[kwActive]);
+      } else if (e.key === "Escape" && open) {
+        kwHide();
+      }
+    });
+    keywordInput.addEventListener("blur", kwHide);
+    generatorForm.addEventListener("submit", kwHide);
+    categorySelect.addEventListener("change", pcApplyContext);
+  }
+  pcInit();
+  /* PC_BLOCK_END */
 
 })();
 
