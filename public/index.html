@@ -1105,6 +1105,190 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   .output-card-head h3{ font-size:13px; }
   .copy-btn{ font-size:11px; padding:7px 10px; }
 }
+
+/* ============================================================
+   BATCH 11 — PREMIUM POLISH  (visual only)
+   ------------------------------------------------------------
+   Page (warm neutral) -> workspace (clean white) -> keyword field
+   (focal point) -> orange CTA. Everything here is scoped to the
+   header, the Create / Analyze workspace and the footer; output
+   cards, modals and the landing page keep their own styles.
+   ============================================================ */
+:root{
+  --page-bg:#f6f4ef;
+  --surface-2:#f9f7f3;
+  --line:#ebe6de;
+  --line-strong:#ddd6ca;
+  --r-ctl:12px;
+  --r-card:20px;
+}
+body{
+  background:var(--page-bg);
+  min-height:100vh; min-height:100dvh;
+  display:flex; flex-direction:column;
+}
+main{ width:100%; flex:1 0 auto; padding:30px 18px 64px; }
+footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
+::selection{ background:rgba(241,100,30,.18); }
+
+/* ---- header: same content, calmer hierarchy (one dark action: Upgrade) ---- */
+.site-header{ background:rgba(246,244,239,.92); border-bottom-color:var(--line); }
+.brand-mark{ width:32px; height:32px; border-radius:9px; }
+.brand-text h1{ font-size:15.5px; font-weight:800; letter-spacing:-.015em; }
+.brand-text p{ font-size:11.5px; font-weight:500; letter-spacing:.005em; }
+.header-actions{ gap:6px; }
+.credits-pill{ font-size:12px; font-weight:600; color:var(--ink-soft); }
+.credits-pill.is-pro{
+  background:var(--primary-tint); color:#b1470f; font-weight:700;
+  border:1px solid #f6d6c1; border-radius:999px; padding:5px 11px;
+}
+.history-btn, #upgradeBtn, #accountBtn{
+  min-height:34px; padding:7px 13px; border-radius:999px;
+  font-size:12.5px; font-weight:600; letter-spacing:-.003em;
+}
+.history-btn, #accountBtn{ background:#fff; color:var(--ink); border:1px solid var(--line-strong); }
+.history-btn:hover, #accountBtn:hover{ background:#fff; border-color:#cdc4b5; color:var(--ink); }
+#upgradeBtn{ background:var(--ink); color:#fff; border:1px solid var(--ink); }
+.header-cta{ min-height:36px; padding:8px 20px; border-radius:999px; font-size:13.5px; font-weight:700; }
+
+/* ---- Create / Analyze switch: quiet segmented control ---- */
+.mode-switch{ padding:4px; gap:4px; margin-bottom:14px; background:#ece8e0; border-radius:14px; }
+.mode-btn{
+  min-height:44px; border-radius:10px; padding:8px 10px;
+  font-size:13.5px; font-weight:600; line-height:1.25; color:#575e68; letter-spacing:-.003em;
+}
+.mode-btn:hover:not(.is-active){ color:var(--ink); background:rgba(255,255,255,.55); }
+.mode-btn.is-active{
+  background:#fff; color:var(--ink); font-weight:700;
+  box-shadow:0 1px 2px rgba(34,38,43,.08), 0 0 0 1px rgba(34,38,43,.04);
+}
+
+/* ---- the workspace surface ---- */
+#generatorForm.card, #analyzeCard.card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--r-card);
+  box-shadow:0 1px 2px rgba(34,38,43,.04), 0 14px 30px -20px rgba(34,38,43,.16);
+  padding:32px 32px 28px;
+}
+
+/* ---- product positioning (compact, product-UI copy) ---- */
+.workspace-intro{ margin:0 0 26px; }
+.workspace-title{
+  font-size:21px; line-height:1.28; font-weight:750; letter-spacing:-.02em; color:var(--ink);
+  text-wrap:balance;
+}
+.workspace-sub{ margin-top:6px; font-size:13.5px; line-height:1.45; color:#6b7280; }
+
+/* ---- labels: quiet by default, the keyword label leads ---- */
+#generatorForm .field > label{ font-size:12.5px; font-weight:600; color:#6b7280; letter-spacing:.005em; margin-bottom:8px; }
+#generatorForm .keyword-field > label{ font-size:14px; font-weight:700; color:var(--ink); letter-spacing:-.005em; margin-bottom:10px; }
+#generatorForm .field{ margin-bottom:22px; }
+#generatorForm .keyword-field{ margin-bottom:24px; }
+#generatorForm .field-platform{ margin-bottom:10px; }
+
+/* ---- the focal point: product keyword ---- */
+#keywordInput{
+  min-height:58px; padding:16px 18px;
+  font-size:17px; font-weight:500; letter-spacing:-.005em; line-height:1.3;
+  color:var(--ink); background:#fff;
+  border:1px solid var(--line-strong); border-radius:14px;
+  box-shadow:0 1px 2px rgba(34,38,43,.05);
+  caret-color:var(--primary);
+}
+#keywordInput::placeholder{ color:#8f939b; font-weight:400; }
+#keywordInput:hover{ border-color:#cdc4b5; }
+#keywordInput:focus{
+  border-color:var(--primary); outline:none;
+  box-shadow:0 0 0 4px rgba(241,100,30,.13), 0 1px 2px rgba(34,38,43,.05);
+}
+
+/* ---- secondary controls: tinted surface, hairline border, one radius ---- */
+#generatorForm .field input[type="text"]:not(#keywordInput),
+#generatorForm .field select,
+#generatorForm .platform-trigger,
+#analyzeCard .field input[type="text"],
+#analyzeCard .field textarea,
+#analyzeCard .field select,
+#analyzeCard .platform-trigger{
+  background-color:var(--surface-2);   /* not the shorthand: selects keep their chevron image */
+  border:1px solid var(--line);
+  border-radius:var(--r-ctl);
+}
+#generatorForm .platform-trigger{ min-height:48px; }
+#generatorForm .field input[type="text"]:not(#keywordInput):hover,
+#generatorForm .platform-trigger:hover,
+#analyzeCard .field input[type="text"]:hover,
+#analyzeCard .field textarea:hover{ border-color:var(--line-strong); }
+#generatorForm .field input[type="text"]:not(#keywordInput):focus,
+#analyzeCard .field input[type="text"]:focus,
+#analyzeCard .field textarea:focus{
+  background-color:#fff; border-color:var(--primary); outline:none;
+  box-shadow:0 0 0 3px rgba(241,100,30,.11);
+}
+#generatorForm .platform-trigger:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+#generatorForm .platform-trigger.is-open{ background:#fff; border-color:var(--primary); }
+
+/* ---- Refine listing: optional, clearly secondary ---- */
+.refine{ border-top:1px solid var(--line); margin:4px 0 20px; }
+.refine > summary{ min-height:50px; font-size:13.5px; font-weight:600; color:#5b616b; transition:color .15s; }
+.refine > summary .refine-opt{ font-weight:500; color:#8a8f98; }
+.refine > summary::after{ transition:color .15s; }
+.refine > summary:hover{ color:var(--ink); }
+.refine > summary:hover::after{ color:var(--primary); }
+.product-details-toggle summary{ background:var(--surface-2); border-color:var(--line); }
+.product-details-toggle summary:hover{ background:#f4f1ea; border-color:var(--line-strong); }
+
+/* ---- primary action ---- */
+#generateBtn.generate-btn{
+  min-height:56px; padding:16px 22px; gap:10px;
+  border-radius:14px;
+  font-size:16px; font-weight:700; letter-spacing:.005em;
+  box-shadow:0 1px 2px rgba(170,66,10,.28), 0 8px 18px -9px rgba(241,100,30,.6);
+  transition:background .15s ease, box-shadow .15s ease, transform .1s ease, opacity .15s ease;
+}
+#generateBtn.generate-btn:hover:not(:disabled){
+  background:var(--primary-dark);
+  box-shadow:0 1px 2px rgba(170,66,10,.32), 0 10px 20px -9px rgba(212,83,15,.6);
+}
+#generateBtn.generate-btn:active:not(:disabled){ transform:translateY(1px); box-shadow:0 1px 2px rgba(170,66,10,.3); }
+#generateBtn.generate-btn:focus-visible{ outline:2px solid var(--ink); outline-offset:3px; }
+#generateBtn.generate-btn:disabled{ opacity:.78; cursor:progress; box-shadow:none; }
+#analyzeBtn.generate-btn, #improveBtn.generate-btn{
+  min-height:56px; border-radius:14px; font-size:16px; font-weight:700; letter-spacing:.005em;
+  box-shadow:0 1px 2px rgba(170,66,10,.28), 0 8px 18px -9px rgba(241,100,30,.6);
+}
+#analyzeBtn.generate-btn:hover:not(:disabled), #improveBtn.generate-btn:hover:not(:disabled){ background:var(--primary-dark); }
+#analyzeBtn.generate-btn:disabled, #improveBtn.generate-btn:disabled{ opacity:.78; cursor:progress; box-shadow:none; }
+#generateBtn .btn-arrow{ width:18px; height:18px; flex:0 0 auto; transition:transform .15s ease; }
+#generateBtn:hover:not(:disabled) .btn-arrow{ transform:translateX(2px); }
+#generateBtn:disabled .btn-arrow{ display:none; }
+
+/* ---- Analyze card spacing follows the same rhythm ---- */
+#analyzeCard .field{ margin-bottom:20px; }
+
+@media (max-width:560px){
+  main{ padding:18px 12px 48px; }
+  .mode-btn{ font-size:13px; padding:8px 6px; }
+  #generatorForm.card, #analyzeCard.card{ padding:22px 16px 20px; border-radius:18px; }
+  .workspace-intro{ margin-bottom:22px; }
+  .workspace-title{ font-size:19px; }
+  .workspace-sub{ font-size:13px; }
+  #keywordInput{ min-height:56px; padding:15px 16px; font-size:16.5px; }
+  #generatorForm .field{ margin-bottom:20px; }
+  #generatorForm .keyword-field{ margin-bottom:22px; }
+  #generatorForm .field-platform{ margin-bottom:8px; }
+  #generateBtn.generate-btn{ min-height:54px; }
+}
+@media (max-width:380px){
+  .header-actions{ gap:5px; }
+  .credits-pill{ font-size:11.5px; padding-left:0; padding-right:2px; }
+  .history-btn, #upgradeBtn, #accountBtn{ padding:7px 9px; font-size:12px; }
+  #accountBtn{ min-width:72px; }
+  .mode-btn{ font-size:12.5px; padding:8px 4px; letter-spacing:-.01em; }
+  #generatorForm.card, #analyzeCard.card{ padding:20px 14px 18px; }
+  .workspace-title{ font-size:18px; }
+}
 </style>
 </head>
 <body>
@@ -1221,6 +1405,10 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
   </div>
 
   <form id="generatorForm" class="card" novalidate>
+    <div class="workspace-intro">
+      <h2 class="workspace-title">Turn your product idea into a ready-to-use listing.</h2>
+      <p class="workspace-sub">TagPulse handles the SEO details for you.</p>
+    </div>
     <div class="field keyword-field">
       <label for="keywordInput">Product keyword / title</label>
       <div class="kw-input-wrap">
@@ -1235,7 +1423,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
       </div>
     </div>
 
-    <div class="field">
+    <div class="field field-platform">
       <label for="categorySelect">Platform</label>
       <div class="platform-picker" id="platformPicker">
         <button type="button" class="platform-trigger" id="platformTrigger" aria-haspopup="listbox" aria-expanded="false">
@@ -1351,6 +1539,7 @@ footer .fine a{ color:var(--muted); text-decoration:underline; }
 
     <button type="submit" class="btn btn-primary generate-btn" id="generateBtn">
       <span id="generateBtnLabel">Generate Listing</span>
+      <svg class="btn-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h11M11 5.5 15.5 10 11 14.5"/></svg>
     </button>
   </form>
 
