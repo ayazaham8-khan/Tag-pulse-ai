@@ -1032,6 +1032,26 @@ main{ max-width:var(--container); margin:0 auto; padding:36px 18px 56px; }
   text-align:center;
 }
 
+/* Continue with Google (auth modal) */
+.btn-google{
+  background:#fff; color:var(--ink);
+  border:1.5px solid var(--border);
+  box-shadow:0 1px 2px rgba(34,38,43,0.06);
+  min-height:48px;
+}
+.btn-google:hover{ background:var(--bg); border-color:#d8cfc0; }
+.btn-google:disabled{ opacity:.7; cursor:not-allowed; }
+.btn-google svg{ flex:0 0 auto; }
+.btn-google .spinner{ border-color:rgba(34,38,43,.2); border-top-color:var(--ink); }
+.auth-divider{
+  display:flex; align-items:center; gap:10px;
+  margin:14px 0;
+  color:var(--muted); font-size:12.5px; font-weight:600;
+}
+.auth-divider::before,.auth-divider::after{
+  content:""; height:1px; flex:1; background:var(--border);
+}
+
 
 /* ============================================================
    FOOTER
@@ -1863,6 +1883,11 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       <div id="authError" class="paywall-error"></div>
 
       <div id="emailStep">
+        <button type="button" class="btn btn-google" id="googleSignInBtn">
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          <span id="googleSignInLabel">Continue with Google</span>
+        </button>
+        <div class="auth-divider" role="separator">Or continue with email</div>
         <div class="paywall-field">
           <label for="authEmail">Email address</label>
           <input type="email" id="authEmail" autocomplete="email" inputmode="email" placeholder="you@example.com">
@@ -1936,6 +1961,12 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
   const SUPABASE_PUBLISHABLE_KEY =
     "sb_publishable_GwuI7pu4wcqiJUIZlG6lmg_WKpE-16M";
+
+  // Captured before supabase-js processes the URL; used only to recognise a
+  // failed/cancelled Google round-trip (see "CONTINUE WITH GOOGLE" below).
+  const initialAuthUrlParams = new URLSearchParams(
+    window.location.search.replace(/^\?/, "") + "&" + window.location.hash.replace(/^#/, "")
+  );
 
   const supabaseClient =
     window.supabase.createClient(
@@ -2643,6 +2674,86 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     closeModal(authModal);
     showToast("Signed out.", "success");
   });
+
+  /* ============================================================
+     CONTINUE WITH GOOGLE
+     ------------------------------------------------------------
+     Uses the existing Supabase client and Supabase's hosted Google
+     OAuth flow. On success Supabase redirects back here and the
+     existing detectSessionInUrl + onAuthStateChange handling signs
+     the user in exactly like a magic-link return. No Google SDK,
+     no secrets, no custom account logic.
+     ============================================================ */
+  const LS_GOOGLE_PENDING = "tagpulse_google_oauth_pending";
+  const googleSignInBtn = $("googleSignInBtn");
+  const googleSignInLabel = $("googleSignInLabel");
+  let googleAuthStarting = false;
+
+  function setGoogleBtnIdle(){
+    googleAuthStarting = false;
+    googleSignInBtn.disabled = false;
+    googleSignInBtn.removeAttribute("aria-busy");
+    googleSignInLabel.textContent = "Continue with Google";
+  }
+
+  async function signInWithGoogle(){
+    if (googleAuthStarting) return;
+    googleAuthStarting = true;
+    hideAuthError();
+    googleSignInBtn.disabled = true;
+    googleSignInBtn.setAttribute("aria-busy", "true");
+    googleSignInLabel.innerHTML = '<span class="spinner"></span> Connecting…';
+
+    try {
+      try { sessionStorage.setItem(LS_GOOGLE_PENDING, "1"); } catch (_) {}
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) throw error;
+      // Success: the browser is navigating to Google. Keep the button
+      // disabled so it cannot be clicked twice while the page unloads.
+    } catch (err) {
+      console.error("Google sign-in could not start:", err);
+      try { sessionStorage.removeItem(LS_GOOGLE_PENDING); } catch (_) {}
+      setGoogleBtnIdle();
+      showAuthError("Couldn't start Google sign-in. Please try again or use email below.");
+    }
+  }
+
+  googleSignInBtn.addEventListener("click", signInWithGoogle);
+
+  // Back-button from Google's screen can restore this page from the
+  // bfcache with the button still in its loading state.
+  window.addEventListener("pageshow", (e) => {
+    if (e.persisted) setGoogleBtnIdle();
+  });
+
+  // If we return from Google with an error (e.g. the user cancelled),
+  // say so calmly. Only runs for a round-trip this page started, so
+  // magic-link return behaviour is untouched.
+  (function handleGoogleReturn(){
+    let pending = false;
+    try {
+      pending = sessionStorage.getItem(LS_GOOGLE_PENDING) === "1";
+      sessionStorage.removeItem(LS_GOOGLE_PENDING);
+    } catch (_) {}
+    if (!pending) return;
+
+    const oauthError = initialAuthUrlParams.get("error");
+    if (!oauthError) return;
+
+    try {
+      history.replaceState(null, "", window.location.pathname);
+    } catch (_) {}
+
+    if (oauthError === "access_denied") {
+      showToast("Google sign-in was cancelled.");
+    } else {
+      openSignInModal();
+      showAuthError("Google sign-in didn't complete. Please try again or use email below.");
+    }
+  })();
 
   const RISK_TERMS = [
     "marvel", "disney", "nike", "adidas", "pokemon", "pokémon",
