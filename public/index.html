@@ -1309,6 +1309,141 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   #generatorForm.card, #analyzeCard.card{ padding:20px 14px 18px; }
   .workspace-title{ font-size:18px; }
 }
+
+/* ============================================================
+   BATCH 12 — FINAL POLISH  (visual; scoped by container/ID)
+   ------------------------------------------------------------
+   Continues the Batch 11 approach: reuse its tokens (--page-bg,
+   --surface-2, --line, --line-strong, --r-ctl, --r-card) and scope
+   every rule to a container so the paywall, History and other
+   modals are untouched. No behavior or markup relationships change.
+   ============================================================ */
+
+/* ---- optional-field tag (replaces three inline styles) ---- */
+.opt-tag{ font-size:11px; font-weight:600; color:var(--muted); margin-left:4px; }
+
+/* ---- Customize your listing: clearer, still collapsed + secondary ---- */
+.refine > summary{ font-size:14px; font-weight:700; color:var(--ink); }
+.refine > summary .refine-opt{ font-size:12.5px; }
+.refine-hint{ font-size:12.5px; line-height:1.5; color:#6b7280; margin:0 0 16px; }
+
+/* ---- generate / improve buttons: calm status text must fit on phones ---- */
+#generateBtnLabel, #improveBtnLabel{ display:inline-flex; align-items:center; justify-content:center; gap:8px; text-align:center; line-height:1.25; }
+#generateBtn.generate-btn:disabled, #improveBtn.generate-btn:disabled{ font-size:15px; }
+
+/* ---- result screen: same surface language as the workspace form ---- */
+#outputSection .card, #analysisSection .card, #improvedBanner.card{
+  border:1px solid var(--line);
+  border-radius:var(--r-card);
+  box-shadow:0 1px 2px rgba(34,38,43,.04), 0 14px 30px -22px rgba(34,38,43,.16);
+  padding:26px 28px;
+}
+#outputSection .card + .card, #outputSection > .card{ margin-top:16px; }
+#outputSection .output-card-head, #analysisSection .output-card-head, #improvedBanner .output-card-head{ margin-bottom:16px; }
+#outputSection .output-card-head h3, #analysisSection .output-card-head h3, #improvedBanner .output-card-head h3{
+  font-size:15.5px; font-weight:750; letter-spacing:-.01em; gap:10px;
+}
+#outputSection .output-card-head h3 .num{ width:24px; height:24px; font-size:12px; background:var(--ink); }
+#outputSection .copy-btn{
+  min-height:38px; padding:8px 14px; font-size:12.5px;
+  background:#fff; border:1px solid var(--line-strong); box-shadow:0 1px 2px rgba(34,38,43,.05);
+}
+#outputSection .copy-btn:hover{ border-color:var(--primary); color:var(--primary-dark); background:#fff; }
+#outputSection .copy-btn.copied{ background:var(--success-tint); color:var(--success); border-color:var(--success); }
+#outputSection .copy-btn:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+#outputSection .title-output{ font-size:18px; line-height:1.4; font-weight:700; letter-spacing:-.01em; margin-bottom:10px; }
+#outputSection .char-count{ font-size:12px; }
+#outputSection .preview-label{ margin:22px 0 10px; }
+#outputSection .listing-preview{ background:var(--surface-2); border-color:var(--line); border-radius:14px; padding:14px; }
+#outputSection .listing-preview-title{ font-size:14px; }
+#outputSection .tag-limit-note{ font-size:12px; margin:-6px 0 14px; line-height:1.45; }
+#outputSection .tags-wrap{ gap:8px; margin-bottom:16px; }
+#outputSection .tag-chip{ font-size:13px; padding:7px 13px; }
+#outputSection .raw-box{ background:var(--surface-2); border-color:var(--line-strong); font-size:13px; }
+#outputSection .desc-output{ font-size:14.5px; line-height:1.7; color:var(--ink); }
+#outputSection .ki-disclaimer, #outputSection .ls-note, #analysisSection .ls-note, #improvedBanner .ls-note{ font-size:12px; line-height:1.55; }
+#outputSection .ki-coverage, #outputSection .ls-diag{ font-size:13px; }
+#outputSection .ki-strategy-text{ font-size:13.5px; }
+#outputSection .ki-focus{ font-size:12.5px; }
+#outputSection .ls-score{ font-size:40px; }
+#analysisSection .ela-item{ background:var(--surface-2); border-color:var(--line); }
+#analysisSection .ela-improve{ border-top-color:var(--line); }
+
+/* ---- error toast: wraps like a message, not a one-line pill ---- */
+#toast.error{ border-radius:16px; line-height:1.45; max-width:min(92vw, 460px); padding:12px 16px; }
+
+/* ---- sign-in modal ---- */
+#authModal .modal-panel{ padding:28px 24px 24px; border-radius:var(--r-card) var(--r-card) 0 0; }
+@media (min-width:640px){ #authModal .modal-panel{ max-width:440px; border-radius:var(--r-card); } }
+#authModal .modal-head{ margin-bottom:8px; }
+#authModal .modal-head h3{ font-size:20px; font-weight:800; letter-spacing:-.02em; }
+#authModal .auth-lead{ font-size:14px; line-height:1.5; color:var(--ink-soft); margin:0 0 18px; }
+#authModal .paywall-error{ margin-bottom:14px; line-height:1.45; }
+#authModal .btn{ border-radius:var(--r-ctl); min-height:50px; font-size:15px; }
+#authModal .btn-google{ border:1px solid var(--line-strong); font-weight:700; }
+#authModal .btn-google:hover:not(:disabled){ background:var(--surface-2); border-color:#cdc4b5; }
+#authModal .btn-google:focus-visible, #authModal .btn-primary:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+#authModal .auth-divider{ margin:18px 0; font-size:12px; font-weight:600; }
+#authModal .auth-divider::before, #authModal .auth-divider::after{ background:var(--line); }
+#authModal .paywall-field{ margin-bottom:14px; }
+#authModal .paywall-field label{ font-size:13px; font-weight:700; color:var(--ink); margin-bottom:8px; }
+#authModal .paywall-field input{
+  min-height:50px; padding:13px 14px; font-size:16px; letter-spacing:0;
+  background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r-ctl);
+}
+#authModal .paywall-field input:hover{ border-color:var(--line-strong); }
+#authModal .paywall-field input:focus{ background:#fff; border-color:var(--primary); box-shadow:0 0 0 3px rgba(241,100,30,.13); outline:none; }
+.auth-sent-box{
+  background:var(--primary-tint); border:1px solid #f6d6c1; border-radius:14px;
+  padding:16px; margin-bottom:14px; display:flex; flex-direction:column; gap:6px;
+}
+.auth-sent-box strong{ font-size:15px; color:var(--ink); }
+.auth-sent-box span{ font-size:13px; line-height:1.5; color:var(--ink-soft); }
+.auth-sent-box .auth-sent-tip{ font-size:12.5px; color:#6b7280; }
+.auth-secondary-btn{ background:var(--surface-2); color:var(--ink); border:1px solid var(--line-strong); }
+.auth-secondary-btn:hover{ background:#f1ede5; }
+.auth-account-email{ text-align:center; font-weight:700; margin:4px 0 16px; overflow-wrap:anywhere; }
+
+/* ---- logged-out homepage ---- */
+#landingScreen .landing-hero{ padding:56px 10px 34px; }
+#landingScreen .landing-hero h2{ color:var(--ink); text-wrap:balance; }
+#landingScreen .landing-hero p:not(.landing-cc-badge){ font-size:16.5px; line-height:1.6; max-width:52ch; margin-bottom:26px; }
+#landingScreen .get-started-btn{
+  width:auto; min-width:220px; min-height:54px; padding:15px 32px; font-size:16px; font-weight:700;
+  box-shadow:0 1px 2px rgba(170,66,10,.28), 0 8px 18px -9px rgba(241,100,30,.6);
+}
+#landingScreen .get-started-btn:focus-visible{ outline:2px solid var(--ink); outline-offset:3px; }
+.landing-cc-badge{ margin:14px auto 0 !important; font-size:13px !important; font-weight:600; color:#6b7280 !important; }
+#landingScreen .landing-demo-card{
+  border-color:var(--line); border-radius:var(--r-card); padding:20px;
+  box-shadow:0 1px 2px rgba(34,38,43,.04), 0 18px 36px -24px rgba(34,38,43,.2);
+}
+#landingScreen .demo-kicker{ font-size:11px; }
+#landingScreen .landing-demo-head h3{ font-size:18px; letter-spacing:-.015em; }
+#landingScreen .demo-input-box{ background:var(--surface-2); border-color:var(--line); border-radius:var(--r-ctl); }
+#landingScreen .demo-generate-btn{ border-radius:var(--r-ctl); }
+#landingScreen .demo-title{ font-size:15.5px; }
+#landingScreen .demo-tags span{ font-size:11.5px; padding:5px 9px; }
+#landingScreen .demo-description{ font-size:13px; }
+#landingScreen .compare-title{ letter-spacing:-.02em; }
+#landingScreen .compare-card{ border-color:var(--line); border-radius:16px; }
+#landingScreen .compare-new{ border-color:#f6d6c1; }
+#landingScreen .compare-card li{ font-size:13.5px; }
+
+@media (max-width:380px){
+  #generateBtn.generate-btn:disabled, #improveBtn.generate-btn:disabled{ font-size:14px; letter-spacing:0; }
+}
+@media (max-width:560px){
+  #outputSection .card, #analysisSection .card, #improvedBanner.card{ padding:20px 16px; border-radius:18px; }
+  #outputSection .title-output{ font-size:17px; }
+  #outputSection .copy-btn{ min-height:40px; }
+  #authModal .modal-panel{ padding:24px 18px 22px; }
+  #landingScreen .landing-hero{ padding:34px 6px 24px; }
+  #landingScreen .landing-hero p:not(.landing-cc-badge){ font-size:15.5px; }
+  #landingScreen .get-started-btn{ width:100%; }
+  #landingScreen .landing-demo{ margin-bottom:24px; }
+  #landingScreen .landing-demo-card{ padding:16px; border-radius:18px; }
+}
 </style>
 </head>
 <body>
@@ -1325,14 +1460,14 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     </div>
     <div class="brand-text">
       <h1>TagPulse AI</h1>
-      <p>E-commerce SEO &amp; Tag Generator</p>
+      <p>Marketplace listing SEO</p>
     </div>
     <div class="header-actions">
       <span class="credits-pill hidden" id="creditsPill"></span>
       <button type="button" class="history-btn hidden" id="historyBtn">History</button>
       <button type="button" class="upgrade-btn hidden" id="upgradeBtn">Upgrade</button>
       <button type="button" class="upgrade-btn hidden" id="accountBtn">Account</button>
-      <button type="button" class="header-cta" id="signInBtn">Sign up</button>
+      <button type="button" class="header-cta" id="signInBtn">Sign in</button>
     </div>
   </div>
 </header>
@@ -1344,15 +1479,15 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   <section class="landing-screen" id="landingScreen">
     <div class="landing-hero">
       <h2>Generate Etsy &amp; Pinterest Listings in 1 Click.</h2>
-      <p>Generate a keyword-rich title, 13 targeted SEO tags, and a ready-to-use description in seconds.</p>
+      <p>Get a keyword-rich title, 13 targeted SEO tags and a ready-to-use description for Etsy, Pinterest, print-on-demand and digital products &mdash; or analyze a listing you already have.</p>
       <button type="button" class="btn btn-primary get-started-btn" id="getStartedBtn">Get Started</button>
-      <p class="landing-cc-badge">🔓 Get Started Free — No Credit Card, No Strings</p>
+      <p class="landing-cc-badge">Start free &mdash; no credit card required</p>
     </div>
 
-    <section class="landing-demo" aria-label="Live demo preview">
+    <section class="landing-demo" aria-label="Example listing preview">
       <div class="landing-demo-head">
         <div>
-          <span class="demo-kicker">LIVE PREVIEW</span>
+          <span class="demo-kicker">EXAMPLE OUTPUT</span>
           <h3>See what TagPulse produces</h3>
         </div>
         <span class="demo-badge">No credit used</span>
@@ -1464,8 +1599,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     </div>
 
     <details class="refine" id="refineDetails">
-      <summary>Refine listing <span class="refine-opt">(optional)</span></summary>
+      <summary>Customize your listing <span class="refine-opt">(optional)</span></summary>
       <div class="refine-body">
+        <p class="refine-hint">Add optional details to personalize your title, tags and description.</p>
 
         <details class="product-details-toggle" id="productDetailsToggle">
           <summary>
@@ -1577,12 +1713,12 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       <textarea id="analyzeDescInput" rows="6" placeholder="Paste your current Etsy listing description"></textarea>
     </div>
     <div class="field">
-      <label for="analyzeIdeaInput">Product / listing idea <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span></label>
+      <label for="analyzeIdeaInput">Product / listing idea <span class="opt-tag">Optional</span></label>
       <input type="text" id="analyzeIdeaInput" maxlength="200" placeholder="e.g. custom leather journal" autocomplete="off">
       <p class="field-help">Optional. Lets TagPulse check that your product's key words appear in the listing.</p>
     </div>
     <div class="field">
-      <label for="analyzeAudienceSelect">Audience <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span></label>
+      <label for="analyzeAudienceSelect">Audience <span class="opt-tag">Optional</span></label>
       <select id="analyzeAudienceSelect"><option value="">Not specified</option></select>
     </div>
     <div id="analyzeProductDetailsSlot"></div>
@@ -1602,7 +1738,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         <p class="ki-top-heading ela-heading">Improve this listing</p>
         <p class="field-help">Generates an improved draft from your listing and context. Uses 1 generation credit.</p>
         <div class="field">
-          <label for="improveWordsInput">Words to avoid <span style="font-size:11px;font-weight:600;color:var(--muted);">Optional</span></label>
+          <label for="improveWordsInput">Words to avoid <span class="opt-tag">Optional</span></label>
           <input type="text" id="improveWordsInput" maxlength="300" placeholder="e.g. cheap, free, custom" autocomplete="off">
         </div>
         <button type="button" class="btn btn-primary generate-btn" id="improveBtn"><span id="improveBtnLabel">Improve This Listing</span></button>
@@ -1878,7 +2014,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       <button type="button" class="modal-close" data-close>✕</button>
     </div>
     <div class="modal-body">
-      <p id="authMessage">New or returning? Enter your email and we'll send you a secure sign-in link.</p>
+      <p id="authMessage" class="auth-lead">Sign in or create your account with Google or a secure email link. No password needed.</p>
 
       <div id="authError" class="paywall-error"></div>
 
@@ -1890,7 +2026,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         <div class="auth-divider" role="separator">Or continue with email</div>
         <div class="paywall-field">
           <label for="authEmail">Email address</label>
-          <input type="email" id="authEmail" autocomplete="email" inputmode="email" placeholder="you@example.com">
+          <input type="email" id="authEmail" autocomplete="email" inputmode="email" placeholder="you@example.com" autocapitalize="off" spellcheck="false">
         </div>
         <button type="button" class="btn btn-primary" id="sendOtpBtn">
           <span id="sendOtpLabel">Send secure sign-in link</span>
@@ -1898,18 +2034,19 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       </div>
 
       <div id="emailSentStep" class="hidden">
-        <div style="background:var(--primary-tint);border:1px solid #f8cba9;border-radius:var(--radius-sm);padding:13px 14px;margin-bottom:12px;">
-          <strong style="display:block;color:var(--ink);margin-bottom:4px;">Check your email</strong>
-          <span style="font-size:12.5px;color:var(--ink-soft);">We sent you a secure confirmation link. Tap the link in the email to finish signing in.</span>
+        <div class="auth-sent-box" role="status">
+          <strong>Check your email</strong>
+          <span>We sent you a secure confirmation link. Tap the link in the email to finish signing in.</span>
+          <span class="auth-sent-tip">Don&rsquo;t see it? Check your spam folder, or use a different email.</span>
         </div>
-        <button type="button" class="btn" id="changeEmailBtn" style="margin-top:10px;background:#f4f1eb;color:#22262b;">
+        <button type="button" class="btn auth-secondary-btn" id="changeEmailBtn">
           Use a different email
         </button>
       </div>
 
       <div id="accountStep" class="hidden">
-        <p id="accountEmail" style="text-align:center;font-weight:700;margin-bottom:14px;"></p>
-        <button type="button" class="btn" id="signOutBtn" style="background:#f4f1eb;color:#22262b;">Sign out</button>
+        <p id="accountEmail" class="auth-account-email"></p>
+        <button type="button" class="btn auth-secondary-btn" id="signOutBtn">Sign out</button>
       </div>
     </div>
   </div>
@@ -2580,6 +2717,11 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       authEmail.focus();
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showAuthError("Enter a valid email address, like you@example.com.");
+      authEmail.focus();
+      return;
+    }
 
     hideAuthError();
     sendOtpBtn.disabled = true;
@@ -2600,7 +2742,15 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
     } catch (err) {
       console.error("Supabase magic link send failed:", err);
-      showAuthError(err?.message || "Couldn't send the sign-in link. Please try again.");
+      // Full error stays in the console above; show a calm, accurate message.
+      const raw = String(err?.message || "");
+      if (/rate limit|too many|security purposes|seconds/i.test(raw)) {
+        showAuthError("Too many attempts. Please wait a minute and try again.");
+      } else if (/valid email|invalid.*email|email.*invalid/i.test(raw)) {
+        showAuthError("Enter a valid email address, like you@example.com.");
+      } else {
+        showAuthError("We couldn't send the sign-in link. Please try again in a moment.");
+      }
     } finally {
       sendOtpBtn.disabled = false;
       sendOtpLabel.textContent = "Send secure sign-in link";
@@ -2624,7 +2774,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   function openSignInModal(){
     openModal(authModal);
     authTitle.textContent = "Get started with TagPulse AI";
-    authMessage.textContent = "New or returning? Enter your email and we'll send you a secure sign-in link.";
+    authMessage.textContent = "Sign in or create your account with Google or a secure email link. No password needed.";
     emailStep.classList.remove("hidden");
     emailSentStep.classList.add("hidden");
     accountStep.classList.add("hidden");
@@ -2648,6 +2798,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   });
 
   sendOtpBtn.addEventListener("click", sendAuthOtp);
+  authEmail.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); if (!sendOtpBtn.disabled) sendAuthOtp(); }
+  });
 
   changeEmailBtn.addEventListener("click", () => {
     emailSentStep.classList.add("hidden");
@@ -3070,7 +3223,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       closeModal(paywallModal);
       openModal(authModal);
       authTitle.textContent = "Sign in before upgrading";
-      authMessage.textContent = "Sign in with your email first so your Pro purchase can be linked to your account.";
+      authMessage.textContent = "Sign in first so your Pro purchase can be linked to your account.";
       emailStep.classList.remove("hidden");
       emailSentStep.classList.add("hidden");
       accountStep.classList.add("hidden");
@@ -3290,7 +3443,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     if (!authUser || !authSession) {
       openModal(authModal);
       authTitle.textContent = "Get started with TagPulse AI";
-      authMessage.textContent = "Enter your email and we'll send you a secure sign-in link. You’ll get 3 lifetime free generations.";
+      authMessage.textContent = "Sign in with Google or a secure email link to start. You’ll get 3 lifetime free generations.";
       emailStep.classList.remove("hidden");
       emailSentStep.classList.add("hidden");
       accountStep.classList.add("hidden");
@@ -3314,7 +3467,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     const category = categorySelect.value;
 
     // Audience is optional too. "Custom" with nothing typed no longer blocks
-    // generation (the field sits inside the collapsed "Refine listing"
+    // generation (the field sits inside the collapsed "Customize your listing"
     // section, where an error could not even be seen) — it simply falls back
     // to the default audience.
     let audience = audienceSelect.value;
@@ -3605,15 +3758,11 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         );
       }
 
-      const baseMessage = err.message || "Something went wrong. Please try again.";
-      const retrySuffix = err.networkRetryExhausted ? " (automatic retry also failed)" : "";
-      const diagSuffix = (err.networkLevelFailure && err.requestId)
-        ? (" [id: " + err.requestId + (typeof err.elapsedMs === "number" ? ", " + err.elapsedMs + "ms" : "") + "]")
-        : "";
-
+      // Technical detail (request ID, timings, raw message, retry state) is
+      // logged above; the user sees a calm, accurate message instead.
       const resumeSuffix = err.resumeHint ? " " + err.resumeHint : "";
 
-      showToast(baseMessage + retrySuffix + diagSuffix + resumeSuffix, "error");
+      showToast(friendlyGenerationError(err) + resumeSuffix, "error", ERROR_TOAST_MS);
     } finally {
       setGenerating(false);
     }
@@ -4113,6 +4262,10 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       const err = new Error(data.error || "AI generation failed (" + res.status + ").");
       err.requestId = requestId;
       err.elapsedMs = elapsedMs;
+      // Diagnostic metadata only (used by friendlyGenerationError to pick
+      // user-facing wording). Does not change control flow or retries.
+      err.httpStatus = res.status;
+      err.hasServerDetail = !!(data && data.error_detail);
       throw err;
     }
 
@@ -4181,6 +4334,58 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   const IN_PROGRESS_POLL_DELAY_MS = 1500;
   const MAX_IN_PROGRESS_POLLS = 8;
 
+  // One calm status for every automatic-wait state (same-ID network resend
+  // and "still processing" polling). Purely a label; retry logic is unchanged.
+  const SLOW_STATUS_HTML = '<span class="spinner"></span> Taking a little longer than usual…';
+  const ERROR_TOAST_MS = 7500;
+
+  // Updates the in-flight button label for whichever action is running
+  // (Generate, or Improve This Listing). Label text only.
+  function setBusyLabel(slow){
+    generateBtnLabel.innerHTML = slow ? SLOW_STATUS_HTML : '<span class="spinner"></span> Generating…';
+    if (improveInFlight) {
+      improveBtnLabel.innerHTML = slow ? SLOW_STATUS_HTML : "Improving…";
+    }
+  }
+
+  /**
+   * Turns a failed generation/improve error into a calm, accurate message
+   * for the user. The real error (message, request ID, timings) is already
+   * logged to the console by the callers before this runs.
+   *  - Only a genuine browser-level fetch rejection (err.networkLevelFailure)
+   *    is described as a possible connection problem.
+   *  - Server/provider failures are never blamed on the user's internet,
+   *    and raw provider/model/status text is never shown.
+   *  - Messages authored by this app (validation, sign-in, etc.) and plain
+   *    server-authored 4xx messages are kept as-is.
+   * No promise about credits is made here; err.resumeHint (which is only set
+   * when the credit is already counted) is appended by the caller.
+   */
+  function friendlyGenerationError(err){
+    const generic = "We couldn't complete your request. Please try again in a moment.";
+    if (!err) return generic;
+    if (err.networkLevelFailure) {
+      return "We couldn't complete your request. Please check your connection and try again.";
+    }
+    if (err.inProgressTimedOut) {
+      return err.message; // already calm: "This generation is taking longer than usual…"
+    }
+    const status = err.httpStatus;
+    const msg = typeof err.message === "string" ? err.message.trim() : "";
+    if (typeof status === "number") {
+      if (status === 429) return "We're handling a lot of requests right now. Please try again in a moment.";
+      if (status === 504 || status === 408) return "We couldn't complete your request because it took too long. Please try again.";
+      const serverAuthored400 = [400, 401, 402, 403, 404, 409, 413].indexOf(status) !== -1;
+      const looksInternal = err.hasServerDetail || /\bAI model\b|groq|\(model:|HTTP \d{3}|api key|not configured|\bD1\b|database/i.test(msg);
+      if (serverAuthored400 && msg && msg.length <= 220 && !looksInternal) return msg;
+      return generic;
+    }
+    // No HTTP status: an error authored by this page (validation failure,
+    // "please sign in", etc.), already written for users.
+    if (msg && msg.length <= 220 && !/failed to fetch|load failed|networkerror|typeerror/i.test(msg)) return msg;
+    return generic;
+  }
+
   async function callGenerateWithNetworkRetry(prompt, requestId, hasProductDetails, retryOf, responseShape){
     requestId = requestId || generateDiagnosticRequestId();
     const startedAt = Date.now();
@@ -4191,7 +4396,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       try {
         const result = await callGenerate(prompt, requestId, hasProductDetails, retryOf, responseShape);
         if (networkResent || polls > 0) {
-          generateBtnLabel.innerHTML = '<span class="spinner"></span> Generating…';
+          setBusyLabel(false);
         }
         return result;
 
@@ -4202,7 +4407,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
           if (canResend && polls < MAX_IN_PROGRESS_POLLS) {
             polls++;
             console.log("[TagPulse] original request still processing — checking the same request ID again", { requestId: requestId, poll: polls });
-            generateBtnLabel.innerHTML = '<span class="spinner"></span> Still working on your request…';
+            setBusyLabel(true);
             await new Promise(resolve => setTimeout(resolve, IN_PROGRESS_POLL_DELAY_MS));
             continue;
           }
@@ -4214,7 +4419,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         if (err.networkLevelFailure && !networkResent && canResend) {
           networkResent = true;
           console.log("[TagPulse] network-level failure — retrying once with the same request ID", { requestId: requestId, elapsedMs: err.elapsedMs });
-          generateBtnLabel.innerHTML = '<span class="spinner"></span> Connection interrupted — retrying…';
+          setBusyLabel(true);
           continue;
         }
 
@@ -5964,7 +6169,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     if (!authUser || !authSession) {
       openModal(authModal);
       authTitle.textContent = "Get started with TagPulse AI";
-      authMessage.textContent = "Enter your email and we'll send you a secure sign-in link. You’ll get 3 lifetime free generations.";
+      authMessage.textContent = "Sign in with Google or a secure email link to start. You’ll get 3 lifetime free generations.";
       emailStep.classList.remove("hidden");
       emailSentStep.classList.add("hidden");
       accountStep.classList.add("hidden");
@@ -6074,10 +6279,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       );
       improvedBanner.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
-      console.error("[TagPulse][Etsy] improve failed", { requestId: err.requestId, elapsedMs: err.elapsedMs, message: err.message });
-      const retrySuffix = err.networkRetryExhausted ? " (automatic retry also failed)" : "";
+      console.error("[TagPulse][Etsy] improve failed", { requestId: err.requestId, elapsedMs: err.elapsedMs, networkLevelFailure: !!err.networkLevelFailure, networkRetryExhausted: !!err.networkRetryExhausted, httpStatus: err.httpStatus, message: err.message });
       const resumeSuffix = err.resumeHint ? " " + err.resumeHint : "";
-      showToast((err.message || "Something went wrong. Please try again.") + retrySuffix + resumeSuffix, "error");
+      showToast(friendlyGenerationError(err) + resumeSuffix, "error", ERROR_TOAST_MS);
     } finally {
       improveInFlight = false;
       improveBtn.disabled = false;
@@ -6894,6 +7098,17 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   $("affiliateInfoBtn").addEventListener("click", () => openModal($("affiliateModal")));
 
   document.querySelectorAll("[data-modal]").forEach(overlay => {
+    const panel = overlay.querySelector(".modal-panel");
+    const heading = overlay.querySelector(".modal-head h3");
+    if (panel) {
+      panel.setAttribute("role", "dialog");
+      panel.setAttribute("aria-modal", "true");
+      if (heading) {
+        if (!heading.id) heading.id = overlay.id + "Heading";
+        panel.setAttribute("aria-labelledby", heading.id);
+      }
+    }
+    overlay.querySelector("[data-close]").setAttribute("aria-label", "Close");
     overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(overlay); });
     overlay.querySelector("[data-close]").addEventListener("click", () => closeModal(overlay));
   });
@@ -6907,11 +7122,11 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   /* ============================================================
      TOAST
      ============================================================ */
-  function showToast(message, type){
+  function showToast(message, type, durationMs){
     clearTimeout(toastTimer);
     toastMsg.textContent = message;
     toast.className = "show" + (type ? " " + type : "");
-    toastTimer = setTimeout(() => { toast.classList.remove("show"); }, 3800);
+    toastTimer = setTimeout(() => { toast.classList.remove("show"); }, durationMs || 3800);
   }
 
   /* ============================================================
@@ -6920,7 +7135,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      Everything in this section runs in the browser only: no
      network request, no Groq call, no credit, no database, no
      external library. It reads the Product Keyword and quietly
-     adapts the optional "Refine listing" controls:
+     adapts the optional "Customize your listing" controls:
 
        getProductContext(keyword)  -> product type / format /
            categories / buyer persona / Product Details profile /
