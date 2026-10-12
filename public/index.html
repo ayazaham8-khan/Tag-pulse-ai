@@ -1444,6 +1444,72 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   #landingScreen .landing-demo{ margin-bottom:24px; }
   #landingScreen .landing-demo-card{ padding:16px; border-radius:18px; }
 }
+
+/* ============================================================
+   BATCH 13 — "Customize your listing" is a real button
+   ------------------------------------------------------------
+   The existing <details id="refineDetails"> is kept (native
+   keyboard/screen-reader disclosure, collapsed by default); only
+   its <summary> is restyled into a full-width secondary button.
+   In Create mode the inner "Product details" toggle is held open
+   (its summary hidden) so there is a single expand step, not two;
+   in Analyze mode it keeps its own visible summary, unchanged.
+   ============================================================ */
+.refine{ border-top:0; margin:6px 0 20px; }
+#refineDetails > summary.customize-btn{
+  list-style:none; cursor:pointer; user-select:none;
+  display:flex; align-items:center; gap:14px;
+  width:100%; min-height:68px; padding:14px 16px;
+  background:#fff; color:var(--ink);
+  border:1px solid var(--line-strong); border-radius:14px;
+  box-shadow:0 1px 2px rgba(34,38,43,.06);
+  transition:border-color .15s, box-shadow .15s, background .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+#refineDetails > summary.customize-btn::-webkit-details-marker{ display:none; }
+#refineDetails > summary.customize-btn::after{ content:none; }
+#refineDetails > summary.customize-btn:hover{ border-color:#cdc4b5; background:var(--surface-2); box-shadow:0 1px 3px rgba(34,38,43,.09); }
+#refineDetails > summary.customize-btn:active{ background:#f4f1ea; }
+#refineDetails > summary.customize-btn:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+#refineDetails[open] > summary.customize-btn{ background:var(--surface-2); border-color:var(--line-strong); }
+.cz-icon{
+  flex:0 0 auto; width:38px; height:38px; border-radius:11px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--primary-tint); color:var(--primary-dark); border:1px solid #f6d6c1;
+}
+.cz-icon svg{ width:19px; height:19px; }
+.cz-text{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.cz-title{ font-size:15px; font-weight:700; line-height:1.25; letter-spacing:-.005em; display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; }
+.cz-opt{
+  font-size:11px; font-weight:600; letter-spacing:.01em; color:#6b7280;
+  background:#efebe4; border-radius:999px; padding:2px 8px;
+}
+.cz-sub{ font-size:12.5px; font-weight:500; line-height:1.35; color:#6b7280; }
+.cz-chev{ flex:0 0 auto; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#6b7280; background:#f4f1eb; transition:transform .2s ease, background .15s; }
+.cz-chev svg{ width:12px; height:8px; }
+#refineDetails[open] > summary .cz-chev{ transform:rotate(180deg); background:#ebe6de; }
+#refineDetails > .refine-body{
+  margin-top:12px; padding:18px 16px 4px;
+  border:1px solid var(--line); border-radius:14px; background:#fff;
+}
+#refineDetails > .refine-body > .field{ margin-bottom:18px; }
+#refineDetails > .refine-body > .field:last-child{ margin-bottom:14px; }
+/* Create mode: Product details is one flat group under the button */
+.refine-body > .product-details-toggle{ margin-bottom:18px; }
+.refine-body > .product-details-toggle > summary{ display:none; }
+.refine-body > .product-details-toggle .product-details-hint{ padding:0 0 16px; font-size:12.5px; }
+.refine-body > .product-details-toggle .product-details-body{ margin-left:0; padding:0; border-left:0; }
+.refine-body > .product-details-toggle .field{ margin-top:0; margin-bottom:18px; }
+.pd-type-row select{ min-height:46px; font-size:15px; }
+@media (max-width:560px){
+  #refineDetails > summary.customize-btn{ padding:13px 14px; gap:12px; min-height:72px; }
+  .cz-icon{ width:36px; height:36px; }
+  #refineDetails > .refine-body{ padding:16px 14px 2px; }
+}
+@media (max-width:380px){
+  .cz-sub{ font-size:12px; }
+  .cz-title{ font-size:14.5px; }
+}
 </style>
 </head>
 <body>
@@ -1599,17 +1665,29 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     </div>
 
     <details class="refine" id="refineDetails">
-      <summary>Customize your listing <span class="refine-opt">(optional)</span></summary>
+      <summary class="customize-btn">
+        <span class="cz-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5h7M14 5.5h3M3 14.5h3M10 14.5h7"/><circle cx="12" cy="5.5" r="2"/><circle cx="8" cy="14.5" r="2"/></svg></span>
+        <span class="cz-text">
+          <span class="cz-title">Customize your listing <span class="cz-opt">Optional</span></span>
+          <span class="cz-sub">Add product details to personalize your listing.</span>
+        </span>
+        <span class="cz-chev" aria-hidden="true"><svg viewBox="0 0 14 9" fill="none"><path d="M1 1l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </summary>
       <div class="refine-body">
-        <p class="refine-hint">Add optional details to personalize your title, tags and description.</p>
 
-        <details class="product-details-toggle" id="productDetailsToggle">
+        <div class="field pd-type-row" id="pdTypeRow">
+          <label for="pdTypeSelect">Product type</label>
+          <select id="pdTypeSelect" aria-describedby="pdTypeHelp"><option value="">Auto-detect</option></select>
+          <p class="field-help" id="pdTypeHelp">The detail fields below adapt to your product. Change this if the wrong type was detected.</p>
+        </div>
+
+        <details class="product-details-toggle" id="productDetailsToggle" open>
           <summary>
             <span class="pd-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5.5h10M6 10h10M6 14.5h6"/><circle cx="3" cy="5.5" r=".6" fill="currentColor"/><circle cx="3" cy="10" r=".6" fill="currentColor"/><circle cx="3" cy="14.5" r=".6" fill="currentColor"/></svg></span>
             <span class="pd-text"><span class="pd-title">Product details</span><span class="pd-sub">Optional details improve accuracy</span></span>
           </summary>
           <p class="product-details-hint">Used as real product facts. Anything left blank is treated as unknown and never guessed.</p>
-          <p class="product-details-hint hidden" id="pdInactiveNote">Details you entered for a different product type are saved separately and won't be used.</p>
+          <p class="product-details-hint hidden" id="pdInactiveNote">Some details you entered don't apply to this product type, so they won't be used.</p>
           <div class="product-details-body" id="pdBody">
             <div class="field" id="pdField_material">
               <label for="productMaterialInput" id="pdLabel_material">Material</label>
@@ -3504,7 +3582,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         ? buildPinterestPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
         : category === "Digital / Printable"
           ? buildDigitalPrintablePrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid)
-          : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+          : buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid, productDetails);
 
     // -----------------------------------------------------------
     // DIAGNOSTIC LOGGING ONLY (Etsy) — tracks which network stage
@@ -3777,11 +3855,26 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      Demand, Pinterest). Etsy has its own buildEtsyPrompt() below;
      handleGenerate() picks which one to call based on category.
      ============================================================ */
-  function buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
-    return buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid);
+  function buildPrompt(keyword, category, audience, seoGoal, wordsToAvoid, productDetails){
+    return buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid, productDetails);
   }
 
-  function buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid){
+  function buildStandardPrompt(keyword, category, audience, seoGoal, wordsToAvoid, productDetails){
+    // Seller-entered Product Details only. Empty fields add nothing, and with no
+    // details at all the prompt is exactly what it was before.
+    productDetails = productDetails || {};
+    const factLines = [];
+    if (productDetails.material)        factLines.push("- Material: " + productDetails.material);
+    if (productDetails.color)           factLines.push("- Color: " + productDetails.color);
+    if (productDetails.size)            factLines.push("- Size / Dimensions: " + productDetails.size);
+    if (productDetails.personalization) factLines.push("- Personalization: " + productDetails.personalization);
+    if (productDetails.features)        factLines.push("- Key features: " + productDetails.features);
+    const factsBlock = factLines.length ? [
+      "",
+      "KNOWN PRODUCT FACTS (entered by the seller — the ONLY product facts you may state or imply):",
+      ...factLines,
+      "Any product attribute not listed above is UNKNOWN. Never invent or imply materials, colors, dimensions, sizes, quantities, ingredients, scent, certifications, safety properties, age suitability, compatibility, included items, weather resistance, or personalization options that are not listed above."
+    ] : [];
     return [
       "Act as a top 1% e-commerce SEO strategist and product listing copywriter, specializing in " + category + " listings.",
       "",
@@ -3795,6 +3888,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
           ? wordsToAvoid.join(", ")
           : "None specified"
       ),
+      ...factsBlock,
       "",
       "Return ONLY a raw JSON object with NO markdown, NO code block markers, and NO explanation text before or after it, containing:",
       "{",
@@ -3875,7 +3969,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       "The KNOWN FACTS for this product — the ONLY facts you may state or imply — are given later in this message, under a KNOWN FACTS heading.",
       "",
       "=== UNKNOWN FACTS — DO NOT INVENT ===",
-      "Any product attribute NOT listed below as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, garment construction, pockets, shipping details, delivery times, washing instructions, quality claims, packaging, personalization workflow/capabilities, quantities, file formats, DPI, and measurements.",
+      "Any product attribute NOT listed below as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, garment construction, pockets, shipping details, delivery times, washing instructions, quality claims, packaging, personalization workflow/capabilities, quantities, file formats, DPI, measurements, ingredients, scent, safety properties, age suitability, certifications, compatibility, included items or components, weather or water resistance, and gemstone or metal type/purity.",
       'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", "top quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact below. If you have nothing factual to say about a dimension, omit it rather than filling the gap with unsupported language.',
       "",
       "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
@@ -4050,7 +4144,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       ...knownFacts,
       "",
       "=== UNKNOWN FACTS — DO NOT INVENT ===",
-      "Any product attribute NOT listed above as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, file formats, DPI, resolution, number of files, download status, compatibility, shipping details, pricing, guarantees, personalization workflow, and measurements.",
+      "Any product attribute NOT listed above as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, file formats, DPI, resolution, number of files, download status, compatibility, shipping details, pricing, guarantees, personalization workflow, measurements, ingredients, safety properties, age suitability, certifications, included items or components, weather or water resistance, and gemstone or metal type/purity.",
       'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact above.',
       "",
       "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
@@ -7169,17 +7263,31 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     digitalStrong: { words: ["printable", "digital", "download", "downloadable", "template", "worksheet", "pdf", "canva", "editable", "svg", "png", "clipart", "goodnotes"], phrases: ["instant download"] },
     digitalWeak:   { words: ["planner", "tracker", "invitation", "checklist"], phrases: ["wall art", "art print"] },   // can be physical too -> never decides alone
 
-    // ---- physical PRODUCT CATEGORIES (strong evidence of a physical item) ----
-    apparel:     { words: ["shirt", "tshirt", "tee", "sweatshirt", "hoodie", "crewneck", "sweater", "apparel", "jacket", "dress", "hat", "beanie", "sock", "pajama", "onesie", "legging", "jogger", "bodysuit", "romper", "cardigan", "jersey", "pullover"], phrases: ["tank top", "long sleeve", "baseball cap"] },
-    jewelry:     { words: ["necklace", "bracelet", "ring", "earring", "pendant", "anklet", "charm", "jewelry", "jewellery", "choker", "brooch", "bangle"], exclude: ["key ring", "ring bearer", "ring binder", "ring light", "ring holder"] },
-    homeDecor:   { words: ["decor", "decoration", "sign", "plaque", "pillow", "vase", "frame", "wreath", "tapestry", "rug", "canvas", "curtain", "blanket", "doormat", "coaster", "ornament", "lantern", "mirror"], phrases: ["wall hanging", "home decor", "wall decor", "table runner", "candle holder"], exclude: ["zodiac sign", "star sign", "birth sign"] },
-    drinkware:   { words: ["mug", "tumbler", "cup", "bottle", "stein"], phrases: ["wine glass", "shot glass", "pint glass"] },
-    bags:        { words: ["tote", "bag", "backpack", "pouch", "purse", "wallet", "clutch", "satchel"] },
-    accessories: { words: ["keychain", "bandana", "scarf", "lanyard", "patch"], phrases: ["key chain", "phone case", "hair clip"] },
-    stationery:  { words: ["notebook", "journal", "notepad", "stationery", "sticker", "bookmark", "postcard"], phrases: ["greeting card", "note card", "thank you card"] },
-    homeGoods:   { words: ["candle", "soap", "towel", "apron", "diffuser"], phrases: ["wax melt", "cutting board", "bath bomb", "mason jar"] },
-    petProduct:  { words: ["collar", "leash", "harness"], phrases: ["dog bed", "pet bed", "dog bowl", "pet bowl", "dog toy", "cat toy", "dog tag", "pet tag", "pet carrier", "dog treat"] },
-    gardenProduct: { words: ["planter"], phrases: ["plant pot", "garden flag", "garden stake", "plant stand", "plant marker", "garden sign", "plant label"] },
+    // ---- PRODUCT CATEGORIES ----
+    // Each category decides which Product Details fields are SUGGESTED. A match
+    // never states a fact about the item; it only chooses what to ask the seller.
+    // Categories listed in PC_WEAK_CATEGORIES can be physical OR digital, so they
+    // never decide the format on their own.
+    apparel:     { words: ["shirt", "tshirt", "tee", "sweatshirt", "hoodie", "crewneck", "sweater", "apparel", "jacket", "dress", "hat", "beanie", "sock", "pajama", "onesie", "legging", "jogger", "bodysuit", "romper", "cardigan", "jersey", "pullover", "skirt", "pant", "trouser", "jean", "blouse", "polo", "coat", "vest", "tunic", "leotard", "swimsuit", "bikini", "nightgown"], phrases: ["tank top", "long sleeve", "baseball cap", "crop top", "button up", "baby clothes", "baby clothing", "kids clothing", "scrub top", "scrub cap"] },
+    jewelry:     { words: ["necklace", "bracelet", "ring", "earring", "pendant", "anklet", "charm", "jewelry", "jewellery", "choker", "brooch", "bangle", "locket", "hoop"], exclude: ["key ring", "ring bearer", "ring binder", "ring light", "ring holder", "embroidery hoop", "hula hoop", "basketball hoop"] },
+    homeDecor:   { words: ["decor", "decoration", "sign", "plaque", "pillow", "vase", "frame", "wreath", "tapestry", "rug", "canvas", "curtain", "blanket", "doormat", "coaster", "ornament", "lantern", "mirror", "cushion", "shelf", "bookshelf", "furniture", "stool", "bench", "ottoman", "nightstand", "dresser", "cabinet", "chair", "basket", "clock", "figurine", "statue", "sculpture", "bookend", "lamp", "lampshade"], phrases: ["wall hanging", "home decor", "wall decor", "table runner", "candle holder", "throw pillow", "coffee table", "side table", "dining table", "end table", "wall shelf", "floating shelf", "night light"], exclude: ["zodiac sign", "star sign", "birth sign", "canvas tote", "canvas bag", "canvas pouch", "canvas shoe", "sign language"] },
+    drinkware:   { words: ["mug", "tumbler", "cup", "bottle", "stein"], phrases: ["wine glass", "shot glass", "pint glass", "beer glass", "water bottle", "coffee cup", "tea cup"], exclude: ["perfume bottle", "baby bottle", "spray bottle"] },
+    kitchen:     { words: ["plate", "bowl", "platter", "spoon", "fork", "utensil", "teapot", "saucer", "placemat", "napkin", "trivet", "spatula", "skillet", "pitcher", "carafe", "kettle", "apron", "towel", "lunchbox"], phrases: ["cutting board", "serving board", "charcuterie board", "tea towel", "kitchen towel", "dish towel", "oven mitt", "pot holder", "cookie cutter", "cookie jar", "spice rack", "kitchen linen", "drinking glass", "mason jar", "lunch box"], exclude: ["license plate", "name plate", "number plate", "plate carrier"] },
+    bags:        { words: ["tote", "bag", "backpack", "pouch", "purse", "wallet", "clutch", "satchel", "handbag", "crossbody", "duffel", "duffle", "messenger"], phrases: ["makeup bag", "cosmetic bag", "pencil case", "lunch bag", "diaper bag", "laptop sleeve", "coin purse", "card holder"], exclude: ["tea bag", "gift bag", "trash bag", "bean bag", "sleeping bag", "paper bag", "plastic bag", "goodie bag", "favor bag", "bag of"] },
+    accessories: { words: ["keychain", "bandana", "scarf", "lanyard", "patch", "scrunchie", "headband", "sunglass", "belt", "cufflink", "barrette"], phrases: ["key chain", "phone case", "hair clip", "hair claw", "hair tie", "hair bow", "bow tie", "bag charm", "luggage tag", "enamel pin", "lapel pin"] },
+    stationery:  { words: ["notebook", "journal", "notepad", "stationery", "sticker", "bookmark", "postcard", "diary", "sketchbook", "scrapbook", "envelope", "washi"], phrases: ["greeting card", "note card", "thank you card", "birthday card", "christmas card", "holiday card", "address book", "guest book", "recipe book", "baby book", "photo book", "sketch book", "photo album", "bullet journal", "gift tag", "sticker sheet", "sticker pack", "note pad"] },
+    candleSoap:  { words: ["candle", "soap", "diffuser", "lotion", "balm", "scrub", "perfume", "fragrance", "incense", "shampoo", "salve", "tallow"], phrases: ["wax melt", "bath bomb", "bath salt", "body butter", "lip balm", "room spray", "essential oil", "bath fizzy", "shower steamer", "soy wax", "body scrub", "body oil", "hand cream", "face cream", "reed diffuser", "car freshener"], exclude: ["candle holder", "candle stand", "candle snuffer", "candle warmer", "soap dish", "soap dispenser", "soap holder", "soap pump", "scrub top", "scrub cap"] },
+    homeGoods:   { words: ["organizer", "organiser", "hanger", "dispenser", "hamper"], phrases: ["soap dish", "soap dispenser", "storage box", "storage basket"] },
+    petProduct:  { words: ["collar", "leash", "harness"], phrases: ["dog bed", "pet bed", "cat bed", "dog bowl", "pet bowl", "cat bowl", "dog toy", "cat toy", "pet toy", "chew toy", "dog tag", "pet tag", "pet carrier", "dog treat", "dog bandana", "pet bandana", "cat bandana", "puppy bandana", "dog sweater", "dog hoodie", "dog coat", "dog costume", "cat tree", "scratching post", "pet feeder"], exclude: ["shirt collar", "peter pan collar", "collar shirt", "collar necklace", "collar pin", "collar stay"] },
+    gardenProduct: { words: ["planter", "birdhouse", "trellis", "terrarium"], phrases: ["plant pot", "garden flag", "garden stake", "plant stand", "plant marker", "garden sign", "plant label", "bird feeder", "bird bath", "wind chime", "garden gnome", "plant hanger", "garden decor", "yard sign", "garden tool", "raised bed", "yard art", "lawn ornament", "seed packet"] },
+    giftEvent:   { words: ["favor", "keepsake", "souvenir", "centerpiece", "guestbook", "memento"], phrases: ["cake topper", "party favor", "wedding favor", "gift box", "gift set", "gift basket", "care package", "place card", "save the date", "welcome sign", "table number", "guest book", "name tag", "bridesmaid proposal", "groomsmen gift", "proposal box"] },
+    wallArt:     { words: ["poster", "painting", "artwork", "portrait", "lithograph"], phrases: ["wall art", "art print", "canvas print", "framed print", "framed art", "wall print", "fine art", "photo print", "metal print", "acrylic print", "poster print", "gallery wall"] },
+    toys:        { words: ["toy", "puzzle", "doll", "dollhouse", "plush", "plushie", "stuffie", "teether", "rattle", "playset", "amigurumi", "fidget"], phrases: ["board game", "card game", "party game", "stuffed animal", "play mat", "building block", "wooden toy", "pretend play", "sensory bin", "busy board", "activity cube"], exclude: ["dog toy", "cat toy", "pet toy", "chew toy", "puzzle piece necklace"] },
+    planner:     { words: ["planner", "calendar", "agenda"] },
+    invite:      { words: ["invitation", "invite", "announcement"] },
+    books:       { words: ["book", "ebook", "novel", "textbook", "workbook", "cookbook", "handbook", "guidebook", "booklet", "zine", "magazine", "flashcard", "curriculum", "storybook"], phrases: ["coloring book", "colouring book", "activity book", "study guide", "lesson plan", "e book", "board book", "picture book", "comic book", "sticker book"], exclude: ["book lover", "book club", "book bag", "book mark", "guest book", "address book", "recipe book", "baby book", "photo book", "sketch book", "scrap book", "log book", "book light", "book sleeve", "book stand", "book end", "book rest", "reading glasses"] },
+    craft:       { words: ["bead", "yarn", "thread", "ribbon", "felt", "wool", "fabric", "rhinestone", "sequin", "glitter", "stencil", "paintbrush", "embroidery", "crochet", "knitting", "macrame", "supply", "cardstock", "stamp", "cabochon", "bezel"], phrases: ["craft supply", "craft kit", "diy kit", "sewing kit", "embroidery kit", "crochet kit", "knitting kit", "resin mold", "silicone mold", "polymer clay", "air dry clay", "heat transfer vinyl", "sublimation blank", "iron on", "wood blank"], exclude: ["fabric softener"] },
+    pagesItem:   { words: ["notebook", "journal", "notepad", "planner", "diary", "book", "sketchbook", "scrapbook", "workbook", "calendar", "booklet", "magazine", "zine"] },
 
     // ---- NICHES (who / what it is about) ----
     dog:      { words: ["dog", "puppy", "pup", "doggo", "corgi", "dachshund", "labrador", "poodle", "retriever", "husky", "bulldog", "chihuahua", "pug", "beagle", "pitbull"] },
@@ -7216,8 +7324,13 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     { id: "art",        label: "Wall art",   profile: "digitalArt",      spec: { words: ["clipart", "svg", "png", "sticker", "graphic", "illustration", "watercolor", "poster", "artwork", "print"], phrases: ["wall art", "art print"] } }
   ];
 
-  const PC_CATEGORY_ORDER  = ["apparel", "jewelry", "homeDecor", "drinkware", "bags", "accessories", "stationery", "petProduct", "gardenProduct", "homeGoods"];
-  const PC_CATEGORY_LABELS = { apparel: "Apparel", jewelry: "Jewelry", homeDecor: "Home decor", drinkware: "Drinkware", bags: "Bags", accessories: "Accessories", stationery: "Stationery", petProduct: "Pet products", gardenProduct: "Garden products", homeGoods: "Home goods" };
+  // Priority order: the FIRST matching category picks the Product Details profile.
+  // More specific / safer matches come first (e.g. "candle holder" is decor, not a candle).
+  const PC_CATEGORY_ORDER  = ["candleSoap", "jewelry", "apparel", "petProduct", "bags", "accessories", "drinkware", "kitchen", "gardenProduct", "giftEvent", "wallArt", "homeDecor", "toys", "stationery", "planner", "invite", "books", "craft", "homeGoods"];
+  const PC_CATEGORY_LABELS = { apparel: "Apparel", jewelry: "Jewelry", homeDecor: "Home decor", drinkware: "Drinkware", kitchen: "Kitchen & dining", bags: "Bags", accessories: "Accessories", stationery: "Stationery", petProduct: "Pet products", gardenProduct: "Garden products", homeGoods: "Home goods", candleSoap: "Candles & soaps", giftEvent: "Gifts & events", wallArt: "Wall art", toys: "Toys & games", planner: "Planner", invite: "Invitations", books: "Books", craft: "Craft supplies" };
+  // Can be physical OR digital -> never decides the format by itself (the Platform tie-breaker still can).
+  const PC_WEAK_CATEGORIES = { wallArt: 1, planner: 1, invite: 1, books: 1 };
+  const PC_CATEGORY_PROFILE = { candleSoap: "candleSoap", jewelry: "jewelry", apparel: "apparel", petProduct: "pet", bags: "bags", accessories: "bags", drinkware: "kitchen", kitchen: "kitchen", gardenProduct: "garden", giftEvent: "giftEvent", wallArt: "wallArt", homeDecor: "homeDecor", toys: "toys", stationery: "stationery", planner: "stationery", invite: "giftEvent", books: "books", craft: "craft", homeGoods: "homeDecor" };
 
   // Niche labels for the small context line (first match wins, max one shown).
   const PC_NICHE_LABELS = [["pet", "Pet"], ["garden", "Garden"], ["wedding", "Wedding"], ["event", "Event"], ["teacher", "Teachers"], ["book", "Books"], ["baby", "Baby & kids"], ["business", "Business"], ["fitness", "Fitness"], ["travel", "Travel"], ["holiday", "Holiday"]];
@@ -7260,22 +7373,63 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     software:        { label: "Software / app compatibility", ph: "e.g. GoodNotes, Canva, Acrobat", max: 150 },
     includedSizes:   { label: "Included sizes", ph: "e.g. 5x7, 8x10, 11x14", max: 120 },
     fileCount:       { label: "Number of files / prints", ph: "e.g. 5 prints", max: 60 },
-    chainLength:     { label: "Chain length", ph: "e.g. 16–18 inch adjustable", max: 100 },
-    style:           { label: "Style", ph: "e.g. boho, minimalist", max: 100 }
+    style:           { label: "Style", ph: "e.g. boho, minimalist", max: 100 },
+    // ---- added for the wider product-type coverage (all optional, seller-entered) ----
+    fit:             { label: "Fit / style", ph: "e.g. relaxed fit, crew neck, long sleeve", max: 100 },
+    gemstone:        { label: "Gemstone / stone (if any)", ph: "e.g. natural amethyst, cubic zirconia", max: 100, fact: "Gemstone" },
+    finish:          { label: "Finish", ph: "e.g. matte, glossy, polished", max: 100 },
+    closure:         { label: "Closure / carrying style", ph: "e.g. zip top, shoulder strap", max: 100 },
+    useCase:         { label: "Intended use", ph: "e.g. gift, home use, classroom", max: 150, fact: "Intended use" },
+    placement:       { label: "Placement / installation", ph: "e.g. stake in ground, hangs on fence", max: 120 },
+    orientation:     { label: "Orientation", ph: "e.g. portrait, landscape, square", max: 60 },
+    framing:         { label: "Framing", ph: "e.g. unframed print, black frame included", max: 100 },
+    artFormat:       { label: "Format", ph: "e.g. physical print, digital download", max: 100, fact: "Format" },
+    theme:           { label: "Theme / style", ph: "e.g. botanical, abstract", max: 100 },
+    quantity:        { label: "Quantity", ph: "e.g. pack of 50, set of 4", max: 100 },
+    scent:           { label: "Scent", ph: "e.g. lavender, vanilla", max: 100 },
+    container:       { label: "Container / form", ph: "e.g. tin, glass jar, bar", max: 100 },
+    ingredients:     { label: "Ingredients / materials", ph: "Only what you want listed", max: 250, fact: "Ingredients / materials (as supplied by the seller)" },
+    animal:          { label: "Animal type", ph: "e.g. dog, cat, small pet", max: 60 },
+    occasion:        { label: "Occasion", ph: "e.g. wedding, birthday, Mother's Day", max: 100 },
+    recipient:       { label: "Recipient", ph: "e.g. bridesmaid, new mom, teacher", max: 100 },
+    ageRange:        { label: "Age range (optional)", ph: "Only if you want it stated, e.g. 3+ years", max: 60, fact: "Age range (as supplied by the seller)" },
+    contents:        { label: "Included components", ph: "e.g. instructions, 10 beads", max: 200 }
   };
   const PC_LEGACY_IDS = ["material", "color", "size", "personalization", "features"];
-  const PC_EXTRA_IDS  = ["fileType", "pageCount", "editable", "included", "software", "includedSizes", "fileCount", "chainLength", "style"];
+  const PC_EXTRA_IDS  = Object.keys(PC_FIELD_DEFS).filter(id => PC_LEGACY_IDS.indexOf(id) < 0);
 
-  // Product Details profiles. A field written "id?flag" only shows when
-  // ctx[flag] is true. "over" customises a field's label / placeholder.
+  // Product Details profiles (3–7 fields each; "Key features" stays the catch-all).
+  // A field written "id?flag" only shows when ctx[flag] is true; "id?!flag" when it is false.
+  // "over" customises a field's label / placeholder / short fact name for that profile.
   const PC_PROFILES = {
     basic:    { fields: ["material", "color", "size", "personalization", "features"] },
-    apparel:  { fields: ["material", "color", "size", "personalization", "features"], over: { material: { ph: "e.g. cotton-poly fleece" }, size: { label: "Size / fit", ph: "e.g. unisex S–3XL, relaxed fit" } } },
-    jewelry:  { fields: ["material", "color", "chainLength?chainJewelry", "size", "personalization", "features"], over: { color: { label: "Color / finish", ph: "e.g. gold, rose gold, silver" }, size: { label: "Size / dimensions", ph: "e.g. pendant 15 mm" } } },
-    homeDecor:{ fields: ["material", "color", "size", "style", "personalization?personalized", "features"], over: { size: { label: "Dimensions", ph: "e.g. 12 x 16 inches" } } },
-    digitalDoc:      { fields: ["fileType", "pageCount", "size", "editable", "included", "software", "features"], over: { size: { label: "Size / dimensions", ph: "e.g. US Letter, A4, A5" }, features: { ph: "e.g. instant download, print at home" } } },
-    digitalArt:      { fields: ["fileType", "includedSizes", "fileCount", "editable", "features"], over: { features: { ph: "e.g. instant download, high resolution" } } },
-    digitalTemplate: { fields: ["fileType", "editable", "software", "included", "size", "personalization", "features"], over: { size: { label: "Size / dimensions", ph: "e.g. 5x7 in, A5" }, included: { label: "Included files / pages", ph: "e.g. front and back, 3 color options" }, personalization: { label: "Personalization / customization", ph: "e.g. names, date, colors" }, features: { ph: "e.g. instant download, 3 color options" } } }
+    apparel:  { fields: ["material", "fit", "size", "color", "personalization", "features"], over: { material: { label: "Fabric / material", ph: "e.g. 100% cotton, cotton-poly fleece" }, size: { label: "Size range", ph: "e.g. unisex S–3XL" }, color: { label: "Color / pattern", ph: "e.g. black, floral print" } } },
+    jewelry:  { fields: ["material", "gemstone", "color", "size", "personalization", "features"], over: { material: { label: "Material / metal", ph: "e.g. 925 sterling silver" }, color: { label: "Finish / color", ph: "e.g. polished, rose gold plated" }, size: { label: "Size / dimensions", ph: "e.g. ring size 7, 10 mm hoop" } } },
+    bags:     { fields: ["material", "size", "closure", "color", "personalization", "features"], over: { size: { label: "Dimensions / capacity", ph: "e.g. 15 x 16 x 4 inches" } } },
+    homeDecor:{ fields: ["material", "size", "color", "style", "useCase", "personalization?personalized", "features"], over: { size: { label: "Dimensions", ph: "e.g. 12 x 16 inches" }, color: { label: "Finish / color", ph: "e.g. matte black, natural oak" }, useCase: { label: "Intended room / placement", ph: "e.g. living room, wall-mounted" } } },
+    wallArt:  { fields: ["theme", "artFormat", "size", "orientation", "framing", "useCase"], over: { theme: { label: "Art style / theme", ph: "e.g. botanical, abstract, vintage" }, size: { label: "Size(s)", ph: "e.g. 8x10, 11x14 inches" }, useCase: { label: "Intended room / use", ph: "e.g. nursery, living room" } } },
+    stationery:{ fields: ["size", "material", "quantity", "pageCount?pages", "useCase", "features"], over: { size: { label: "Dimensions", ph: "e.g. A5, 4 x 6 inches" }, material: { label: "Material / finish", ph: "e.g. matte vinyl, 100 gsm paper" }, quantity: { label: "Quantity / pieces", ph: "e.g. 50 stickers, 3 notebooks" } } },
+    giftEvent:{ fields: ["occasion", "recipient", "personalization", "color", "size", "features"], over: { personalization: { label: "Personalization (method, name, text, date)", ph: "e.g. laser-engraved name and date" }, color: { label: "Color / theme", ph: "e.g. blush and gold" }, size: { label: "Dimensions", ph: "e.g. 4 x 6 inches" }, features: { label: "Quantity / key features", ph: "e.g. set of 12, gift box included" } } },
+    candleSoap:{ fields: ["scent", "size", "container", "ingredients", "useCase", "features"], over: { size: { label: "Size / weight", ph: "e.g. 8 oz, 100 g bar" }, useCase: { label: "Gift occasion / use", ph: "e.g. housewarming, spa night" } } },
+    pet:      { fields: ["animal", "material", "size", "color", "personalization", "features"], over: { size: { label: "Size / fit", ph: "e.g. neck 12–16 inches" }, features: { ph: "e.g. adjustable, for daily walks" } } },
+    kitchen:  { fields: ["material", "size", "finish", "quantity", "personalization?personalized", "features"], over: { size: { label: "Dimensions / capacity", ph: "e.g. 11 oz, 12 x 8 inches" }, finish: { label: "Finish / color", ph: "e.g. matte white, natural wood" }, quantity: { label: "Quantity included", ph: "e.g. set of 4" }, features: { label: "Intended use / key features", ph: "e.g. for serving, everyday use" } } },
+    toys:     { fields: ["theme", "material", "size", "quantity", "ageRange", "features"], over: { theme: { label: "Type / theme", ph: "e.g. building blocks, farm animals" }, size: { label: "Dimensions", ph: "e.g. 6 x 6 inches" }, quantity: { label: "Included pieces", ph: "e.g. 24 pieces" } } },
+    craft:    { fields: ["material", "size", "quantity", "finish", "contents", "features"], over: { size: { label: "Size / dimensions", ph: "e.g. 6 mm, 10 yards" }, quantity: { label: "Quantity / amount", ph: "e.g. 100 pcs, 50 g" }, finish: { label: "Finish / color", ph: "e.g. matte, assorted colors" }, contents: { label: "Included components", ph: "e.g. thread, needle, instructions" }, features: { label: "Intended crafting use / key features", ph: "e.g. for knitting, jewelry making" } } },
+    garden:   { fields: ["material", "size", "finish", "placement", "useCase", "features"], over: { size: { label: "Dimensions", ph: "e.g. 12 x 18 inches" }, finish: { label: "Finish / color", ph: "e.g. weathered black" }, useCase: { label: "Intended setting", ph: "e.g. patio, vegetable garden" } } },
+    books:    { fields: ["artFormat", "pageCount", "size", "contents", "useCase", "features"], over: { artFormat: { label: "Format", ph: "e.g. paperback, hardcover, PDF ebook" }, size: { label: "Dimensions / trim size", ph: "e.g. 6 x 9 inches" }, contents: { label: "Contents / topics covered", ph: "e.g. 30 lessons, answer key" }, useCase: { label: "Intended audience / use", ph: "e.g. homeschool, beginners" } } },
+    digitalDoc:      { fields: ["fileType", "pageCount", "size", "editable", "included", "software", "features"], over: { size: { label: "Size / dimensions", ph: "e.g. US Letter, A4, A5" }, features: { label: "Intended use / key features", ph: "e.g. instant download, print at home" } } },
+    digitalArt:      { fields: ["fileType", "includedSizes", "fileCount", "editable", "features"], over: { features: { label: "Intended use / key features", ph: "e.g. instant download, high resolution" } } },
+    digitalTemplate: { fields: ["fileType", "editable", "software", "included", "size", "personalization", "features"], over: { size: { label: "Size / dimensions", ph: "e.g. 5x7 in, A5" }, included: { label: "Included files / pages", ph: "e.g. front and back, 3 color options" }, personalization: { label: "Personalization / customization", ph: "e.g. names, date, colors" }, features: { label: "Intended use / key features", ph: "e.g. instant download, 3 color options" } } }
+  };
+
+  // Labels for the "Product type" correction select (value = profile id).
+  const PC_PROFILE_LABELS = {
+    basic: "General product", apparel: "Clothing & apparel", jewelry: "Jewelry", bags: "Bags & accessories",
+    homeDecor: "Home decor & furniture", wallArt: "Wall art & prints", stationery: "Stationery, stickers & planners",
+    giftEvent: "Personalized gifts & events", candleSoap: "Candles, soaps & bath", pet: "Pet products",
+    kitchen: "Kitchen & dining", toys: "Toys, games & kids", craft: "Craft supplies", garden: "Garden & outdoor",
+    books: "Books & education", digitalDoc: "Digital download — planner / document",
+    digitalArt: "Digital download — art / clipart", digitalTemplate: "Digital download — template"
   };
 
   // SEO-focus option sets. Index 0 is the automatic default. These are
@@ -7310,7 +7464,10 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     "Garden Plant Markers", "Succulent Planter", "Garden Flag", "Gardener Gift", "Plant Mom Mug", "Wedding Welcome Sign", "Bridal Shower Favors", "Custom Wedding Cake Topper", "Bridesmaid Tote Bag", "Engagement Gift for Couples",
     // digital
     "Editable Birthday Invitation", "Printable Budget Planner", "Printable Botanical Wall Art", "Habit Tracker Printable", "Meal Planner Printable", "Teacher Worksheet Bundle", "Printable Kids Worksheets", "Canva Social Media Template", "Resume Template", "Printable Baby Shower Games",
-    "Digital Download Wall Art", "Cleaning Checklist Printable", "Notion Budget Template", "Printable Coloring Pages", "Digital Sticker Bundle", "Dog Training Planner Printable", "Pet Care Binder Printable", "Fitness Planner Printable", "Reading Log Printable", "Printable Travel Itinerary"
+    "Digital Download Wall Art", "Cleaning Checklist Printable", "Notion Budget Template", "Printable Coloring Pages", "Digital Sticker Bundle", "Dog Training Planner Printable", "Pet Care Binder Printable", "Fitness Planner Printable", "Reading Log Printable", "Printable Travel Itinerary",
+    // more product types
+    "Soy Candle", "Handmade Soap Bar", "Wooden Toy", "Crochet Plush", "Bird Feeder", "Ceramic Planter", "Cutting Board", "Wooden Serving Tray",
+    "Crochet Yarn Kit", "Glass Beads Assortment", "Personalized Wedding Favors", "Custom Baby Onesie", "Wooden Wall Shelf", "Linen Cushion Cover", "Canvas Print", "Greeting Card Set"
   ];
 
   /* ---------------- B. PURE FUNCTIONS (no DOM) ---------------- */
@@ -7376,7 +7533,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     const digitalStrong = has("digitalStrong");
     const digitalWeak = has("digitalWeak");
     const categories = PC_CATEGORY_ORDER.filter(has);
-    const physicalStrong = categories.length > 0;
+    const physicalStrong = categories.some(c => !PC_WEAK_CATEGORIES[c]);
 
     const n = {};
     ["dog", "cat", "pet", "garden", "wedding", "event", "teacher", "book", "baby", "business", "fitness", "travel", "mom", "dad", "holiday"].forEach(id => { n[id] = has(id); });
@@ -7417,13 +7574,15 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     if (!buyerPersona && personalizedStrong && gift) buyerPersona = PC_PERSONA_PERSONAL_GIFT;
 
     // ---- Product Details profile ----
+    // Only chooses which fields to ASK for. Low confidence -> general fields.
+    const giftFallback = categories.length === 0 && format !== "digital" && (gift || personalizedStrong || n.wedding || n.event);
     let detailsProfile = "basic";
     if (format === "digital") detailsProfile = digitalKind ? digitalKind.profile : "digitalDoc";
-    else if (format === "physical") {
-      if (categories.indexOf("apparel") >= 0) detailsProfile = "apparel";
-      else if (categories.indexOf("jewelry") >= 0) detailsProfile = "jewelry";
-      else if (categories.indexOf("homeDecor") >= 0) detailsProfile = "homeDecor";
-    }
+    else if (categories.length) detailsProfile = PC_CATEGORY_PROFILE[categories[0]] || "basic";
+    else if (giftFallback) detailsProfile = "giftEvent";
+    const detectedProfile = detailsProfile;
+    const profileOverridden = !!(opts.profileOverride && PC_PROFILES[opts.profileOverride]);
+    if (profileOverridden) detailsProfile = opts.profileOverride;
 
     // ---- SEO focus set ----
     let seoProfile = "general";
@@ -7445,12 +7604,16 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       if (categories.length) labels.push(PC_CATEGORY_LABELS[categories[0]]);
       if (personalized) labels.push("Personalized");
       if (nicheLabel) labels.push(nicheLabel);
+    } else if (categories.length || giftFallback) {
+      labels.push(categories.length ? PC_CATEGORY_LABELS[categories[0]] : "Gifts & events");
+      if (personalized) labels.push("Personalized");
+      if (nicheLabel) labels.push(nicheLabel);
     } else {
       if (nicheLabel) labels.push(nicheLabel);
       if (personalized && labels.length) labels.push("Personalized");
     }
 
-    const confidence = (formatFromKeyword && format !== "unknown") || buyerPersona || nicheLabel ? "high" : "low";
+    const confidence = (formatFromKeyword && format !== "unknown") || categories.length || giftFallback || buyerPersona || nicheLabel ? "high" : "low";
 
     return {
       keyword: String(keyword == null ? "" : keyword),
@@ -7462,10 +7625,13 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       digitalKind: digitalKind ? digitalKind.id : null,
       personalized: personalized,
       chainJewelry: has("chainJewelry"),
+      pages: has("pagesItem"),
       buyerPersona: buyerPersona,
       confidence: confidence,
       labels: labels.slice(0, 3),
       detailsProfile: detailsProfile,
+      detectedProfile: detectedProfile,
+      profileOverridden: profileOverridden,
       seoProfile: seoProfile,
       seoFocusOptions: PC_SEO_SETS[seoProfile].slice()
     };
@@ -7475,17 +7641,24 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   function pcDetailFieldsFor(ctx){
     const prof = PC_PROFILES[ctx.detailsProfile] || PC_PROFILES.basic;
     const over = prof.over || {};
+    const baby = !!(ctx.signals && ctx.signals.niches && ctx.signals.niches.indexOf("baby") >= 0);
     const out = [];
     prof.fields.forEach(spec => {
       let id = spec, flag = null;
       const q = spec.indexOf("?");
       if (q > 0) { id = spec.slice(0, q); flag = spec.slice(q + 1); }
-      if (flag && !ctx[flag]) return;
+      if (flag) {
+        const neg = flag.charAt(0) === "!";
+        if (!!ctx[neg ? flag.slice(1) : flag] === neg) return;
+      }
       const base = PC_FIELD_DEFS[id];
       const o = over[id] || {};
+      let label = o.label || base.label;
       let ph = o.ph || base.ph;
-      if (id === "personalization" && ctx.personalized) ph = "What can be customized? e.g. name, date, photo";
-      out.push({ id: id, label: o.label || base.label, ph: ph });
+      if (id === "personalization" && ctx.personalized && !o.ph) ph = "What can be customized? e.g. name, date, photo";
+      if (ctx.detailsProfile === "apparel" && id === "size" && baby) { label = "Size / age range"; ph = "e.g. 0–3 months, 6–12 months"; }
+      if (ctx.detailsProfile === "jewelry" && id === "size" && ctx.chainJewelry) ph = "e.g. 18 in chain, 15 mm pendant";
+      out.push({ id: id, label: label, ph: ph, fact: o.fact || base.fact || label });
     });
     return out;
   }
@@ -7545,10 +7718,13 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   const PC_LEGACY_INPUTS = { material: productMaterialInput, color: productColorInput, size: productSizeInput, personalization: productPersonalizationInput, features: productFeaturesInput };
   const pcStaticAudienceValues = Object.keys(AUDIENCE_CATALOG).map(k => AUDIENCE_CATALOG[k].value || k);
   const pdEls = {};          // field id -> { wrap, label, input }
-  const pdStore = {};        // profile key -> { field id -> value }  (values never cross profiles)
+  const pdStore = {};        // "create" | "analyze" -> { field id -> value }  (Create and Analyze never share values)
+  let pcLayoutSig = "";      // signature of the layout on screen (skips needless DOM work)
+  let pcTypeOverride = "";   // "" = auto-detect; otherwise a PC_PROFILES id chosen by the seller
+  let pdTypeSelect = null;
   let pcReady = false;
   let pcCtx = getProductContext("", {});
-  let pcShownKey = null;     // which store key the Product Details inputs currently show
+  let pcShownKey = null;     // which store the Product Details inputs currently show ("create" | "analyze")
   let pcActiveFields = [];   // fields of the layout currently shown (only these are ever sent)
   let pcOptEl = null;        // the dynamic "suggested persona" <option>
   let kwItems = [], kwActive = -1, kwSkipSuggest = false;
@@ -7561,6 +7737,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
   function pcLayout(fields){
     pcActiveFields = fields;
+    const sig = fields.map(f => f.id + "|" + f.label + "|" + f.ph).join("~");
+    if (sig === pcLayoutSig) return;          // same fields already on screen: touch nothing (no flicker, focus kept)
+    pcLayoutSig = sig;
     const on = {};
     fields.forEach(f => { on[f.id] = true; });
     Object.keys(pdEls).forEach(id => {
@@ -7575,17 +7754,19 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     });
   }
 
+  // Fields that hold text but are not part of the current layout are hidden and
+  // are NEVER sent. Tell the seller so a hidden value is never a surprise.
   function pcUpdateInactiveNote(){
-    const other = pcShownKey !== "analyze" && Object.keys(pdStore).some(k =>
-      k !== pcShownKey && k !== "analyze" &&
-      Object.keys(pdStore[k]).some(id => String(pdStore[k][id] || "").trim()));
-    pdInactiveNote.classList.toggle("hidden", !other);
+    const active = {};
+    pcActiveFields.forEach(f => { active[f.id] = true; });
+    const stray = Object.keys(pdEls).some(id => !active[id] && String(pdEls[id].input.value || "").trim());
+    pdInactiveNote.classList.toggle("hidden", !stray);
   }
 
-  // Show the Product Details of `key` ("analyze" or a Create profile id).
-  // The inputs hold ONE profile's values at a time; the others are parked in
-  // pdStore, so a value typed for one product type can never be sent as a
-  // fact for another.
+  // Show the Product Details of `key` ("create" or "analyze") with the given layout.
+  // Values are stored per FIELD (not per product type): changing the product title
+  // keeps what was typed in every field that is still shown, and values in fields
+  // that are no longer shown are kept but hidden and never sent.
   function pcShowDetails(key, fields){
     if (!pcReady) return;
     if (pcShownKey !== key) {
@@ -7593,6 +7774,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       pcShownKey = key;
       const vals = pdStore[key] || {};
       Object.keys(pdEls).forEach(id => { pdEls[id].input.value = vals[id] || ""; });
+      pcLayoutSig = "";
     }
     pcLayout(fields);
     pcUpdateInactiveNote();
@@ -7601,7 +7783,12 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   // Used by the Create/Analyze mode switch (replaces the Batch 8 two-bucket stash).
   function swapProductDetails(fromMode, toMode){
     if (toMode === "analyze") pcShowDetails("analyze", pcDetailFieldsFor({ detailsProfile: "basic" }));
-    else pcShowDetails(pcCtx.detailsProfile, pcDetailFieldsFor(pcCtx));
+    else {
+      pcShowDetails("create", pcDetailFieldsFor(pcCtx));
+      // Create mode shows Product details as one flat group under the Customize button.
+      if (productDetailsToggle) productDetailsToggle.open = true;
+    }
+    if (toMode === "analyze" && productDetailsToggle) productDetailsToggle.open = false;   // Analyze keeps its original collapsed default
   }
 
   // The ONLY place Product Details are read for generation: active fields only.
@@ -7612,7 +7799,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       const v = String(pdEls[f.id].input.value || "").trim();
       if (!v) return;
       if (PC_LEGACY_IDS.indexOf(f.id) >= 0) out[f.id] = v;
-      else extras.push(f.label.replace(/\?$/, "") + ": " + v);
+      else extras.push((f.fact || f.label).replace(/\?$/, "") + ": " + v);
     });
     if (extras.length) out.features = [out.features].concat(extras).filter(Boolean).join("; ");
     return out;
@@ -7705,21 +7892,30 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     kwContextPersona.classList.toggle("hidden", !personaShown);
   }
 
+  /* ---- "Product type" correction (inside Customize; auto-detect by default) ---- */
+  function pcSyncTypeSelect(ctx){
+    if (!pdTypeSelect) return;
+    const autoLabel = "Auto-detect (" + (PC_PROFILE_LABELS[ctx.detectedProfile] || PC_PROFILE_LABELS.basic) + ")";
+    if (pdTypeSelect.options[0].textContent !== autoLabel) pdTypeSelect.options[0].textContent = autoLabel;
+    if (pdTypeSelect.value !== pcTypeOverride) pdTypeSelect.value = pcTypeOverride;
+  }
+
   /* ---- the single entry point: keyword (or platform) changed ---- */
   function pcApplyContext(){
     if (!pcReady) return;
-    const ctx = getProductContext(keywordInput.value, { platform: categorySelect.value });
+    const ctx = getProductContext(keywordInput.value, { platform: categorySelect.value, profileOverride: pcTypeOverride });
     pcCtx = ctx;
     pcRenderContext(ctx);
+    pcSyncTypeSelect(ctx);
     if (analyzeUIActive) return;          // Analyze mode keeps its own, unchanged controls
-    pcShowDetails(ctx.detailsProfile, pcDetailFieldsFor(ctx));
+    pcShowDetails("create", pcDetailFieldsFor(ctx));
     pcSyncPersona(ctx);
     pcSyncSeo(ctx);
   }
 
   // History: re-derive the context from the restored keyword, then restore the saved choices.
   function pcRestoreFromHistory(item){
-    pcAudienceManual = false; pcGoalManual = false; pcManualGoal = "";
+    pcAudienceManual = false; pcGoalManual = false; pcManualGoal = ""; pcTypeOverride = "";
     pcApplyContext();
     pcRestoreAudience(item.audience);
     pcRestoreSeoFocus(item.seoGoal);
@@ -7791,8 +7987,18 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       pdBody.appendChild(wrap);
       pdEls[id] = { wrap: wrap, label: label, input: input };
     });
+    pdTypeSelect = $("pdTypeSelect");
+    Object.keys(PC_PROFILE_LABELS).forEach(id => {
+      const o = document.createElement("option");
+      o.value = id; o.textContent = PC_PROFILE_LABELS[id];
+      pdTypeSelect.appendChild(o);
+    });
+    pdTypeSelect.addEventListener("change", function(){
+      pcTypeOverride = pdTypeSelect.value || "";
+      pcApplyContext();
+    });
     pcReady = true;
-    pcShowDetails("basic", pcDetailFieldsFor(pcCtx));
+    pcShowDetails("create", pcDetailFieldsFor(pcCtx));
     pcApplyContext();
 
     keywordInput.addEventListener("input", function(){
