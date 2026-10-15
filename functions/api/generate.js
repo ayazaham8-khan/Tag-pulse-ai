@@ -70,6 +70,17 @@ const GROQ_MODEL_FALLBACK =
 // see callGroq() for exactly which failures attempt it.
 const GROQ_FALLBACK_ENABLED = true;
 
+// TOKEN BUDGET DECISION (kept at 3072 in the token-optimization batch
+// that removed the AI-generated Keyword Intelligence output): a 2048
+// ceiling is a plausible candidate now that Etsy returns only
+// {title, tags, description}, but no real post-change completion-token
+// figures exist yet (this file now logs them: see logGroqUsage()), and
+// Groq's docs do not say whether the declared ceiling counts toward the
+// TPM limit, so lowering it would trade an unproven saving for a real
+// truncation/retry risk. Revisit with data: lower it only after the
+// logged completionTokens (reasoning included) show a comfortable
+// margin and no finishReason "length".
+//
 // Explicit output-token ceiling. History: raised from 2048 to 4096
 // after Groq dashboard evidence showed HTTP 400 "Failed to validate
 // JSON" failures consistently landing at exactly 2048 output tokens
@@ -2535,6 +2546,14 @@ const ETSY_KEYWORD_OPPORTUNITY_ROLES = [
   "personalization"
 ];
 
+// LEGACY: no longer requested by the current frontend, which sends no
+// response_shape for Etsy any more (Etsy uses TAGS_OUTPUT_SCHEMA through
+// the default path, so the backend does NOT require keywordIntelligence).
+// This schema and its whitelist entry stay only so a browser tab still
+// running the previous frontend, which asks for keywordIntelligence in
+// its prompt and sends response_shape "etsy_intelligence", keeps getting
+// a schema that matches its prompt instead of an HTTP 400. Safe to
+// delete once no old tabs can exist.
 const ETSY_INTELLIGENCE_OUTPUT_SCHEMA = {
   type: "object",
   properties: {
@@ -2911,6 +2930,8 @@ async function callGroqModel(
     { requestId: requestId, model: model }
   );
 
+  logGroqUsage(requestId, model, data, res.headers);
+
 
   const choice =
     data?.choices?.[0];
@@ -2975,6 +2996,88 @@ async function callGroqModel(
  * omits it, so those errors are completely unaffected by this
  * addition.
  */
+/**
+ * TOKEN USAGE DIAGNOSTICS. One concise log line per successful Groq
+ * response so real usage can be compared before/after prompt changes,
+ * and actual input tokens told apart from cached ones. Reads ONLY the
+ * numeric `usage` fields Groq returns (each is null when Groq omits
+ * it), the finish reason, and the token rate-limit headers. It never
+ * logs the prompt, the model output, the API key or any header other
+ * than the three token-limit ones, is never sent to the browser, and
+ * can never throw into the request.
+ *
+ *   promptTokens       input tokens (cached ones included)
+ *   cachedTokens       the part of promptTokens served from Groq's cache
+ *   completionTokens   output tokens (reasoning + visible JSON)
+ *   reasoningTokens    the reasoning part of completionTokens, if given
+ *   finishReason       "length" would mean the output hit the ceiling
+ */
+function logGroqUsage(requestId, model, data, headers) {
+
+  try {
+
+    const usage = (data && data.usage) || {};
+    const promptDetails = usage.prompt_tokens_details || {};
+    const completionDetails = usage.completion_tokens_details || {};
+    const choice = data && data.choices && data.choices[0];
+
+    const count = function (v) {
+      return (typeof v === "number" && Number.isFinite(v)) ? v : null;
+    };
+
+    console.log(
+      "[TagPulse][generate] groq token usage",
+      {
+        requestId: requestId,
+        model: model,
+        promptTokens: count(usage.prompt_tokens),
+        completionTokens: count(usage.completion_tokens),
+        totalTokens: count(usage.total_tokens),
+        cachedTokens: count(promptDetails.cached_tokens),
+        reasoningTokens: count(completionDetails.reasoning_tokens),
+        finishReason:
+          (choice && typeof choice.finish_reason === "string")
+            ? choice.finish_reason
+            : null,
+        maxCompletionTokens: GROQ_MAX_COMPLETION_TOKENS,
+        tokenRateLimit: buildTokenRateLimitSnapshot(headers)
+      }
+    );
+
+  } catch (_) {}
+}
+
+/**
+ * Only the three token (TPM) rate-limit headers, as plain strings, or
+ * null when none are present. Deliberately narrower than
+ * buildRateLimitHeaderSnapshot(), which is used for 429 diagnostics.
+ */
+function buildTokenRateLimitSnapshot(headers) {
+
+  if (!headers || typeof headers.get !== "function") {
+    return null;
+  }
+
+  const names = [
+    "x-ratelimit-limit-tokens",
+    "x-ratelimit-remaining-tokens",
+    "x-ratelimit-reset-tokens"
+  ];
+
+  const snapshot = {};
+  let any = false;
+
+  names.forEach(function (name) {
+    const value = headers.get(name);
+    if (value !== null && value !== undefined) {
+      snapshot[name] = value;
+      any = true;
+    }
+  });
+
+  return any ? snapshot : null;
+}
+
 /**
  * Reads Groq's standard rate-limit response headers, when present,
  * into a small plain object for logging. (The wait hint used to
