@@ -1878,38 +1878,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       <p class="char-count" id="descCharCount"></p>
     </div>
 
-    <div class="card ki-card hidden" id="keywordIntelligenceCard">
-      <div class="output-card-head">
-        <h3><span class="num">4</span>Keyword Intelligence</h3>
-      </div>
-      <p class="ki-disclaimer">TagPulse Estimated Opportunity — based on your listing inputs and generated keyword relevance. This is not Etsy search-volume or ranking data.</p>
-
-      <div class="ki-breakdown" id="kiRoleBreakdown"></div>
-
-      <div class="ki-opportunities" id="kiOpportunitiesList"></div>
-    </div>
-
-    <div class="card ki-card hidden" id="keywordStrategyCard">
-      <div class="output-card-head">
-        <h3><span class="num">5</span>Keyword Strategy</h3>
-      </div>
-      <p class="ki-coverage" id="ksCoverage"></p>
-      <p class="ki-strategy-text" id="ksStrategyText"></p>
-      <p class="ki-focus" id="ksFocus"></p>
-    </div>
-
-    <div class="card ki-card hidden" id="listingScoreCard">
-      <div class="output-card-head">
-        <h3><span class="num">6</span>TagPulse Listing Score</h3>
-      </div>
-      <div class="ls-score-row">
-        <span class="ls-score" id="lsScoreValue"></span>
-        <span class="ls-score-max">/ 100</span>
-      </div>
-      <ul class="ls-diagnostics" id="lsDiagnostics"></ul>
-      <p class="ls-note">Measures listing quality and keyword/fact coverage. It does not measure Etsy rankings, search volume, competition, or sales probability.</p>
-    </div>
-
   </section>
   </section>
 </main>
@@ -2245,18 +2213,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   const descOutput     = $("descOutput");
   const descCharCount  = $("descCharCount");
 
-  const keywordIntelligenceCard = $("keywordIntelligenceCard");
-  const kiRoleBreakdown          = $("kiRoleBreakdown");
-  const kiOpportunitiesList      = $("kiOpportunitiesList");
 
-  const keywordStrategyCard = $("keywordStrategyCard");
-  const ksCoverage          = $("ksCoverage");
-  const ksStrategyText      = $("ksStrategyText");
-  const ksFocus             = $("ksFocus");
-
-  const listingScoreCard = $("listingScoreCard");
-  const lsScoreValue     = $("lsScoreValue");
-  const lsDiagnostics    = $("lsDiagnostics");
 
   const copyTitleBtn = $("copyTitleBtn");
   const copyTagsBtn  = $("copyTagsBtn");
@@ -3610,16 +3567,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     const firstRequestId = generationId + "-1";
     const validationRetryRequestId = firstRequestId + "-retry";
 
-    // Etsy Keyword Intelligence (batch 1): the explicit, whitelisted
-    // shape selector sent ONLY on Etsy's two generation calls (the
-    // initial request and its validation retry, below). Pinterest
-    // and Digital/Printable never set this, so their calls omit
-    // response_shape entirely and the backend's existing behavior
-    // for them is unchanged (see selectResponseFormat() in
-    // functions/api/generate.js).
-    const etsyResponseShape =
-      category === "Etsy" ? "etsy_intelligence" : undefined;
-
     // Batch 8: the in-flight lock is taken immediately before the try/finally
     // that always releases it (nothing between here and the try can throw
     // after the lock is set).
@@ -3639,8 +3586,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
           prompt: prompt,
           buildRetryPrompt: (errors) => buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, errors),
           hasProductDetails: hasProductDetails,
-          shape: etsyResponseShape,
-          wordsToAvoid: wordsToAvoid,
+                    wordsToAvoid: wordsToAvoid,
           audience: audience,
           productContextText: productContextText,
           finalFailureMessage: "The AI couldn't produce a valid Etsy listing after a retry. Please try again or adjust your inputs.",
@@ -3659,7 +3605,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         parsed = eg.parsed;
         serverState = eg.serverState;
       } else {
-        const result = await callGenerateWithNetworkRetry(prompt, firstRequestId, hasProductDetails, undefined, etsyResponseShape);
+        const result = await callGenerateWithNetworkRetry(prompt, firstRequestId, hasProductDetails);
 
         if (result.status === 402) {
           applyServerState(result.data);
@@ -3676,41 +3622,11 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
       if (category === "Etsy") {
 
-        // Batch 2: deterministic, non-blocking Keyword Intelligence
-        // post-processing. Runs only once validation above has
-        // already accepted title/tags/description; can never fail
-        // generation and never triggers another retry — see
-        // processEtsyKeywordIntelligence() for the full contract.
-        try {
-          parsed.keywordIntelligence =
-            processEtsyKeywordIntelligence(parsed, productContextText);
-        } catch (intelErr) {
-          console.warn(
-            "[TagPulse][Etsy] keyword intelligence processing failed - continuing without it",
-            intelErr
-          );
-          parsed.keywordIntelligence = { opportunities: [], roleBreakdown: {
-            core: 0, long_tail: 0, buyer_intent: 0, attribute_style: 0,
-            personalization: 0, unclassified: Array.isArray(parsed.tags) ? parsed.tags.length : 0
-          }};
-        }
-
-        // Batch 5: deterministic, local Listing Score. No network
-        // request, no Groq call, no credit involvement. Stored on the
-        // payload so saved history keeps the exact score. A failure
-        // here only omits the score - the listing is never affected.
-        try {
-          const listingScore = computeEtsyListingScore(parsed, {
-            keyword: keyword,
-            productDetails: productDetails,
-            wordsToAvoid: wordsToAvoid
-          });
-          if (listingScore) parsed.listingScore = listingScore;
-          else delete parsed.listingScore;
-        } catch (scoreErr) {
-          console.warn("[TagPulse][Etsy] listing score failed - continuing without it", scoreErr);
-          delete parsed.listingScore;
-        }
+        // Etsy output ({title, tags, description}) was already parsed and
+        // validated inside runEtsyGeneration() above (one bounded free
+        // retry). Nothing else is derived from it: the AI-generated
+        // Keyword Intelligence, the Keyword Strategy and the Listing Score
+        // were removed to save Groq tokens and simplify the interface.
 
       } else if (category === "Pinterest") {
 
@@ -3730,7 +3646,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
             validation.errors
           );
 
-          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId, etsyResponseShape);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId);
 
           if (retryResult.status === 402) {
             applyServerState(retryResult.data);
@@ -3773,7 +3689,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
             validation.errors
           );
 
-          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId, etsyResponseShape);
+          const retryResult = await callGenerateWithNetworkRetry(retryPrompt, validationRetryRequestId, hasProductDetails, firstRequestId);
 
           if (retryResult.status === 402) {
             applyServerState(retryResult.data);
@@ -3907,49 +3823,31 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      ETSY PROMPT BUILDER (dedicated — Etsy no longer uses
      buildStandardPrompt())
      ------------------------------------------------------------
-     Implements the fact-boundary design from the Etsy SEO engine
-     spec:
-       - Only user-supplied product details are ever asserted as
-         facts (KNOWN FACTS block below, built only from non-empty
-         fields).
-       - Every attribute NOT supplied is explicitly declared
-         unknown and off-limits, including vague "safe substitute"
-         quality language ("premium", "durable", etc.) that isn't
-         backed by a known fact.
-       - Targeting/audience is kept OUT of the KNOWN FACTS block on
-         purpose (it used to sit there, which is very likely why it
-         got treated as a fact the model could freely turn into
-         keywords). It now lives in its own AUDIENCE CONTEXT
-         section, explicitly framed as strategic context and not a
-         keyword source, with an explicit ban on mechanically
-         combining the targeting label with a product word.
-       - The model is asked to privately reason through which
-         search-intent clusters genuinely apply before writing the
-         13 tags, with explicit anti-redundancy and anti-filler
-         instructions, but is told not to output that reasoning —
-         only the final {title, tags, description} object.
-       - An optional validationErrors array turns this into a
-         single-retry correction prompt: when non-empty, it's
-         appended as a "fix these exact issues" section so the
-         retry is a targeted correction, not a blind re-roll.
+     TOKEN OPTIMIZATION: the model now returns ONLY
+     {title, tags, description} (the AI-generated Keyword
+     Intelligence section was removed, and the ordinary prompt was
+     consolidated from ~9,000 to roughly 4,000 characters). All
+     essential safeguards are kept, stated once each:
+       - Only seller-supplied product facts may be asserted (the
+         KNOWN FACTS block is built only from non-empty fields, so an
+         empty field is never a fact); every other attribute is
+         unknown and off-limits, including unsupported "safe
+         substitute" quality language.
+       - The targeting/audience label is context only, never a
+         keyword source, and never leaks into the listing.
+       - Title <= 140 chars; exactly 13 tags, each <= 20 characters
+         including spaces, multi-word, no exact/near duplicates;
+         WORDS TO AVOID respected; valid JSON only.
+     Cache-friendly order: every static instruction comes FIRST
+     (identical on every Etsy request), all user-specific content
+     (facts, targeting, words to avoid, improve block, retry
+     feedback) comes LAST. Not a guarantee of a Groq cache hit.
+     An optional validationErrors array turns this into the single
+     free validation-retry prompt ("fix these exact issues").
      ============================================================ */
   function buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, validationErrors, improveContext){
     productDetails = productDetails || {};
     validationErrors = validationErrors || [];
-
-    // TOKEN OPTIMIZATION: reordered so every static instructional
-    // block (identical on every Etsy request) comes FIRST, and all
-    // user-specific/dynamic content (product facts, audience,
-    // words-to-avoid, retry feedback) comes LAST. This gives
-    // repeated Etsy requests a long, stable common prefix that is
-    // eligible for Groq's automatic prompt caching -- it does not
-    // guarantee a cache hit on any given request.
-    //
-    // Wording is preserved verbatim wherever possible. A few
-    // sentences that said "above" / "below" needed small, purely
-    // positional fixes since the facts they refer to moved -- no
-    // rule, safeguard, or requirement was reworded in substance.
-    // See the batch report for the exact list of touched sentences.
 
     const knownFacts = [
       "- Product idea: " + keyword
@@ -3963,69 +3861,36 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
     // ---- STATIC PREFIX (identical across every Etsy request) ----
     const lines = [
-      "Act as a senior Etsy SEO strategist and listing copywriter. This is a strict factual-accuracy task, not a creative-writing task.",
+      "You are an Etsy SEO copywriter. Write one listing for the product described under KNOWN FACTS at the end of this message. This is a strict factual-accuracy task, not creative writing. Work efficiently; do not write out lengthy analysis.",
       "",
-      "=== KNOWN FACTS RULE ===",
-      "The KNOWN FACTS for this product — the ONLY facts you may state or imply — are given later in this message, under a KNOWN FACTS heading.",
+      "FACT RULES",
+      "- KNOWN FACTS are the ONLY facts you may state or imply. Any attribute not listed there is unknown (an empty or missing detail is not a fact). Never state, imply or hint at a value for an unknown attribute, e.g. material, color, size, weight, features, care, printing method, construction, shipping or delivery, packaging, quantity, file format, DPI, ingredients, scent, safety, age suitability, certifications, compatibility, included items, weather or water resistance, gemstone or metal type, or how personalization works.",
+      '- Do not use unsupported quality language such as "premium", "durable", "beautifully made", "high quality" or "top quality" unless a known fact supports it. If there is nothing factual to say about a point, leave it out.',
       "",
-      "=== UNKNOWN FACTS — DO NOT INVENT ===",
-      "Any product attribute NOT listed below as a known fact is UNKNOWN. Never state, imply, or hint at a specific value for an unknown attribute. This includes (but is not limited to): materials, colors, dimensions, sizes, weights, features, care instructions, printing methods, garment construction, pockets, shipping details, delivery times, washing instructions, quality claims, packaging, personalization workflow/capabilities, quantities, file formats, DPI, measurements, ingredients, scent, safety properties, age suitability, certifications, compatibility, included items or components, weather or water resistance, and gemstone or metal type/purity.",
-      'Do NOT use vague "safe substitute" claims such as "premium", "durable", "beautifully made", "high quality", "top quality", or similar quality/craftsmanship language UNLESS it is directly supported by a known fact below. If you have nothing factual to say about a dimension, omit it rather than filling the gap with unsupported language.',
+      "TARGETING",
+      'The selected targeting option (end of this message) is background context for tone only. It is not a product fact and not a keyword source. Never build a keyword from the label plus a product word (e.g. "online shopper gift", "etsy dog mom", "pinterest wall art") and never write phrases like "for online shoppers", "for Etsy shoppers" or "for Pinterest users". A term is allowed only if it is independently relevant to the product or to genuine buyer search intent.',
       "",
-      "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
-      "This tells you who the likely buyer is, to help you judge tone and genuine buyer intent. It is background context only — it is not a product fact and not a keyword to insert.",
-      'Never create a keyword merely by combining the targeting label with a product word (for example, do not produce "online shopper gift", "etsy dog mom", "pinterest wall art", or similar). Do not insert phrases like "for online shoppers", "for Etsy shoppers", "for Pinterest users", or similar targeting/audience metadata into the title, tags, or description just because that option was selected.',
-      "A term may still be used if it is independently relevant to the actual product or genuine buyer search intent — the rule is only against mechanically converting the UI targeting label into SEO text. SEO phrases must come primarily from the actual product concept, the supplied product details, genuine buyer intent, and search contexts specific to this product — not from the targeting label itself.",
+      "OUTPUT",
+      "Return ONLY a raw JSON object: no markdown, no code fences, no text outside it. Exactly this shape:",
+      '{"title": "...", "tags": ["...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."], "description": "..."}',
       "",
-      "=== KEYWORD STRATEGY (this reasoning IS part of your output — see KEYWORD INTELLIGENCE below) ===",
-      "Before writing the final tags, evaluate candidate phrases across these search-intent clusters, to the extent they genuinely apply to THIS product: core product, product type/variant, primary theme/design, personalization/customization, recipient/audience, occasion, gift intent, use case, style/aesthetic, relevant niche/sub-niche. These are reasoning categories, NOT mandatory tags — only use a cluster that is genuinely supported by the product and supplied facts; do not force every cluster to appear.",
-      "Prioritize, in order: (1) direct relevance to the actual product, (2) strong buyer/search intent, (3) specificity, (4) distinct search intent, (5) natural multi-word phrasing, (6) Etsy tag constraints, (7) diversity across the 13 tags.",
-      'Avoid generating several tags that are merely grammatical variations of the same search intent — for example "dog mom gift", "gift for dog mom", and "dog mom present" all express the same intent; select only the strongest one and use the freed-up slots for other genuinely different search intents. Do not fill slots with generic filler such as "unique gift", "special occasion gift", "perfect gift", "cute item", or "great present" unless the phrase carries genuinely useful, product-specific search intent. Do not overcorrect: tags that represent legitimately different product attributes or angles (for example "dog mom sweatshirt" and "personalized dog mom") may coexist.',
+      "TITLE: at most 140 characters. Natural and readable, not a keyword dump or synonym chain. Put the main product phrase near the start. No unsupported attributes. Avoid filler such as \"Perfect Gift\" or \"Great Gift\" when a more specific phrase exists. Do not pad to use up the limit.",
       "",
-      "=== KEYWORD INTELLIGENCE (output this — this is TagPulse's own internal analysis layer, NOT official Etsy data) ===",
-      "In keywordIntelligence.opportunities, list roughly 12 to 20 of the strongest keyword phrases your KEYWORD STRATEGY reasoning above actually identified for this specific product — do not pad the list with weak or irrelevant filler just to reach a count.",
-      "For EACH opportunity provide exactly these 4 fields:",
-      '  - "keyword": the candidate phrase itself.',
-      '  - "role": EXACTLY one of these 5 values, and no others: "core", "long_tail", "buyer_intent", "attribute_style", "personalization".',
-      '  - "why": one short, concrete, product-specific sentence explaining why this keyword is useful for THIS product. Never generic filler like "this is a good keyword" or "this will help sales" — ground it in the actual product, audience, or intent.',
-      '  - "selected_for_tags": true ONLY if this exact keyword phrase is one of the 13 tags you output below in "tags". Use false for additional relevant opportunities you considered but did not select for the final 13.',
-      "Keyword Intelligence is TagPulse's own internal analysis, not Etsy platform data. NEVER state or imply an Etsy search volume, competition level, demand number, trend percentage, ranking position, or ranking probability anywhere in \"why\" or elsewhere — TagPulse does not have that data. Do not include any numeric score or tier for an opportunity.",
-      "Keep every \"why\" brief (roughly one sentence) — this section supports the listing below, it must not balloon the response.",
+      'TAGS: exactly 13. Every tag is non-empty, a multi-word phrase (no bare single words), relevant to the product, and 20 characters or fewer INCLUDING spaces, with no unsupported factual attribute. No exact or near-duplicate tags: do not use grammatical variants of one intent (e.g. "dog mom gift", "gift for dog mom", "dog mom present"); use the freed slots for genuinely different search intents that the facts support (product type, theme, personalization, recipient, occasion, use case, style). No generic filler such as "unique gift", "perfect gift" or "special occasion gift". Tags for different attributes (e.g. "dog mom sweatshirt" and "personalized dog mom") may coexist.',
+      'Length check: count the characters of every tag, including spaces, before answering; never assume a phrase fits. If a phrase is over 20, REPLACE it with a different, shorter, still-relevant phrase you have counted; never truncate it (a cut-off word is not a tag). After any replacement recount all 13. Examples that fit: "custom name gift" (16), "boho home decor" (15), "birthday gift idea" (18).',
       "",
-      "=== OUTPUT FORMAT ===",
-      "Return ONLY a raw JSON object — NO markdown, NO code block markers, NO explanation outside the fields specified, NO intermediate work. Exactly this shape:",
-      "{",
-      '  "title": "...",',
-      '  "tags": ["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13"],',
-      '  "description": "...",',
-      '  "keywordIntelligence": {',
-      '    "opportunities": [',
-      '      { "keyword": "...", "role": "core", "why": "...", "selected_for_tags": true }',
-      "    ]",
-      "  }",
-      "}",
+      'DESCRIPTION: a useful Etsy description using ONLY the KNOWN FACTS and the SEO goal, plus general use-case or occasion framing that needs no invented fact. No unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production or packaging. Do not mention targeting labels (e.g. "for online shoppers"); speak naturally to the buyer.',
       "",
-      'TITLE RULES: Maximum 140 characters. Put the primary product phrase naturally near the beginning when it reads well. Natural and readable, not a keyword dump. No repetitive synonym chains. No unsupported product attributes. Avoid generic filler such as "Perfect Gift", "Great Gift", or "Perfect for..." when a stronger, more product-specific phrase is available. Do not stuff in extra words just to use up the character limit.',
-      "TAG RULES: Exactly 13 tags. Every tag must be non-empty, 20 characters or fewer, and a multi-word phrase (no bare single words). Every tag must be relevant to the actual product and must not state an unsupported factual attribute. No exact duplicate tags. Prefer tags that represent genuinely different search-intent angles over near-duplicate phrasing of the same angle — but do not force artificial diversity where it doesn't fit the product.",
-      "=== TAG LENGTH PROCEDURE (follow exactly, before finalizing tags) ===",
-      "HARD constraints — must never be violated: every tag is 20 characters or fewer, INCLUDING SPACES. The tags array contains EXACTLY 13 tags.",
-      "STRATEGY (a preference, not a hard rule): prefer a natural multi-word phrase when one fits within the 20-character hard limit.",
-      "Before finalizing the tags array: count the characters of EVERY tag, one at a time, including spaces. Never assume a phrase fits just because it looks short — actually count it.",
-      "If a natural keyword phrase exceeds 20 characters, do NOT output it and do NOT truncate or cut it down — a cut-off word is not a valid tag. Instead replace it entirely with a different, shorter, still-relevant phrase that you have counted and confirmed fits within 20 characters.",
-      'Examples of tags that fit the 20-character hard limit (count includes spaces; these are illustrative only, not phrases you must use): "custom name gift" (16), "handmade wall art" (17), "boho home decor" (15), "minimalist jewelry" (18), "birthday gift idea" (18).',
-      "After any replacement, recount every one of the 13 tags again and confirm the array still contains exactly 13 valid tags before returning your response.",
-      'DESCRIPTION RULES: Write a useful Etsy description using ONLY the known facts and the stated SEO goal provided later in this message, plus general non-specific framing (use-case, occasion, gift-worthiness) where it doesn\'t require inventing a fact. Do not add unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production, or packaging. Do not mention internal targeting/audience metadata (for example "for online shoppers", "for Etsy shoppers", "for Pinterest users") just because that option was selected — speak naturally to the buyer and product without exposing internal targeting labels.',
-      "WORDS-TO-AVOID RULE: Do not use any of the words or phrases listed under WORDS TO AVOID later in this message, anywhere in the title, tags, or description."
+      "WORDS TO AVOID: never use any word or phrase listed under WORDS TO AVOID anywhere in the title, tags or description."
     ];
 
     // ---- DYNAMIC SUFFIX (user-specific — varies every request) ----
     lines.push(
       "",
-      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
+      "KNOWN FACTS (the ONLY facts you may state or imply):",
       ...knownFacts,
       "",
-      "=== AUDIENCE CONTEXT (strategic understanding only — NOT a keyword source) ===",
-      "Selected targeting option: " + audience,
+      "TARGETING (context only, not a keyword source): " + audience,
       "",
       "WORDS TO AVOID: " + (
         wordsToAvoid.length
@@ -4049,7 +3914,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       // tag-length rejection message always contains this exact phrase
       // (see validateEtsyOutput() below) — detected here only to decide
       // whether to add extra, more directive coaching; the validator's
-      // own rejection logic and wording are unchanged.
+      // own rejection logic and wording are unchanged. This block is
+      // added ONLY on a retry that failed for tag length, so it costs
+      // nothing on an ordinary request.
       const hasTagLengthViolation =
         validationErrors.some(function (e) {
           return /exceeds the 20-character limit/.test(e);
@@ -4638,7 +4505,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       console.log("[TagPulse][Etsy] request #1 starting", { hasProductDetails: o.hasProductDetails });
       let first;
       try {
-        first = await callGenerateWithNetworkRetry(o.prompt, firstRequestId, o.hasProductDetails, undefined, o.shape);
+        first = await callGenerateWithNetworkRetry(o.prompt, firstRequestId, o.hasProductDetails);
       } catch (err) {
         if (err.requestInProgress || err.networkLevelFailure) {
           remember({ stage: "first", expiresAt: startedAt + PENDING_FIRST_TTL_MS }, err, RESUME_HINT_FIRST);
@@ -4661,7 +4528,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: o.hasProductDetails, resumed: !!prior });
     let second;
     try {
-      second = await callGenerateWithNetworkRetry(retryPrompt, retryRequestId, o.hasProductDetails, firstRequestId, o.shape);
+      second = await callGenerateWithNetworkRetry(retryPrompt, retryRequestId, o.hasProductDetails, firstRequestId);
     } catch (err) {
       remember({ stage: "retry", retryPrompt: retryPrompt, firstCompletedAt: firstCompletedAt, expiresAt: firstCompletedAt + PENDING_RETRY_TTL_MS }, err, RESUME_HINT_RETRY);
       throw err;
@@ -4691,269 +4558,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     }
   }
 
-  /* ============================================================
-     KEYWORD INTELLIGENCE RENDERING (batch 3 — Etsy only)
-     ------------------------------------------------------------
-     Purely a display layer. Every value rendered here (role, tier,
-     selected_for_tags, roleBreakdown) is already normalized and
-     reconciled by processEtsyKeywordIntelligence() (batch 2) --
-     this function does not recompute, re-score, or re-validate
-     anything. It only decides HOW to show data that already exists,
-     and defensively skips anything it doesn't recognize rather than
-     guessing or inventing a category.
-
-     Called only from renderOutput() when category === "Etsy". Old
-     history entries (saved before this feature existed) simply have
-     no parsed.keywordIntelligence, so this hides the card and the
-     rest of the Etsy result renders exactly as it always has.
-     ============================================================ */
-
-  const KI_ROLE_LABELS = {
-    core: "Core",
-    long_tail: "Long-tail",
-    buyer_intent: "Buyer Intent",
-    attribute_style: "Attribute / Style",
-    personalization: "Personalization",
-    unclassified: "Unclassified"
-  };
-  const KI_ROLE_DISPLAY_ORDER =
-    ["core", "long_tail", "buyer_intent", "attribute_style", "personalization", "unclassified"];
-  const KI_TIER_CLASS = { "Strong": "strong", "Moderate": "moderate", "Limited": "limited" };
-
-  function renderEtsyKeywordIntelligence(parsed){
-    const ki = parsed && parsed.keywordIntelligence;
-    const opportunities = (ki && Array.isArray(ki.opportunities)) ? ki.opportunities : [];
-    const roleBreakdown =
-      (ki && ki.roleBreakdown && typeof ki.roleBreakdown === "object" && !Array.isArray(ki.roleBreakdown))
-        ? ki.roleBreakdown
-        : null;
-
-    // Nothing usable at all (missing/malformed/old history entry) —
-    // omit the section entirely rather than showing an empty card.
-    if (!roleBreakdown && opportunities.length === 0) {
-      keywordIntelligenceCard.classList.add("hidden");
-      kiRoleBreakdown.innerHTML = "";
-      kiOpportunitiesList.innerHTML = "";
-      renderEtsyKeywordStrategy(null); // no source data -> Strategy hides too
-      return;
-    }
-
-    keywordIntelligenceCard.classList.remove("hidden");
-
-    // ---- role breakdown summary ----
-    kiRoleBreakdown.innerHTML = "";
-    if (roleBreakdown) {
-      let total = 0;
-      KI_ROLE_DISPLAY_ORDER.forEach(function(roleKey){
-        total += Number(roleBreakdown[roleKey]) || 0;
-      });
-
-      const totalLine = document.createElement("p");
-      totalLine.className = "ki-breakdown-total";
-      totalLine.textContent = total + (total === 1 ? " Tag Analyzed" : " Tags Analyzed");
-      kiRoleBreakdown.appendChild(totalLine);
-
-      const pills = document.createElement("div");
-      pills.className = "ki-breakdown-pills";
-      KI_ROLE_DISPLAY_ORDER.forEach(function(roleKey){
-        const count = Number(roleBreakdown[roleKey]) || 0;
-        if (count === 0) return; // keep the summary compact — only show categories actually present
-        const pill = document.createElement("span");
-        pill.className = "ki-role-pill";
-        pill.textContent = KI_ROLE_LABELS[roleKey] + " · " + count;
-        pills.appendChild(pill);
-      });
-      kiRoleBreakdown.appendChild(pills);
-    }
-
-    // ---- top keyword opportunities (batch 3 revision) ----
-    // Per the UX revision: this is a compact "what matters about the
-    // keyword strategy" summary, not a per-keyword mini-report. The
-    // 13 actual tags are already shown above, so this shows at most
-    // the 5 strongest opportunities rather than every opportunity,
-    // and drops the selected_for_tags badge and role/tier pill rows
-    // (already implicit in the role breakdown above). This is a
-    // display-only SELECTION over data processEtsyKeywordIntelligence()
-    // already computed — no new scoring, no re-reconciliation.
-    kiOpportunitiesList.innerHTML = "";
-
-    const validOpportunities = opportunities.filter(function(opp){
-      return opp && typeof opp === "object" && KI_TIER_CLASS[opp.tier];
-    });
-
-    if (validOpportunities.length === 0) {
-      // Nothing renderable at the individual level. The role
-      // breakdown above may still stand on its own — omit this
-      // subsection quietly (no "no data" filler) rather than a
-      // broken or empty-looking list.
-      return;
-    }
-
-    // Strong -> Moderate -> Limited, and a stable tiebreak that
-    // preserves processEtsyKeywordIntelligence()'s own existing
-    // order within a tier (explicit index tiebreak rather than
-    // relying only on Array.sort's stability guarantee).
-    const KI_TIER_PRIORITY = { "Strong": 0, "Moderate": 1, "Limited": 2 };
-    const topOpportunities = validOpportunities
-      .map(function(opp, index){ return { opp: opp, index: index }; })
-      .sort(function(a, b){
-        const diff = KI_TIER_PRIORITY[a.opp.tier] - KI_TIER_PRIORITY[b.opp.tier];
-        return diff !== 0 ? diff : a.index - b.index;
-      })
-      .slice(0, 5)
-      .map(function(entry){ return entry.opp; });
-
-    const heading = document.createElement("p");
-    heading.className = "ki-top-heading";
-    heading.textContent = "Top Keyword Opportunities";
-    kiOpportunitiesList.appendChild(heading);
-
-    topOpportunities.forEach(function(opp){
-      const item = document.createElement("div");
-      item.className = "ki-opportunity";
-
-      const kw = document.createElement("p");
-      kw.className = "ki-keyword";
-      kw.textContent = String(opp.keyword || "").trim();
-      item.appendChild(kw);
-
-      const metaParts = [opp.tier];
-      if (KI_ROLE_LABELS[opp.role]) metaParts.push(KI_ROLE_LABELS[opp.role]);
-      const meta = document.createElement("p");
-      meta.className = "ki-meta-line ki-tier-" + KI_TIER_CLASS[opp.tier];
-      meta.textContent = metaParts.join(" · ");
-      item.appendChild(meta);
-
-      if (opp.why) {
-        const why = document.createElement("p");
-        why.className = "ki-why";
-        why.textContent = String(opp.why).trim();
-        item.appendChild(why);
-      }
-
-      kiOpportunitiesList.appendChild(item);
-    });
-
-    renderEtsyKeywordStrategy(roleBreakdown);
-  }
-
-  /* ============================================================
-     KEYWORD STRATEGY (batch 4 — Etsy only)
-     ------------------------------------------------------------
-     "How do the 13 tags work together?" — derived ENTIRELY from
-     the roleBreakdown that processEtsyKeywordIntelligence() (batch
-     2) already computed and renderEtsyKeywordIntelligence() (batch
-     3) already validated above. No Groq call, no new taxonomy, no
-     re-scoring: this only reads counts that already exist and
-     assembles a short, deterministic explanation from them.
-
-     "Insufficient data" here means specifically: every one of the
-     13 tags landed in "unclassified" (i.e. batch 2's reconciliation
-     could not confirm a role for any of them) — Coverage would be
-     empty and there is nothing meaningful to say about how the tags
-     work together, so the card hides. Passing null (no roleBreakdown
-     at all — old history, or Keyword Intelligence itself absent)
-     hides it the same way.
-     ============================================================ */
-
-  // Order matches the product spec's own Coverage example exactly
-  // (Core, Buyer Intent, Long-tail, Attribute/Style, Personalization) —
-  // intentionally NOT the same left-to-right order as the role
-  // breakdown pills above, and "unclassified" is never part of
-  // Coverage: an unclassified tag doesn't describe part of the
-  // strategy, by definition.
-  const KS_COVERAGE_ORDER = ["core", "buyer_intent", "long_tail", "attribute_style", "personalization"];
-
-  const KS_ROLE_CLAUSES = {
-    core: "a core product phrase",
-    buyer_intent: "buyer-intent phrasing aimed at shoppers ready to purchase",
-    long_tail: "more specific long-tail variations",
-    attribute_style: "attribute and style-based modifiers",
-    personalization: "personalization-focused phrasing"
-  };
-
-  function joinWithAnd(parts){
-    if (parts.length <= 1) return parts.join("");
-    if (parts.length === 2) return parts[0] + " with " + parts[1];
-    return parts.slice(0, -1).join(", ") + ", and " + parts[parts.length - 1];
-  }
-
-  /**
-   * computeEtsyKeywordStrategy(roleBreakdown)
-   *
-   * Pure, deterministic. Returns null when there isn't enough
-   * classified data to say anything meaningful, otherwise:
-   *   { coverageParts: [{role, label, count}], strategyText, focusText }
-   * focusText may be null (spec: omit rather than guess).
-   */
-  function computeEtsyKeywordStrategy(roleBreakdown){
-    if (!roleBreakdown || typeof roleBreakdown !== "object" || Array.isArray(roleBreakdown)) {
-      return null;
-    }
-
-    const coverageParts = [];
-    let totalClassified = 0;
-    KS_COVERAGE_ORDER.forEach(function(roleKey){
-      const count = Number(roleBreakdown[roleKey]) || 0;
-      if (count > 0) {
-        coverageParts.push({ role: roleKey, label: KI_ROLE_LABELS[roleKey], count: count });
-        totalClassified += count;
-      }
-    });
-
-    // Every tag unclassified (or a completely empty breakdown) — no
-    // reliable structure to describe. Hide rather than show an empty
-    // Coverage line and a meaningless sentence.
-    if (totalClassified === 0) return null;
-
-    // ---- strategy sentence: which clauses are present decides the
-    // wording, so the text genuinely varies with the data instead of
-    // being one fixed sentence for every listing. ----
-    const clauses = coverageParts.map(function(p){ return KS_ROLE_CLAUSES[p.role]; });
-    let strategyText;
-    if (clauses.length === 1) {
-      strategyText = "Your tags rely mainly on " + clauses[0] + ".";
-    } else {
-      strategyText = "Your tags combine " + joinWithAnd(clauses) +
-        " to cover different search intents without relying on near-duplicate phrases.";
-    }
-
-    // ---- optional focus signal: only when reliably determinable ----
-    let focusText = null;
-    const dominant = coverageParts.reduce(function(best, p){
-      return (!best || p.count > best.count) ? p : best;
-    }, null);
-    if (dominant && dominant.count >= 2 && (dominant.count / totalClassified) >= 0.4) {
-      focusText = dominant.label + " is a major part of this strategy.";
-    } else if ((Number(roleBreakdown.buyer_intent) || 0) === 0 && totalClassified >= 3) {
-      focusText = "Buyer-intent coverage is limited.";
-    }
-
-    return { coverageParts: coverageParts, strategyText: strategyText, focusText: focusText };
-  }
-
-  function renderEtsyKeywordStrategy(roleBreakdown){
-    const strategy = computeEtsyKeywordStrategy(roleBreakdown);
-
-    if (!strategy) {
-      keywordStrategyCard.classList.add("hidden");
-      ksCoverage.textContent = "";
-      ksStrategyText.textContent = "";
-      ksFocus.textContent = "";
-      return;
-    }
-
-    keywordStrategyCard.classList.remove("hidden");
-
-    ksCoverage.textContent = strategy.coverageParts
-      .map(function(p){ return p.label + " " + p.count; })
-      .join(" · ");
-
-    ksStrategyText.textContent = strategy.strategyText;
-
-    ksFocus.textContent = strategy.focusText ? ("Focus: " + strategy.focusText) : "";
-  }
-
   function renderOutput(parsed, category){
     const title = String(parsed.title).trim();
     titleOutput.textContent = title;
@@ -4980,19 +4584,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
     descOutput.textContent = String(parsed.description).trim();
 
-    // Keyword Intelligence is Etsy-only. renderOutput() is shared with
-    // Digital/Printable/POD (see renderOutputByType below), so every
-    // other category explicitly hides the card rather than leaving a
-    // stale one visible from a previous Etsy generation.
-    if (category === "Etsy") {
-      renderEtsyKeywordIntelligence(parsed);
-      renderEtsyListingScore(parsed);
-    } else {
-      keywordIntelligenceCard.classList.add("hidden");
-      keywordStrategyCard.classList.add("hidden");
-      listingScoreCard.classList.add("hidden");
-    }
-
     outputSection.classList.remove("hidden");
   }
 
@@ -5008,35 +4599,11 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      not call or modify renderOutput().
      ============================================================ */
   /* ============================================================
-     TAGPULSE LISTING SCORE (Batch 5, Etsy only)
-     ------------------------------------------------------------
-     A deterministic, local 0-100 diagnostic of how well the
-     generated Etsy listing is structured, using ONLY data TagPulse
-     already has: title, tags, description, processed Keyword
-     Intelligence roleBreakdown, the seller's product keyword,
-     seller-supplied Product Details and Words to Avoid.
-
-     It is NOT an Etsy ranking / search-volume / competition / CTR /
-     conversion / sales measure, and never claims to be. No network
-     request, no Groq call, no credit involved.
-
-     Components (target weights):
-       productKeywordCoverage 25   keywordRoleCoverage 20
-       tagDiversity           15   productFactCoverage 20
-       descriptionCoverage    15   wordsToAvoid         5
-
-     A component that cannot apply to this listing (no product
-     keyword tokens, no usable Keyword Intelligence, no supplied
-     facts, no Words to Avoid, fewer than 2 tags) is marked
-     applicable:false and EXCLUDED from both the earned points and
-     the maximum - the total is then earned / applicable-maximum x
-     100. Blank inputs are therefore never penalised and never earn
-     free credit.
-
-     computeEtsyListingScore() returns a plain serialisable object
-     (stored on the Etsy payload, so saved history keeps the exact
-     score) or null when it cannot be computed. Callers must treat
-     null / a throw as "no score" and never block generation.
+     SHARED TEXT-MATCHING HELPERS (lsTokens / lsUnique / lsHitRatio /
+     lsContainsSeq / lsSuppliedFacts / lsFactScores and the LS_*
+     constants). Used by the Existing Listing Analysis below, which is
+     local and free (no network request, no Groq call, no credit).
+     The old TagPulse Listing Score that also used them was removed.
      ============================================================ */
 
   const LS_STOPWORDS = new Set([
@@ -5059,25 +4626,12 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   const LS_FACT_FIELDS = ["material", "color", "size", "personalization", "features"];
   const LS_NEGATIVE_FACT = /^(no|none|n\/a|na|not available|not applicable|-+)$/i;
 
-  const LS_MAX = {
-    productKeywordCoverage: 25,
-    keywordRoleCoverage: 20,
-    tagDiversity: 15,
-    productFactCoverage: 20,
-    descriptionCoverage: 15,
-    wordsToAvoid: 5
-  };
-
   function lsAsText(v){
     return (typeof v === "string") ? v.trim() : "";
   }
 
   function lsClamp01(n){
     return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0;
-  }
-
-  function lsRound1(n){
-    return Math.round(n * 10) / 10;
   }
 
   function lsUnique(arr){
@@ -5165,325 +4719,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     };
   }
 
-  function lsPlural(n, one, many){
-    return n + " " + (n === 1 ? one : (many || one + "s"));
-  }
-
-  /* --- A. Primary product keyword coverage (25) --- */
-  function lsScoreKeyword(keyword, titleTokens, descSet){
-    const max = LS_MAX.productKeywordCoverage;
-    const seq = lsTokens(keyword);
-    const K = lsUnique(seq);
-    if (!K.length) return { max: max, points: 0, applicable: false };
-
-    const t = lsHitRatio(K, new Set(titleTokens));
-    const d = lsHitRatio(K, descSet);
-    const phrase = lsContainsSeq(titleTokens, seq) ? 1 : 0;
-    const titleScore = 0.8 * t.ratio + 0.2 * phrase;
-    const ratio = 0.7 * titleScore + 0.3 * d.ratio;
-
-    let improve = null;
-    if (ratio < 0.85){
-      if (t.ratio < 1) improve = "Title includes " + t.hit + " of " + t.total + " words from your product keyword.";
-      else if (d.ratio < 1) improve = "Description mentions " + d.hit + " of " + d.total + " words from your product keyword.";
-      else improve = "Title contains your keyword's words but not as a phrase.";
-    }
-    return {
-      max: max, points: max * ratio, applicable: true,
-      improve: improve,
-      strength: "Title and description cover your product keyword well."
-    };
-  }
-
-  /* --- B. Keyword role coverage (20) --- */
-  function lsScoreRoles(roleBreakdown, hasAttributeFacts, hasPersonalization){
-    const max = LS_MAX.keywordRoleCoverage;
-    if (!roleBreakdown || typeof roleBreakdown !== "object") return { max: max, points: 0, applicable: false };
-
-    const keys = ["core", "long_tail", "buyer_intent", "attribute_style", "personalization", "unclassified"];
-    const c = {};
-    let total = 0;
-    keys.forEach(function(k){
-      const v = roleBreakdown[k];
-      c[k] = (Number.isFinite(v) && v > 0) ? v : 0;
-      total += c[k];
-    });
-    const classified = total - c.unclassified;
-    if (total <= 0 || classified <= 0) return { max: max, points: 0, applicable: false };
-
-    const weights = { core: 6, buyer_intent: 5, long_tail: 4, attribute_style: 3, personalization: 3 };
-    const applicableRoles = ["core", "buyer_intent", "long_tail"];
-    if (hasAttributeFacts) applicableRoles.push("attribute_style");
-    if (hasPersonalization) applicableRoles.push("personalization");
-
-    let wAll = 0, wCovered = 0, covered = 0;
-    const missing = [];
-    applicableRoles.forEach(function(r){
-      wAll += weights[r];
-      if (c[r] > 0){ wCovered += weights[r]; covered++; }
-      else missing.push(r);
-    });
-    const share = classified / total;
-    const ratio = 0.85 * (wCovered / wAll) + 0.15 * share;
-
-    let improve = null;
-    if (missing.length){
-      improve = "No " + missing.map(r => KI_ROLE_LABELS[r]).join(" or ") + " tag identified in the keyword analysis.";
-    } else if (share < 0.6){
-      improve = "Keyword analysis could classify only " + classified + " of " + total + " tags.";
-    }
-    return {
-      max: max, points: max * ratio, applicable: true,
-      improve: improve,
-      strength: "Tags cover " + covered + " of " + applicableRoles.length + " applicable keyword roles."
-    };
-  }
-
-  /* --- C. Tag diversity / redundancy (15) --- */
-  function lsScoreTags(tags){
-    const max = LS_MAX.tagDiversity;
-    const n = tags.length;
-    if (n < 2) return { max: max, points: 0, applicable: false };
-
-    const lower = tags.map(t => t.toLowerCase().replace(/\s+/g, " "));
-    const exactDupes = n - new Set(lower).size;
-
-    const sets = tags.map(t => new Set(lsTokens(t)));
-    let setPairs = 0;
-    for (let i = 0; i < n; i++){
-      for (let j = i + 1; j < n; j++){
-        if (lower[i] === lower[j]) continue;
-        const a = sets[i], b = sets[j];
-        if (!a.size || !b.size) continue;
-        let inter = 0;
-        a.forEach(function(x){ if (b.has(x)) inter++; });
-        const union = a.size + b.size - inter;
-        const subset = inter === a.size || inter === b.size;
-        if ((inter === a.size && inter === b.size) || (subset && inter / union >= 0.75)) setPairs++;
-      }
-    }
-    // Existing near-duplicate helper (same stemming as validation).
-    const helperPairs = findNearDuplicateTagPairs(tags)
-      .filter(p => p[0].toLowerCase().trim() !== p[1].toLowerCase().trim()).length;
-    const redundantPairs = Math.max(setPairs, helperPairs);
-
-    let totalTok = 0;
-    const seen = new Set();
-    sets.forEach(function(s){ totalTok += s.size; s.forEach(function(t){ seen.add(t); }); });
-    const uniqRatio = totalTok ? seen.size / totalTok : 1;
-    const div = lsClamp01((uniqRatio - 0.3) / 0.3);
-
-    const points = 4 * ((n - exactDupes) / n)
-      + Math.max(0, 5 - 1.5 * redundantPairs)
-      + 6 * div;
-
-    let improve = null;
-    if (exactDupes > 0) improve = lsPlural(exactDupes, "duplicate tag") + ".";
-    else if (redundantPairs > 0) improve = lsPlural(redundantPairs, "tag pair") + " express nearly the same phrase.";
-    else if (div < 0.6) improve = "Tags repeat many of the same words.";
-
-    return {
-      max: max, points: Math.min(max, points), applicable: true,
-      improve: improve,
-      strength: "Tags are varied, with little redundancy."
-    };
-  }
-
-  /* --- D. Provided product-fact coverage (20) --- */
-  function lsScoreFacts(facts, listingSet){
-    const max = LS_MAX.productFactCoverage;
-    const res = Object.keys(facts).length ? lsFactScores(facts, listingSet) : null;
-    if (!res) return { max: max, points: 0, applicable: false,
-      info: "No product details were supplied, so fact coverage wasn't scored." };
-
-    const weak = res.fieldScores.filter(f => f.score < 0.6).map(f => LS_FACT_LABELS[f.field]);
-    return {
-      max: max, points: max * res.avg, applicable: true,
-      improve: (res.avg < 0.85 && weak.length)
-        ? ("Some supplied details aren't clearly reflected in the listing (" + weak.join(", ") + ").")
-        : null,
-      strength: "Your supplied product details are well represented."
-    };
-  }
-
-  /* --- E. Description coverage / completeness (15) --- */
-  function lsScoreDescription(descSet, keywordTokens, tags, facts){
-    const max = LS_MAX.descriptionCoverage;
-    const subs = [];   // { key, w, r }
-
-    subs.push({ key: "substance", w: 5, r: lsClamp01(descSet.size / 40) });
-    if (keywordTokens.length){
-      subs.push({ key: "keyword", w: 4, r: lsHitRatio(keywordTokens, descSet).ratio });
-    }
-    const fr = Object.keys(facts).length ? lsFactScores(facts, descSet) : null;
-    if (fr) subs.push({ key: "facts", w: 3, r: fr.avg });
-
-    const tagRatios = [];
-    tags.forEach(function(t){
-      const toks = lsUnique(lsTokens(t));
-      if (toks.length) tagRatios.push(lsHitRatio(toks, descSet).ratio >= 0.5 ? 1 : 0);
-    });
-    if (tagRatios.length){
-      subs.push({ key: "tags", w: 3, r: tagRatios.reduce((a, b) => a + b, 0) / tagRatios.length });
-    }
-
-    const wAll = subs.reduce((a, s) => a + s.w, 0);
-    const ratio = subs.reduce((a, s) => a + s.w * s.r, 0) / wAll;
-
-    const msgs = {
-      substance: "Description is short on distinct content.",
-      keyword: "Description mentions few of your product keyword's words.",
-      facts: "Description doesn't mention some of your supplied details.",
-      tags: "Description covers few of your tag terms."
-    };
-    let worst = null;
-    subs.forEach(function(s){ if (s.r < 0.6 && (!worst || s.r < worst.r)) worst = s; });
-
-    return {
-      max: max, points: max * ratio, applicable: true,
-      improve: (ratio < 0.85 && worst) ? msgs[worst.key] : null,
-      strength: "Description supports the listing's keyword and tag terms."
-    };
-  }
-
-  /* --- F. Words-to-avoid compliance (5) --- */
-  function lsScoreAvoid(avoidList, titleFull, tagsFull, descFull){
-    const max = LS_MAX.wordsToAvoid;
-    const phrases = avoidList
-      .map(p => ({ raw: p, toks: lsTokens(p, true) }))
-      .filter(p => p.toks.length);
-    if (!phrases.length) return { max: max, points: 0, applicable: false };
-
-    const found = phrases.filter(function(p){
-      return lsContainsSeq(titleFull, p.toks) ||
-             lsContainsSeq(descFull, p.toks) ||
-             tagsFull.some(t => lsContainsSeq(t, p.toks));
-    }).map(p => p.raw);
-
-    return {
-      max: max, points: max * Math.max(0, 1 - 0.5 * found.length), applicable: true,
-      improve: found.length ? ("Contains a Words to Avoid entry: " + found.slice(0, 2).join(", ") + ".") : null,
-      strength: "No Words to Avoid entries appear in the listing."
-    };
-  }
-
-  function computeEtsyListingScore(parsed, ctx){
-    if (!parsed || typeof parsed !== "object") return null;
-
-    const title = lsAsText(parsed.title);
-    const description = lsAsText(parsed.description);
-    const tags = Array.isArray(parsed.tags) ? parsed.tags.map(lsAsText).filter(Boolean) : [];
-    if (!title || !description || !tags.length) return null;
-
-    ctx = (ctx && typeof ctx === "object") ? ctx : {};
-    const keyword = lsAsText(ctx.keyword);
-    const pd = (ctx.productDetails && typeof ctx.productDetails === "object") ? ctx.productDetails : {};
-    const avoid = Array.isArray(ctx.wordsToAvoid) ? ctx.wordsToAvoid.map(lsAsText).filter(Boolean) : [];
-
-    const titleTokens = lsTokens(title);
-    const descTokens = lsTokens(description);
-    const descSet = new Set(descTokens);
-    const listingSet = new Set(titleTokens.concat(descTokens));
-    tags.forEach(function(t){ lsTokens(t).forEach(function(x){ listingSet.add(x); }); });
-
-    const facts = lsSuppliedFacts(pd);
-    const hasAttributeFacts = !!(facts.material || facts.color || facts.size || facts.features);
-    const hasPersonalization = !!facts.personalization;
-    const keywordTokens = lsUnique(lsTokens(keyword));
-
-    const ki = (parsed.keywordIntelligence && typeof parsed.keywordIntelligence === "object")
-      ? parsed.keywordIntelligence : null;
-
-    const comps = {
-      productKeywordCoverage: lsScoreKeyword(keyword, titleTokens, descSet),
-      keywordRoleCoverage: lsScoreRoles(ki && ki.roleBreakdown, hasAttributeFacts, hasPersonalization),
-      tagDiversity: lsScoreTags(tags),
-      productFactCoverage: lsScoreFacts(facts, listingSet),
-      descriptionCoverage: lsScoreDescription(descSet, keywordTokens, tags, facts),
-      wordsToAvoid: lsScoreAvoid(
-        avoid, lsTokens(title, true), tags.map(t => lsTokens(t, true)), lsTokens(description, true)
-      )
-    };
-
-    let earned = 0, possible = 0;
-    const keys = Object.keys(LS_MAX);
-    keys.forEach(function(k){
-      if (comps[k].applicable){
-        earned += Math.min(comps[k].max, Math.max(0, comps[k].points));
-        possible += comps[k].max;
-      }
-    });
-    if (possible <= 0) return null;
-    const score = Math.min(100, Math.max(0, Math.round(100 * earned / possible)));
-
-    // Diagnostics come only from the actual component results:
-    // weakest applicable components first (up to 3), then strengths.
-    const applicableKeys = keys.filter(k => comps[k].applicable);
-    const ratioOf = k => comps[k].points / comps[k].max;
-    const improves = applicableKeys
-      .filter(k => comps[k].improve)
-      .sort((a, b) => (ratioOf(a) - ratioOf(b)) || (comps[b].max - comps[a].max))
-      .slice(0, 3)
-      .map(k => ({ type: "improve", message: comps[k].improve }));
-    const strengths = applicableKeys
-      .filter(k => !comps[k].improve && ratioOf(k) >= 0.85)
-      .sort((a, b) => (ratioOf(b) - ratioOf(a)) || (comps[b].max - comps[a].max))
-      .map(k => ({ type: "strength", message: comps[k].strength }));
-    // When no product details were supplied, one slot explains why fact
-    // coverage wasn't scored (so the score is never silently different).
-    const wantInfo = !comps.productFactCoverage.applicable && !!comps.productFactCoverage.info;
-    const diagnostics = improves.concat(strengths).slice(0, wantInfo ? 3 : 4);
-    if (wantInfo) diagnostics.push({ type: "info", message: comps.productFactCoverage.info });
-
-    const outComponents = {};
-    keys.forEach(function(k){
-      outComponents[k] = {
-        points: comps[k].applicable ? lsRound1(Math.min(comps[k].max, Math.max(0, comps[k].points))) : 0,
-        max: comps[k].max,
-        applicable: !!comps[k].applicable
-      };
-    });
-
-    return { version: 1, score: score, components: outComponents, diagnostics: diagnostics };
-  }
-
-  function renderEtsyListingScore(parsed){
-    function hide(){
-      listingScoreCard.classList.add("hidden");
-      lsScoreValue.textContent = "";
-      lsDiagnostics.innerHTML = "";
-    }
-    try {
-      const ls = parsed && parsed.listingScore;
-      if (!ls || typeof ls !== "object" || !Number.isFinite(ls.score) ||
-          ls.score < 0 || ls.score > 100 || !Array.isArray(ls.diagnostics)){
-        hide();
-        return;
-      }
-      lsScoreValue.textContent = String(Math.round(ls.score));
-      lsDiagnostics.innerHTML = "";
-      const marks = { strength: "\u2713", improve: "\u2022", info: "i" };
-      ls.diagnostics.slice(0, 4).forEach(function(d){
-        if (!d || typeof d.message !== "string" || !d.message) return;
-        const type = marks.hasOwnProperty(d.type) ? d.type : "info";
-        const li = document.createElement("li");
-        li.className = "ls-diag ls-" + type;
-        const mark = document.createElement("span");
-        mark.className = "ls-diag-mark";
-        mark.textContent = marks[type];
-        const text = document.createElement("span");
-        text.textContent = d.message;
-        li.appendChild(mark);
-        li.appendChild(text);
-        lsDiagnostics.appendChild(li);
-      });
-      listingScoreCard.classList.remove("hidden");
-    } catch (e) {
-      console.warn("[TagPulse][Etsy] listing score render failed - hiding card", e);
-      hide();
-    }
-  }
-
   /* ============================================================
      EXISTING ETSY LISTING ANALYSIS (Batch 6, Etsy only)
      ------------------------------------------------------------
@@ -5500,8 +4735,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      them: lsTokens / lsUnique / lsHitRatio / lsContainsSeq /
      lsSuppliedFacts / lsFactScores / LS_* constants, the
      normalizeTagForDuplicateCheck stemmer behind the near-duplicate
-     heuristic, and getAudienceLeakPhrases. computeEtsyListingScore()
-     is NOT called and no second score is produced.
+     heuristic, and getAudienceLeakPhrases. No score is produced.
      analyzeExistingEtsyListing(input) -> listingAnalysis (version 1)
      is a plain serialisable object, kept stable for a future
      "Improve My Listing" batch. Never throws for string/blank
@@ -6260,9 +5494,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      The analysis above stays free and local. THIS action is a real
      generation: it goes through the normal /api/generate path (auth,
      idempotent credit reservation, one free validation retry, refund
-     on failure) with the existing "etsy_intelligence" response shape
-     - no new endpoint, no new response_shape. The prompt is the
-     existing buildEtsyPrompt() plus one optional improve block.
+     on failure) and returns {title, tags, description} - no new
+     endpoint, no response_shape. The prompt is the existing
+     buildEtsyPrompt() plus one optional improve block.
      ============================================================ */
   const improveArea = $("improveArea");
   const improveWordsInput = $("improveWordsInput");
@@ -6329,7 +5563,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         .filter(d => d.severity === "issue" || d.severity === "warning")
         .slice(0, 8).map(d => d.message)
     };
-    const shape = "etsy_intelligence";
 
     // Lock taken immediately before the try/finally that always releases it.
     improveInFlight = true;
@@ -6347,7 +5580,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         prompt: prompt,
         buildRetryPrompt: (errors) => buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, errors, improveContext),
         hasProductDetails: hasProductDetails,
-        shape: shape,
         wordsToAvoid: wordsToAvoid,
         audience: audience,
         productContextText: productContextText,
@@ -6362,28 +5594,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       }
       const parsed = eg.parsed;
       const serverState = eg.serverState;
-      // Same deterministic, non-blocking post-processing as a normal Etsy
-      // generation, so the saved history entry has the same payload shape.
-      try {
-        parsed.keywordIntelligence = processEtsyKeywordIntelligence(parsed, productContextText);
-      } catch (intelErr) {
-        console.warn("[TagPulse][Etsy] keyword intelligence processing failed - continuing without it", intelErr);
-        parsed.keywordIntelligence = { opportunities: [], roleBreakdown: {
-          core: 0, long_tail: 0, buyer_intent: 0, attribute_style: 0,
-          personalization: 0, unclassified: Array.isArray(parsed.tags) ? parsed.tags.length : 0 } };
-      }
-      try {
-        const listingScore = computeEtsyListingScore(parsed, { keyword: keyword, productDetails: productDetails, wordsToAvoid: wordsToAvoid });
-        if (listingScore) parsed.listingScore = listingScore; else delete parsed.listingScore;
-      } catch (scoreErr) {
-        delete parsed.listingScore;
-      }
       const outputType = getOutputType(category);
       const activeSection = renderOutputByType(outputType, parsed, category);
       // Compact improved view: title / tags / description only.
-      keywordIntelligenceCard.classList.add("hidden");
-      keywordStrategyCard.classList.add("hidden");
-      listingScoreCard.classList.add("hidden");
       improvedBanner.classList.remove("hidden");
       improvedOutputActive = true;
       applyServerState(serverState);
@@ -6440,14 +5653,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     const description = String(parsed.description).trim();
     descOutput.textContent = description;
     descCharCount.textContent = [...description].length + " / 500 characters";
-
-    // Keyword Intelligence is Etsy-only — never shown for Pinterest.
-    // Explicit hide here too (renderPinterestOutput doesn't call
-    // renderOutput) so a stale card from a prior Etsy generation
-    // can never remain visible after switching platforms.
-    keywordIntelligenceCard.classList.add("hidden");
-    keywordStrategyCard.classList.add("hidden");
-    listingScoreCard.classList.add("hidden");
 
     outputSection.classList.remove("hidden");
   }
@@ -6567,225 +5772,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       "Local Customers": ["local customer", "local customers"]
     };
     return map[audience] || [];
-  }
-
-  /* ------------------------------------------------------------
-     ETSY KEYWORD INTELLIGENCE — DETERMINISTIC POST-PROCESSING
-     (batch 2)
-     ------------------------------------------------------------
-     keywordIntelligence, as returned by the model, is ADVISORY
-     input ONLY. Nothing in this file trusts it: every field is
-     re-derived or verified deterministically from the model's
-     OTHER, already-blocking-validated output (the final `tags`
-     array) and from the product context the user actually typed.
-
-     This runs strictly AFTER validateEtsyOutput() has already
-     accepted the title/tags/description (see the single call site
-     in handleGenerate's Etsy branch). It never blocks generation,
-     never triggers a retry, and never throws — a completely
-     missing or garbage keywordIntelligence object still produces a
-     valid, fully-formed result (opportunities: [], roleBreakdown:
-     all-unclassified against the real tags), so Etsy generation
-     always succeeds whenever the existing validator says the
-     listing itself is valid.
-
-     Design choice for a missing/unusable section (spec said "omit
-     or degrade"): this always DEGRADES to a consistent, fully-
-     shaped object rather than omitting the key. Batch 3's UI can
-     then key off `opportunities.length` to decide whether to
-     render the section, without a second "is the key even present"
-     case to handle.
-     ------------------------------------------------------------ */
-
-  const ETSY_KEYWORD_INTELLIGENCE_ROLES = [
-    "core", "long_tail", "buyer_intent", "attribute_style", "personalization"
-  ];
-
-  const ETSY_KEYWORD_INTELLIGENCE_FILLER_PHRASES = [
-    "unique gift", "perfect gift", "great gift", "special gift", "gift idea"
-  ];
-
-  function normalizeEtsyKeywordText(value){
-    return String(value || "")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, " ");
-  }
-
-  // Deterministic per-opportunity tier score. Internal only — the
-  // numeric value itself is never exposed to the caller, only the
-  // resulting "Strong" / "Moderate" / "Limited" label (see
-  // computeEtsyOpportunityTier below).
-  function scoreEtsyOpportunity(opportunity, isConfirmedSelected, productContextText){
-    let score = 0;
-
-    if (isConfirmedSelected) score += 2;
-
-    if (opportunity.role === "core" || opportunity.role === "buyer_intent") {
-      score += 1;
-    }
-
-    const normalizedKeyword = normalizeEtsyKeywordText(opportunity.keyword);
-    const normalizedContext = normalizeEtsyKeywordText(productContextText);
-
-    if (normalizedKeyword && normalizedContext) {
-      const keywordWords = normalizedKeyword.split(" ").filter(function(w){ return w.length > 2; });
-      const hasOverlap = keywordWords.some(function(word){
-        return normalizedContext.indexOf(word) !== -1;
-      });
-      if (hasOverlap) score += 1;
-    }
-
-    if (ETSY_KEYWORD_INTELLIGENCE_FILLER_PHRASES.indexOf(normalizedKeyword) !== -1) {
-      score -= 1;
-    }
-
-    return score;
-  }
-
-  function computeEtsyOpportunityTier(score){
-    if (score >= 3) return "Strong";
-    if (score >= 1) return "Moderate";
-    return "Limited";
-  }
-
-  /**
-   * processEtsyKeywordIntelligence(parsed, productContextText)
-   *
-   * parsed        — the already blocking-validated Etsy result
-   *                 (must have a valid `tags` array; this function
-   *                 does not re-check that).
-   * productContextText — the same string already built in
-   *                 handleGenerate (keyword + supplied Product
-   *                 Details), used only for the deterministic
-   *                 word-overlap signal. No AI call, no external
-   *                 data, no web search.
-   *
-   * Returns a NEW keywordIntelligence object:
-   *   {
-   *     opportunities: [{ keyword, role, why, selected_for_tags, tier }],
-   *     roleBreakdown: { core, long_tail, buyer_intent,
-   *                      attribute_style, personalization,
-   *                      unclassified }   // always sums to tags.length
-   *   }
-   *
-   * Never throws.
-   */
-  function processEtsyKeywordIntelligence(parsed, productContextText){
-
-    const finalTags = Array.isArray(parsed && parsed.tags) ? parsed.tags : [];
-    const normalizedTags = finalTags.map(normalizeEtsyKeywordText);
-
-    const roleBreakdown = {
-      core: 0,
-      long_tail: 0,
-      buyer_intent: 0,
-      attribute_style: 0,
-      personalization: 0,
-      unclassified: 0
-    };
-
-    let rawOpportunities;
-    try {
-      rawOpportunities =
-        (parsed &&
-          parsed.keywordIntelligence &&
-          Array.isArray(parsed.keywordIntelligence.opportunities))
-          ? parsed.keywordIntelligence.opportunities
-          : [];
-    } catch (err) {
-      rawOpportunities = [];
-    }
-
-    // ---- Step 1: filter to well-formed opportunities only ------
-    // (§3 role validation, §9 malformed-field handling — a bad
-    // item is dropped, never allowed to break anything.)
-    const wellFormed = [];
-    for (let i = 0; i < rawOpportunities.length; i++) {
-      const raw = rawOpportunities[i];
-      if (!raw || typeof raw !== "object") continue;
-
-      const keyword = normalizeEtsyKeywordText(raw.keyword);
-      if (!keyword) continue;
-
-      if (ETSY_KEYWORD_INTELLIGENCE_ROLES.indexOf(raw.role) === -1) continue;
-
-      wellFormed.push({
-        keyword: keyword,
-        role: raw.role,
-        why: (typeof raw.why === "string" && raw.why.trim()) ? raw.why.trim() : "",
-        // The model's flag is read here only as a hint for step 2's
-        // dedup preference — it is NEVER trusted as the final value.
-        modelClaimedSelected: raw.selected_for_tags === true
-      });
-    }
-
-    // ---- Step 2: de-duplicate by normalized keyword (§10) -------
-    // Prefer the version with a valid role (guaranteed at this
-    // point, all survivors have one) and a non-empty "why"; among
-    // ties, prefer one the model itself claimed was selected.
-    const byKeyword = new Map();
-    for (let i = 0; i < wellFormed.length; i++) {
-      const item = wellFormed[i];
-      const existing = byKeyword.get(item.keyword);
-      if (!existing) {
-        byKeyword.set(item.keyword, item);
-        continue;
-      }
-      const itemScore = (item.why ? 1 : 0) + (item.modelClaimedSelected ? 1 : 0);
-      const existingScore = (existing.why ? 1 : 0) + (existing.modelClaimedSelected ? 1 : 0);
-      if (itemScore > existingScore) {
-        byKeyword.set(item.keyword, item);
-      }
-    }
-    const deduped = Array.from(byKeyword.values());
-
-    // ---- Step 3: reconcile selected_for_tags against the REAL,
-    // already-validated final tags (§2) — exact normalized match
-    // only, never the model's self-report. ------------------------
-    const confirmedTagIndexes = new Set();
-    const opportunities = deduped.map(function(item){
-      const tagIndex = normalizedTags.indexOf(item.keyword);
-      const confirmedSelected = tagIndex !== -1;
-      if (confirmedSelected) confirmedTagIndexes.add(tagIndex);
-
-      const score = scoreEtsyOpportunity(item, confirmedSelected, productContextText);
-
-      return {
-        keyword: item.keyword,
-        role: item.role,
-        why: item.why,
-        selected_for_tags: confirmedSelected,
-        tier: computeEtsyOpportunityTier(score)
-        // Note: `score` itself is intentionally not included —
-        // only the resulting tier label is ever exposed (§4/§7).
-      };
-    });
-
-    // Tally roles ONLY for opportunities confirmed selected — an
-    // opportunity that isn't one of the 13 tags doesn't occupy a
-    // slot in the listing's role breakdown, no matter how the
-    // model classified it.
-    for (let i = 0; i < opportunities.length; i++) {
-      if (opportunities[i].selected_for_tags &&
-          Object.prototype.hasOwnProperty.call(roleBreakdown, opportunities[i].role)) {
-        roleBreakdown[opportunities[i].role]++;
-      }
-    }
-
-    // ---- Step 4: any final tag with no confirmed opportunity is
-    // "unclassified" (§2/§6) — counted once per tag, never
-    // invented as a fake opportunity. --------------------------
-    for (let i = 0; i < normalizedTags.length; i++) {
-      if (!confirmedTagIndexes.has(i)) {
-        roleBreakdown.unclassified++;
-      }
-    }
-
-    return {
-      opportunities: opportunities,
-      roleBreakdown: roleBreakdown
-    };
   }
 
   /* ------------------------------------------------------------
