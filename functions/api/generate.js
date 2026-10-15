@@ -93,6 +93,33 @@ const GROQ_MAX_COMPLETION_TOKENS = 3072;
 
 const GROQ_TIMEOUT_MS = 30000;
 
+// RATE-LIMIT HANDLING (Groq HTTP 429).
+// Evidence: both models have a 8,000 tokens-per-minute limit and one
+// generation uses roughly 3,700-4,500 tokens, so two generations
+// inside a minute can exhaust a model's budget; a validation retry
+// counts as one of them. A 429 means "not now", not "no" - Groq says
+// how long to wait in the Retry-After header.
+//
+// When BOTH models answer 429, the request waits ONCE for the soonest
+// reset and tries ONE more call - but only if that hint is short:
+//   * hint <= RATE_LIMIT_MAX_WAIT_MS, and
+//   * the whole request would still be inside RATE_LIMIT_DECISION_
+//     BUDGET_MS (kept under the browser's 45 s same-ID resend window).
+// Otherwise it fails fast with a 429 that carries the wait time, the
+// credit is refunded as before, and the same request ID can simply be
+// sent again later.
+const RATE_LIMIT_MAX_WAIT_MS = 8000;
+const RATE_LIMIT_WAIT_PAD_MS = 250;
+const RATE_LIMIT_MIN_WAIT_MS = 1000;
+const RATE_LIMIT_DECISION_BUDGET_MS = 15000;
+// Hints beyond this are treated as invalid rather than trusted.
+const RATE_LIMIT_MAX_HINT_MS = 24 * 60 * 60 * 1000;
+
+// What the browser is told on a rate limit: no provider, model or
+// organization details (those stay in the server log).
+const RATE_LIMIT_USER_MESSAGE =
+  "We're handling a lot of requests right now. Please try again in a moment.";
+
 // Server-side cap on the prompt string (characters). Measured against the
 // real prompt builders in public/index.html: the largest legitimate prompts
 // (an Improve validation-retry carrying 8 issues + the full clipped listing
@@ -1281,6 +1308,54 @@ export async function onRequestPost(context) {
 
 
     // =========================================================
+    // RATE LIMITED (both models answered HTTP 429)
+    // =========================================================
+    // Any reserved credit was already refunded by the path-specific
+    // catch that rethrew this, and a free validation retry never
+    // reserved one. The idempotency row is removed so the SAME request
+    // ID can simply be sent again once the limit has reset. The body
+    // carries only a generic message and the wait time; the provider,
+    // model and organization details stay in the server log.
+
+    if (err && err.rateLimited) {
+
+      const retryAfterSeconds =
+        Number.isFinite(err.retryAfterMs)
+          ? Math.max(1, Math.ceil(err.retryAfterMs / 1000))
+          : null;
+
+      console.error(
+        "[TagPulse][generate] rate limited response ready to send",
+        {
+          requestId: requestId,
+          elapsedMs: Date.now() - requestStartTime,
+          status: 429,
+          retryAfterSeconds: retryAfterSeconds,
+          detail: err.errorDetail || null
+        }
+      );
+
+      await deleteGenerationRequestRow(env.DB, requestId);
+
+      return jsonResponse(
+        {
+          error: RATE_LIMIT_USER_MESSAGE,
+          code: "rate_limited",
+          retry_after_seconds: retryAfterSeconds
+        },
+        429,
+        retryAfterSeconds === null
+          ? corsHeaders
+          : Object.assign(
+              {},
+              corsHeaders,
+              { "Retry-After": String(retryAfterSeconds) }
+            )
+      );
+    }
+
+
+    // =========================================================
     // GENERAL ERROR
     // =========================================================
 
@@ -2233,6 +2308,84 @@ async function callGroq(
 
   } catch (fallbackErr) {
 
+    // Both models answered 429 (and only that case): wait out a SHORT
+    // provider-supplied hint once and try once more; otherwise fail
+    // fast with the wait time. See RATE_LIMIT_* constants above.
+    if (isRateLimitError(primaryErr) && isRateLimitError(fallbackErr)) {
+
+      const plan =
+        planRateLimitRetry(
+          primaryErr,
+          fallbackErr,
+          Date.now() - callStart
+        );
+
+      console.error(
+        "[TagPulse][generate] Groq primary AND fallback both rate limited:",
+        {
+          requestId: requestId,
+          primaryHintMs: primaryErr.retryAfterMs,
+          fallbackHintMs: fallbackErr.retryAfterMs,
+          willWait: !!plan,
+          waitMs: plan ? plan.waitMs : null,
+          retryModel: plan ? plan.model : null,
+          elapsedMs: Date.now() - callStart
+        }
+      );
+
+      if (!plan) {
+        throw buildRateLimitedError(primaryErr, fallbackErr, null);
+      }
+
+      await sleep(plan.waitMs);
+
+      try {
+
+        const text =
+          await callGroqModel(
+            plan.model,
+            prompt,
+            apiKey,
+            requestId,
+            responseShape
+          );
+
+        console.error(
+          "[TagPulse][generate] Groq succeeded after waiting out the rate limit:",
+          {
+            requestId: requestId,
+            model: plan.model,
+            waitedMs: plan.waitMs,
+            finalResult: "success",
+            elapsedMs: Date.now() - callStart
+          }
+        );
+
+        return text;
+
+      } catch (retryErr) {
+
+        if (isRateLimitError(retryErr)) {
+
+          // Still limited: stop here. No second wait, no further calls.
+          throw buildRateLimitedError(
+            plan.model === GROQ_MODEL_PRIMARY ? retryErr : primaryErr,
+            plan.model === GROQ_MODEL_FALLBACK ? retryErr : fallbackErr,
+            retryErr
+          );
+        }
+
+        if (retryErr && retryErr.category === "timeout") {
+          throw retryErr;
+        }
+
+        // Any other failure of the single retried call is reported
+        // like any single-attempt failure.
+        throw buildFallbackNotEligibleError(retryErr);
+      }
+    }
+
+
     console.error(
       "[TagPulse][generate] Groq primary AND fallback both failed:",
       {
@@ -2648,14 +2801,19 @@ async function callGroqModel(
     let errCode = null;
     let failedGeneration = null;
     let rateLimitHeaders = null;
+    let retryAfterMs = null;
 
     if (res.status === 429) {
-      // Diagnostic-only capture of Groq's own rate-limit headers
-      // (never secrets — no key/auth data lives in these), so a
-      // 429 fallback event can be logged with the limiter's own
-      // numbers instead of guessing. Only included when present.
+      // Groq's own rate-limit headers (never secrets — no key/auth
+      // data lives in these): logged for diagnosis, and the wait
+      // hint is read from them so callGroq() can respect it.
       rateLimitHeaders =
         buildRateLimitHeaderSnapshot(res.headers);
+
+      const hint =
+        readRateLimitRetryHintMs(res.headers, Date.now());
+
+      retryAfterMs = hint ? hint.ms : null;
     }
 
 
@@ -2717,7 +2875,8 @@ async function callGroqModel(
         type: errType,
         code: errCode,
         failedGeneration: failedGeneration,
-        rateLimitHeaders: rateLimitHeaders
+        rateLimitHeaders: rateLimitHeaders,
+        retryAfterMs: retryAfterMs
       }
     );
   }
@@ -2818,11 +2977,10 @@ async function callGroqModel(
  */
 /**
  * Reads Groq's standard rate-limit response headers, when present,
- * into a small plain object for logging only — never acted on to
- * pace/delay a retry in this change (see RELIABILITY FIX above:
- * a 429 goes straight to one fallback attempt, not a wait). Only
- * known, non-sensitive header names are read; nothing else on the
- * response (no auth/cookie data) is ever touched.
+ * into a small plain object for logging. (The wait hint used to
+ * pace a retry is parsed separately by readRateLimitRetryHintMs().)
+ * Only known, non-sensitive header names are read; nothing else on
+ * the response (no auth/cookie data) is ever touched.
  */
 function buildRateLimitHeaderSnapshot(headers) {
 
@@ -2878,6 +3036,201 @@ function makeGroqError(
   err.groqCode = (extra && extra.code) || null;
   err.groqFailedGeneration = (extra && extra.failedGeneration) || null;
   err.groqRateLimitHeaders = (extra && extra.rateLimitHeaders) || null;
+  err.retryAfterMs =
+    (extra && Number.isFinite(extra.retryAfterMs))
+      ? extra.retryAfterMs
+      : null;
+
+  return err;
+}
+
+/**
+ * Parses a Retry-After value: either delta-seconds ("30", "2.5") or
+ * an HTTP-date. Returns milliseconds, or null for anything missing,
+ * malformed, negative, in the past, or absurdly large. Never throws.
+ */
+function parseRetryAfterMs(value, nowMs) {
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const v = value.trim();
+
+  if (!v) {
+    return null;
+  }
+
+  let ms;
+
+  if (/^\d+(\.\d+)?$/.test(v)) {
+
+    ms = parseFloat(v) * 1000;
+
+  } else if (/^[A-Za-z]{3},/.test(v)) {
+
+    const t = Date.parse(v);
+
+    if (!Number.isFinite(t)) {
+      return null;
+    }
+
+    ms = t - nowMs;
+
+    if (ms <= 0) {
+      return null;
+    }
+
+  } else {
+
+    return null;
+  }
+
+  return (Number.isFinite(ms) && ms >= 0 && ms <= RATE_LIMIT_MAX_HINT_MS)
+    ? ms
+    : null;
+}
+
+/**
+ * Parses Groq's x-ratelimit-reset-* duration format ("7.66s",
+ * "2m59.56s", "1h2m3s", "400ms"). Returns milliseconds or null.
+ */
+function parseResetDurationMs(value) {
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const v = value.trim();
+
+  const m = /^(?:(\d+(?:\.\d+)?)d)?(?:(\d+(?:\.\d+)?)h)?(?:(\d+(?:\.\d+)?)m(?!s))?(?:(\d+(?:\.\d+)?)s)?(?:(\d+(?:\.\d+)?)ms)?$/.exec(v);
+
+  if (!v || !m) {
+    return null;
+  }
+
+  const ms =
+    (parseFloat(m[1] || "0") * 86400000) +
+    (parseFloat(m[2] || "0") * 3600000) +
+    (parseFloat(m[3] || "0") * 60000) +
+    (parseFloat(m[4] || "0") * 1000) +
+    parseFloat(m[5] || "0");
+
+  return (Number.isFinite(ms) && ms >= 0 && ms <= RATE_LIMIT_MAX_HINT_MS)
+    ? ms
+    : null;
+}
+
+/**
+ * How long Groq says to wait after a 429, read from the real
+ * response headers: Retry-After first; if it is missing or invalid,
+ * the reset header for the limit that was hit (requests when no
+ * requests remain, otherwise tokens). Returns { ms, source } or null
+ * - null means "no trustworthy hint", and callers never guess one.
+ */
+function readRateLimitRetryHintMs(headers, nowMs) {
+
+  if (!headers || typeof headers.get !== "function") {
+    return null;
+  }
+
+  const ra = parseRetryAfterMs(headers.get("retry-after"), nowMs);
+
+  if (ra !== null) {
+    return { ms: ra, source: "retry-after" };
+  }
+
+  const remainingRequests = headers.get("x-ratelimit-remaining-requests");
+
+  const resetHeader =
+    (remainingRequests !== null &&
+      remainingRequests !== undefined &&
+      String(remainingRequests).trim() === "0")
+      ? "x-ratelimit-reset-requests"
+      : "x-ratelimit-reset-tokens";
+
+  const reset = parseResetDurationMs(headers.get(resetHeader));
+
+  return reset !== null
+    ? { ms: reset, source: resetHeader }
+    : null;
+}
+
+function isRateLimitError(err) {
+  return !!err && err.category === "rate_limit";
+}
+
+/**
+ * Decides whether a double-429 may be waited out inside this request.
+ * Picks the model whose hint is soonest (ties go to the primary) among
+ * hints within RATE_LIMIT_MAX_WAIT_MS, and refuses when the wait would
+ * push the request past RATE_LIMIT_DECISION_BUDGET_MS. Returns
+ * { model, waitMs } or null (= fail fast). Pure; no side effects.
+ */
+function planRateLimitRetry(primaryErr, fallbackErr, elapsedMs) {
+
+  const candidates = [
+    { model: GROQ_MODEL_PRIMARY, hintMs: primaryErr && primaryErr.retryAfterMs },
+    { model: GROQ_MODEL_FALLBACK, hintMs: fallbackErr && fallbackErr.retryAfterMs }
+  ].filter(function (c) {
+    return Number.isFinite(c.hintMs) && c.hintMs <= RATE_LIMIT_MAX_WAIT_MS;
+  });
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  let best = candidates[0];
+
+  if (candidates.length > 1 && candidates[1].hintMs < best.hintMs) {
+    best = candidates[1];
+  }
+
+  const waitMs = Math.max(
+    Math.ceil(best.hintMs) + RATE_LIMIT_WAIT_PAD_MS,
+    RATE_LIMIT_MIN_WAIT_MS
+  );
+
+  if (elapsedMs + waitMs > RATE_LIMIT_DECISION_BUDGET_MS) {
+    return null;
+  }
+
+  return { model: best.model, waitMs: waitMs };
+}
+
+/**
+ * The single Error for "both models are rate limited" (after the one
+ * bounded wait, if any). Reuses buildBothFailedError() so the server
+ * log keeps both models' real details, and marks it rateLimited so the
+ * response handler sends the clean 429 instead of provider text.
+ * retryAfterMs is the newest hint we have: the retried call's own hint
+ * when a retry happened, otherwise the soonest of the two.
+ */
+function buildRateLimitedError(primaryErr, fallbackErr, retriedErr) {
+
+  const err = buildBothFailedError(primaryErr, fallbackErr, null);
+
+  let hint;
+
+  if (retriedErr) {
+
+    hint = Number.isFinite(retriedErr.retryAfterMs)
+      ? retriedErr.retryAfterMs
+      : null;
+
+  } else {
+
+    const known = [primaryErr, fallbackErr]
+      .map(function (e) { return e && e.retryAfterMs; })
+      .filter(function (ms) { return Number.isFinite(ms); });
+
+    hint = known.length ? Math.min.apply(null, known) : null;
+  }
+
+  err.rateLimited = true;
+  err.category = "rate_limit";
+  err.groqStatus = 429;
+  err.retryAfterMs = hint;
 
   return err;
 }
