@@ -4360,6 +4360,10 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       // user-facing wording). Does not change control flow or retries.
       err.httpStatus = res.status;
       err.hasServerDetail = !!(data && data.error_detail);
+      if (res.status === 429) {
+        // Wait time the server relays for a rate limit (never provider text).
+        err.retryAfterSec = readRetryAfterSeconds(data, res.headers);
+      }
       throw err;
     }
 
@@ -4455,6 +4459,32 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
    * No promise about credits is made here; err.resumeHint (which is only set
    * when the credit is already counted) is appended by the caller.
    */
+  // Seconds the server says to wait after a rate limit (body field first, then
+  // the standard header). Returns a whole number 1..86400, or null when absent
+  // or invalid - callers never invent a wait.
+  function readRetryAfterSeconds(data, headers){
+    let raw = data && data.retry_after_seconds;
+    if (typeof raw !== "number") {
+      raw = null;
+      try {
+        const h = headers && headers.get ? headers.get("Retry-After") : null;
+        if (typeof h === "string" && /^\d+$/.test(h.trim())) raw = parseInt(h.trim(), 10);
+      } catch (_) {}
+    }
+    if (typeof raw !== "number" || !isFinite(raw) || raw < 1 || raw > 86400) return null;
+    return Math.ceil(raw);
+  }
+
+  function rateLimitMessage(sec){
+    const base = "We're handling a lot of requests right now.";
+    if (typeof sec !== "number") return base + " Please try again in a moment.";
+    if (sec <= 3) return base + " Please try again in a few seconds.";
+    if (sec < 60) return base + " Please try again in about " + sec + " seconds.";
+    if (sec <= 90) return base + " Please try again in about a minute.";
+    if (sec <= 600) return base + " Please try again in about " + Math.ceil(sec / 60) + " minutes.";
+    return base + " Please try again a little later.";
+  }
+
   function friendlyGenerationError(err){
     const generic = "We couldn't complete your request. Please try again in a moment.";
     if (!err) return generic;
@@ -4467,7 +4497,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     const status = err.httpStatus;
     const msg = typeof err.message === "string" ? err.message.trim() : "";
     if (typeof status === "number") {
-      if (status === 429) return "We're handling a lot of requests right now. Please try again in a moment.";
+      if (status === 429) return rateLimitMessage(err.retryAfterSec);
       if (status === 504 || status === 408) return "We couldn't complete your request because it took too long. Please try again.";
       const serverAuthored400 = [400, 401, 402, 403, 404, 409, 413].indexOf(status) !== -1;
       const looksInternal = err.hasServerDetail || /\bAI model\b|groq|\(model:|HTTP \d{3}|api key|not configured|\bD1\b|database/i.test(msg);
