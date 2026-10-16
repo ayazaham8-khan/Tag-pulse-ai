@@ -1878,6 +1878,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       <p class="char-count" id="descCharCount"></p>
     </div>
 
+
   </section>
   </section>
 </main>
@@ -2212,8 +2213,6 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   const tagsRaw        = $("tagsRaw");
   const descOutput     = $("descOutput");
   const descCharCount  = $("descCharCount");
-
-
 
   const copyTitleBtn = $("copyTitleBtn");
   const copyTagsBtn  = $("copyTagsBtn");
@@ -3567,6 +3566,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     const firstRequestId = generationId + "-1";
     const validationRetryRequestId = firstRequestId + "-retry";
 
+    // Etsy now uses the backend's default {title, tags, description} schema, so no
+    // response_shape is sent (the Keyword Intelligence output was removed to save tokens).
+
     // Batch 8: the in-flight lock is taken immediately before the try/finally
     // that always releases it (nothing between here and the try can throw
     // after the lock is set).
@@ -3586,7 +3588,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
           prompt: prompt,
           buildRetryPrompt: (errors) => buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, errors),
           hasProductDetails: hasProductDetails,
-                    wordsToAvoid: wordsToAvoid,
+          wordsToAvoid: wordsToAvoid,
           audience: audience,
           productContextText: productContextText,
           finalFailureMessage: "The AI couldn't produce a valid Etsy listing after a retry. Please try again or adjust your inputs.",
@@ -3622,11 +3624,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
       if (category === "Etsy") {
 
-        // Etsy output ({title, tags, description}) was already parsed and
-        // validated inside runEtsyGeneration() above (one bounded free
-        // retry). Nothing else is derived from it: the AI-generated
-        // Keyword Intelligence, the Keyword Strategy and the Listing Score
-        // were removed to save Groq tokens and simplify the interface.
+        // Etsy output was already validated (with its single free retry) by runEtsyGeneration().
 
       } else if (category === "Pinterest") {
 
@@ -3823,31 +3821,51 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      ETSY PROMPT BUILDER (dedicated — Etsy no longer uses
      buildStandardPrompt())
      ------------------------------------------------------------
-     TOKEN OPTIMIZATION: the model now returns ONLY
-     {title, tags, description} (the AI-generated Keyword
-     Intelligence section was removed, and the ordinary prompt was
-     consolidated from ~9,000 to roughly 4,000 characters). All
-     essential safeguards are kept, stated once each:
-       - Only seller-supplied product facts may be asserted (the
-         KNOWN FACTS block is built only from non-empty fields, so an
-         empty field is never a fact); every other attribute is
-         unknown and off-limits, including unsupported "safe
-         substitute" quality language.
-       - The targeting/audience label is context only, never a
-         keyword source, and never leaks into the listing.
-       - Title <= 140 chars; exactly 13 tags, each <= 20 characters
-         including spaces, multi-word, no exact/near duplicates;
-         WORDS TO AVOID respected; valid JSON only.
-     Cache-friendly order: every static instruction comes FIRST
-     (identical on every Etsy request), all user-specific content
-     (facts, targeting, words to avoid, improve block, retry
-     feedback) comes LAST. Not a guarantee of a Groq cache hit.
-     An optional validationErrors array turns this into the single
-     free validation-retry prompt ("fix these exact issues").
+     Implements the fact-boundary design from the Etsy SEO engine
+     spec:
+       - Only user-supplied product details are ever asserted as
+         facts (KNOWN FACTS block below, built only from non-empty
+         fields).
+       - Every attribute NOT supplied is explicitly declared
+         unknown and off-limits, including vague "safe substitute"
+         quality language ("premium", "durable", etc.) that isn't
+         backed by a known fact.
+       - Targeting/audience is kept OUT of the KNOWN FACTS block on
+         purpose (it used to sit there, which is very likely why it
+         got treated as a fact the model could freely turn into
+         keywords). It now lives in its own AUDIENCE CONTEXT
+         section, explicitly framed as strategic context and not a
+         keyword source, with an explicit ban on mechanically
+         combining the targeting label with a product word.
+       - The model is given compact search-intent, anti-redundancy
+         and anti-filler guidance for the 13 tags and returns ONLY
+         the final {title, tags, description} object (no Keyword
+         Intelligence output; that was removed to save tokens).
+       - An optional validationErrors array turns this into a
+         single-retry correction prompt: when non-empty, it's
+         appended as a "fix these exact issues" section so the
+         retry is a targeted correction, not a blind re-roll.
      ============================================================ */
   function buildEtsyPrompt(keyword, productDetails, audience, seoGoal, wordsToAvoid, validationErrors, improveContext){
     productDetails = productDetails || {};
     validationErrors = validationErrors || [];
+
+    // TOKEN OPTIMIZATION (compact prompt): every static instruction
+    // comes FIRST (identical on every Etsy request, so repeated
+    // requests share a long stable prefix that Groq's automatic
+    // prompt caching can reuse - a cache hit is never guaranteed), and
+    // all request-specific content (product facts, audience, words to
+    // avoid, retry feedback, existing listing) comes LAST.
+    //
+    // Redundant restatements were merged, not dropped: the fact
+    // boundary, unknown-attribute list, audience-label ban, 13 tags /
+    // 20 characters / multi-word / no-duplicates rules, title and
+    // description rules, words-to-avoid rule and the JSON-only output
+    // rule are all still stated once. The model is no longer asked for
+    // Keyword Intelligence output, and the response is only
+    // {title, tags, description} (the backend's default tags schema).
+    // NOTE: this text must never contain the literal '"keywords":' -
+    // the backend uses that to choose the Pinterest schema.
 
     const knownFacts = [
       "- Product idea: " + keyword
@@ -3861,36 +3879,37 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
     // ---- STATIC PREFIX (identical across every Etsy request) ----
     const lines = [
-      "You are an Etsy SEO copywriter. Write one listing for the product described under KNOWN FACTS at the end of this message. This is a strict factual-accuracy task, not creative writing. Work efficiently; do not write out lengthy analysis.",
+      "Act as a senior Etsy SEO strategist and listing copywriter. This is a strict factual-accuracy task, not a creative-writing task.",
       "",
-      "FACT RULES",
-      "- KNOWN FACTS are the ONLY facts you may state or imply. Any attribute not listed there is unknown (an empty or missing detail is not a fact). Never state, imply or hint at a value for an unknown attribute, e.g. material, color, size, weight, features, care, printing method, construction, shipping or delivery, packaging, quantity, file format, DPI, ingredients, scent, safety, age suitability, certifications, compatibility, included items, weather or water resistance, gemstone or metal type, or how personalization works.",
-      '- Do not use unsupported quality language such as "premium", "durable", "beautifully made", "high quality" or "top quality" unless a known fact supports it. If there is nothing factual to say about a point, leave it out.',
+      "=== FACTS ===",
+      "The KNOWN FACTS at the end of this message are the ONLY product facts you may state or imply. Any attribute not listed there is UNKNOWN: never state, imply, or hint at a value for it. This includes materials, colors, sizes, dimensions, weights, features, care or washing instructions, printing methods, construction, pockets, shipping or delivery, packaging, quantities, file formats, DPI, ingredients, scent, safety properties, age suitability, certifications, compatibility, included items or components, weather or water resistance, gemstone or metal type/purity, and how personalization works. Do not use unsupported quality claims such as \"premium\", \"durable\", \"high quality\", or \"beautifully made\". If there is nothing factual to say about something, omit it.",
       "",
-      "TARGETING",
-      'The selected targeting option (end of this message) is background context for tone only. It is not a product fact and not a keyword source. Never build a keyword from the label plus a product word (e.g. "online shopper gift", "etsy dog mom", "pinterest wall art") and never write phrases like "for online shoppers", "for Etsy shoppers" or "for Pinterest users". A term is allowed only if it is independently relevant to the product or to genuine buyer search intent.',
+      "=== AUDIENCE ===",
+      "The selected targeting option at the end is strategic background only: not a product fact and not a keyword source. Never turn the targeting label into keywords or phrases (for example \"online shopper gift\", \"etsy dog mom\", \"for Etsy shoppers\", \"for Pinterest users\") and never mention it in the listing. A term is fine only if it is independently relevant to the product and genuine buyer search intent.",
       "",
-      "OUTPUT",
-      "Return ONLY a raw JSON object: no markdown, no code fences, no text outside it. Exactly this shape:",
-      '{"title": "...", "tags": ["...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "...", "..."], "description": "..."}',
+      "=== TAGS ===",
+      "Choose phrases real Etsy buyers would search, drawn only from what genuinely applies to THIS product: core product, type or variant, theme or design, personalization (only if it is a known fact), recipient, occasion, gift intent, use case, style, niche. These are ideas, not required categories. Prefer specific, buyer-intent phrases, and give each tag a distinct search intent: do not output grammatical variants of one phrase (\"dog mom gift\", \"gift for dog mom\", \"dog mom present\"). Avoid generic filler (\"unique gift\", \"perfect gift\", \"special occasion gift\") unless it carries product-specific intent. Tags for genuinely different product attributes or angles may coexist.",
+      "HARD RULES: exactly 13 tags. Every tag is 20 characters or fewer INCLUDING SPACES, is a multi-word phrase (never a single word), and is not an exact duplicate. No tag may state an unknown fact. Count each tag's characters, spaces included, before answering. If a phrase is over 20, replace it entirely with a shorter relevant phrase you have counted; never truncate it. Examples that fit (illustrative only): \"custom name gift\" (16), \"handmade wall art\" (17), \"boho home decor\" (15), \"minimalist jewelry\" (18), \"birthday gift idea\" (18).",
       "",
-      "TITLE: at most 140 characters. Natural and readable, not a keyword dump or synonym chain. Put the main product phrase near the start. No unsupported attributes. Avoid filler such as \"Perfect Gift\" or \"Great Gift\" when a more specific phrase exists. Do not pad to use up the limit.",
+      "=== TITLE ===",
+      "At most 140 characters. Put the primary product phrase early when it reads naturally. Readable, not a keyword dump: no repeated synonym chains, no unsupported attributes, and avoid filler such as \"Perfect Gift\" or \"Perfect for...\" when something more specific is available. Do not pad to reach the limit.",
       "",
-      'TAGS: exactly 13. Every tag is non-empty, a multi-word phrase (no bare single words), relevant to the product, and 20 characters or fewer INCLUDING spaces, with no unsupported factual attribute. No exact or near-duplicate tags: do not use grammatical variants of one intent (e.g. "dog mom gift", "gift for dog mom", "dog mom present"); use the freed slots for genuinely different search intents that the facts support (product type, theme, personalization, recipient, occasion, use case, style). No generic filler such as "unique gift", "perfect gift" or "special occasion gift". Tags for different attributes (e.g. "dog mom sweatshirt" and "personalized dog mom") may coexist.',
-      'Length check: count the characters of every tag, including spaces, before answering; never assume a phrase fits. If a phrase is over 20, REPLACE it with a different, shorter, still-relevant phrase you have counted; never truncate it (a cut-off word is not a tag). After any replacement recount all 13. Examples that fit: "custom name gift" (16), "boho home decor" (15), "birthday gift idea" (18).',
+      "=== DESCRIPTION ===",
+      "A useful Etsy description using ONLY the KNOWN FACTS and the SEO goal, plus general non-specific framing (use case, occasion, gift-worthiness) that needs no invented fact. No unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production, or packaging. Never mention targeting or audience labels. Speak naturally to the buyer.",
       "",
-      'DESCRIPTION: a useful Etsy description using ONLY the KNOWN FACTS and the SEO goal, plus general use-case or occasion framing that needs no invented fact. No unsupported claims about materials, dimensions, colors, quality, shipping, care, features, customization, production or packaging. Do not mention targeting labels (e.g. "for online shoppers"); speak naturally to the buyer.',
-      "",
-      "WORDS TO AVOID: never use any word or phrase listed under WORDS TO AVOID anywhere in the title, tags or description."
+      "=== OUTPUT ===",
+      "Return ONLY a raw JSON object: no markdown, no code fences, no text outside it, no reasoning. Exactly this shape:",
+      '{"title":"...","tags":["tag1","tag2","tag3","tag4","tag5","tag6","tag7","tag8","tag9","tag10","tag11","tag12","tag13"],"description":"..."}',
+      "Do not use any word or phrase listed under WORDS TO AVOID in the title, tags, or description."
     ];
 
     // ---- DYNAMIC SUFFIX (user-specific — varies every request) ----
     lines.push(
       "",
-      "KNOWN FACTS (the ONLY facts you may state or imply):",
+      "=== KNOWN FACTS (the ONLY facts you may state or imply) ===",
       ...knownFacts,
       "",
-      "TARGETING (context only, not a keyword source): " + audience,
+      "Selected targeting option (strategic context only, never a keyword): " + audience,
       "",
       "WORDS TO AVOID: " + (
         wordsToAvoid.length
@@ -3914,9 +3933,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       // tag-length rejection message always contains this exact phrase
       // (see validateEtsyOutput() below) — detected here only to decide
       // whether to add extra, more directive coaching; the validator's
-      // own rejection logic and wording are unchanged. This block is
-      // added ONLY on a retry that failed for tag length, so it costs
-      // nothing on an ordinary request.
+      // own rejection logic and wording are unchanged.
       const hasTagLengthViolation =
         validationErrors.some(function (e) {
           return /exceeds the 20-character limit/.test(e);
@@ -4457,6 +4474,133 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     return p;
   }
 
+  /* ------------------------------------------------------------
+     LOCAL TAG-LENGTH REPAIR (Etsy only, no API call)
+     ------------------------------------------------------------
+     When the ONLY validation failures are tags over the 20-character
+     limit, the tags are shortened here instead of spending a second
+     Groq request. Strictly conservative: words are only ever removed
+     or re-ordered (never added, never cut mid-word), and the result is
+     accepted only if the COMPLETE validateEtsyOutput() then passes.
+     Anything else (another kind of error, no safe shortening, a
+     shortening that creates a duplicate / avoided word / etc.) returns
+     null and the existing free validation retry runs exactly as before.
+     ------------------------------------------------------------ */
+
+  // Words that add no product fact and are safe to drop from a tag.
+  // Deliberately short: words that can be part of a real phrase
+  // ("great dane", "high waisted", "best friend") are NOT listed.
+  const TAG_REPAIR_FLUFF = new Set([
+    "stylish", "durable", "perfect", "unique", "premium", "quality", "amazing", "awesome",
+    "beautiful", "lovely", "stunning", "gorgeous", "trendy", "fashionable", "ideal", "nice"
+  ]);
+  const TAG_REPAIR_EDGE_STOPWORDS = new Set(["for", "and", "with", "of", "the", "a", "an", "in", "to", "your", "my", "or", "by", "on", "at"]);
+  const TAG_REPAIR_NO_SWAP_TAIL = new Set(["her", "him", "them", "you", "me", "us", "it", "everyone", "anyone", "someone"]);
+
+  function tagRepairWordKey(w){
+    return String(w).toLowerCase().replace(/[^a-z0-9']/g, "");
+  }
+
+  // Candidate shortenings of one over-long tag, best first (most words kept).
+  function tagRepairCandidates(tag){
+    const words = String(tag).trim().split(/\s+/).filter(Boolean);
+    const key = tagRepairWordKey;
+    const forIdx = ws => ws.findIndex(w => key(w) === "for");
+
+    const dropFluff = ws => ws.filter((w, i) => {
+      const k = key(w);
+      if (TAG_REPAIR_FLUFF.has(k)) return false;
+      // "drinking water bottle" -> "water bottle" only; "drinking glass" keeps its meaning.
+      if (k === "drinking" && ws[i + 1] && key(ws[i + 1]) === "water") return false;
+      return true;
+    });
+    // "water bottle for class" -> "class water bottle" (single trailing word only).
+    const swapFor = ws => {
+      const i = forIdx(ws);
+      if (i < 1 || i !== ws.length - 2) return null;
+      const tail = key(ws[ws.length - 1]);
+      if (!tail || TAG_REPAIR_NO_SWAP_TAIL.has(tail) || TAG_REPAIR_EDGE_STOPWORDS.has(tail)) return null;
+      return [ws[ws.length - 1]].concat(ws.slice(0, i));
+    };
+    // "water bottle for class" -> "water bottle"
+    const dropForClause = ws => {
+      const i = forIdx(ws);
+      return i >= 1 ? ws.slice(0, i) : null;
+    };
+
+    const variants = [];
+    const noFluff = dropFluff(words);
+    if (noFluff.length !== words.length) variants.push(noFluff);
+    const bases = [words].concat(variants);
+    const raw = [];
+    bases.forEach(function (b, bi) {
+      if (bi > 0) raw.push(b);
+      const sw = swapFor(b); if (sw) raw.push(sw);
+      const df = dropForClause(b); if (df) raw.push(df);
+    });
+
+    const seen = new Set();
+    const out = [];
+    raw.forEach(function (ws, order) {
+      if (ws.length < 2) return;
+      if (TAG_REPAIR_EDGE_STOPWORDS.has(key(ws[0])) || TAG_REPAIR_EDGE_STOPWORDS.has(key(ws[ws.length - 1]))) return;
+      const text = ws.join(" ");
+      if ([...text].length > 20) return;
+      const id = text.toLowerCase();
+      if (seen.has(id)) return;
+      seen.add(id);
+      out.push({ text: text, words: ws.length, order: order });
+    });
+    out.sort((a, b) => (b.words - a.words) || (a.order - b.order));
+    return out.map(c => c.text);
+  }
+
+  function isTagLengthOnlyError(msg){
+    return /exceeds the 20-character limit\.$/.test(String(msg));
+  }
+
+  // Returns { parsed, changes } (a copy with ONLY the tags replaced; title and
+  // description untouched) when every validation error was an over-long tag and
+  // every one could be safely shortened so the full validation now passes.
+  // Otherwise returns null. Never throws.
+  function repairOverlongEtsyTags(parsed, validation, wordsToAvoid, audience, productContext){
+    try {
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray(parsed.tags)) return null;
+      if (!validation || validation.valid || !validation.errors.length) return null;
+      if (!validation.errors.every(isTagLengthOnlyError)) return null;
+
+      const original = parsed.tags.map(t => (typeof t === "string" ? t.trim() : t));
+      const repaired = original.slice();
+      const changes = [];
+      for (let i = 0; i < original.length; i++) {
+        const tag = original[i];
+        if (typeof tag !== "string" || [...tag].length <= 20) continue;
+        let chosen = null;
+        const candidates = tagRepairCandidates(tag);
+        for (let c = 0; c < candidates.length; c++) {
+          const trial = repaired.slice();
+          trial[i] = candidates[c];
+          const v = validateEtsyOutput(Object.assign({}, parsed, { tags: trial }), wordsToAvoid, audience, productContext);
+          // Acceptable unless the shortening itself caused a NEW kind of error
+          // (duplicate, near-duplicate, avoided word, audience leak, ...).
+          // Over-long tags still waiting for their own repair are expected.
+          if (v.errors.every(isTagLengthOnlyError)) { chosen = candidates[c]; break; }
+        }
+        if (!chosen) return null;
+        repaired[i] = chosen;
+        changes.push({ from: tag, to: chosen });
+      }
+      if (!changes.length) return null;
+
+      const result = Object.assign({}, parsed, { tags: repaired });
+      // The listing is accepted only if the COMPLETE validation passes.
+      if (!validateEtsyOutput(result, wordsToAvoid, audience, productContext).valid) return null;
+      return { parsed: result, changes: changes };
+    } catch (_) {
+      return null;
+    }
+  }
+
   function evaluateEtsyResponseText(text, o){
     let parsed;
     try {
@@ -4466,7 +4610,14 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       return { parsed: null, errors: [ETSY_PARSE_FAILURE_ERROR] };
     }
     const validation = validateEtsyOutput(parsed, o.wordsToAvoid, o.audience, o.productContextText);
-    return { parsed: parsed, errors: validation.valid ? null : validation.errors };
+    if (validation.valid) return { parsed: parsed, errors: null };
+    // Only over-long tags failed? Fix them locally instead of making another AI request.
+    const repair = repairOverlongEtsyTags(parsed, validation, o.wordsToAvoid, o.audience, o.productContextText);
+    if (repair) {
+      console.log("[TagPulse][Etsy] over-long tags repaired locally — no extra AI request needed", repair.changes);
+      return { parsed: repair.parsed, errors: null };
+    }
+    return { parsed: parsed, errors: validation.errors };
   }
 
   // Resolves { parsed, serverState } or { paywalled: true, data }.
@@ -4505,7 +4656,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       console.log("[TagPulse][Etsy] request #1 starting", { hasProductDetails: o.hasProductDetails });
       let first;
       try {
-        first = await callGenerateWithNetworkRetry(o.prompt, firstRequestId, o.hasProductDetails);
+        first = await callGenerateWithNetworkRetry(o.prompt, firstRequestId, o.hasProductDetails, undefined, o.shape);
       } catch (err) {
         if (err.requestInProgress || err.networkLevelFailure) {
           remember({ stage: "first", expiresAt: startedAt + PENDING_FIRST_TTL_MS }, err, RESUME_HINT_FIRST);
@@ -4528,7 +4679,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     console.log("[TagPulse][Etsy] retry (request #2) starting", { hasProductDetails: o.hasProductDetails, resumed: !!prior });
     let second;
     try {
-      second = await callGenerateWithNetworkRetry(retryPrompt, retryRequestId, o.hasProductDetails, firstRequestId);
+      second = await callGenerateWithNetworkRetry(retryPrompt, retryRequestId, o.hasProductDetails, firstRequestId, o.shape);
     } catch (err) {
       remember({ stage: "retry", retryPrompt: retryPrompt, firstCompletedAt: firstCompletedAt, expiresAt: firstCompletedAt + PENDING_RETRY_TTL_MS }, err, RESUME_HINT_RETRY);
       throw err;
@@ -4599,11 +4750,11 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      not call or modify renderOutput().
      ============================================================ */
   /* ============================================================
-     SHARED TEXT-MATCHING HELPERS (lsTokens / lsUnique / lsHitRatio /
-     lsContainsSeq / lsSuppliedFacts / lsFactScores and the LS_*
-     constants). Used by the Existing Listing Analysis below, which is
-     local and free (no network request, no Groq call, no credit).
-     The old TagPulse Listing Score that also used them was removed.
+     SHARED TEXT HELPERS (used by the Existing Listing Analysis below)
+     ------------------------------------------------------------
+     Small, pure token/stopword utilities. They used to live inside the
+     TagPulse Listing Score section; the score itself was removed, these
+     stay because the local analysis depends on them.
      ============================================================ */
 
   const LS_STOPWORDS = new Set([
@@ -4623,15 +4774,11 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     material: "material", color: "color", size: "size",
     personalization: "personalization", features: "key features"
   };
-  const LS_FACT_FIELDS = ["material", "color", "size", "personalization", "features"];
+
   const LS_NEGATIVE_FACT = /^(no|none|n\/a|na|not available|not applicable|-+)$/i;
 
   function lsAsText(v){
     return (typeof v === "string") ? v.trim() : "";
-  }
-
-  function lsClamp01(n){
-    return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0;
   }
 
   function lsUnique(arr){
@@ -4663,6 +4810,12 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       if (ok) return true;
     }
     return false;
+  }
+
+  const LS_FACT_FIELDS = ["material", "color", "size", "personalization", "features"];
+
+  function lsClamp01(n){
+    return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0;
   }
 
   function lsHitRatio(needTokens, haveSet){
@@ -4719,6 +4872,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     };
   }
 
+
   /* ============================================================
      EXISTING ETSY LISTING ANALYSIS (Batch 6, Etsy only)
      ------------------------------------------------------------
@@ -4731,10 +4885,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      write - and it does NOT depend on validateEtsyOutput(): an
      invalid listing (too many tags, long title, empty description)
      is reported as a finding, never rejected.
-     Reuses the Batch 5 / validation helpers rather than copying
-     them: lsTokens / lsUnique / lsHitRatio / lsContainsSeq /
-     lsSuppliedFacts / lsFactScores / LS_* constants, the
-     normalizeTagForDuplicateCheck stemmer behind the near-duplicate
+     Reuses the shared helpers rather than copying them: lsTokens /
+     lsUnique / lsContainsSeq / lsAsText and the LS_* constants above,
+     the normalizeTagForDuplicateCheck stemmer behind the near-duplicate
      heuristic, and getAudienceLeakPhrases. No score is produced.
      analyzeExistingEtsyListing(input) -> listingAnalysis (version 1)
      is a plain serialisable object, kept stable for a future
@@ -5494,9 +5647,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
      The analysis above stays free and local. THIS action is a real
      generation: it goes through the normal /api/generate path (auth,
      idempotent credit reservation, one free validation retry, refund
-     on failure) and returns {title, tags, description} - no new
-     endpoint, no response_shape. The prompt is the existing
-     buildEtsyPrompt() plus one optional improve block.
+     on failure) with the default {title, tags, description} response
+     schema - no new endpoint, no response_shape. The prompt is the
+     existing buildEtsyPrompt() plus one optional improve block.
      ============================================================ */
   const improveArea = $("improveArea");
   const improveWordsInput = $("improveWordsInput");
