@@ -858,6 +858,66 @@ main{ max-width:var(--container); margin:0 auto; padding:36px 18px 56px; }
 .ela-banner{ margin-top:16px; }
 #improvedBanner:not(.hidden) + #outputSection{ margin-top:16px; }
 
+/* ---- Shop Health Audit (optional, local, collapsed by default; scoped to .sha) ---- */
+.sha{ margin-top:14px; padding-top:6px; }
+.sha-link{
+  display:inline-flex; align-items:center; min-height:44px; padding:8px 2px;
+  background:none; border:0; border-radius:6px; font-size:13px; font-weight:600; color:var(--ink-soft);
+  text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line-strong); text-align:left;
+}
+.sha-link:hover{ color:var(--ink); text-decoration-color:var(--muted); }
+.sha-link:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+.sha-link::after{ content:"+"; margin-left:8px; font-size:16px; font-weight:500; color:var(--muted); text-decoration:none; display:inline-block; }
+.sha-link[aria-expanded="true"]::after{ content:"\2013"; }
+.sha-panel{ margin-top:6px; padding:16px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-md); }
+.sha-panel h3{ font-size:15px; font-weight:800; color:var(--ink); margin:0 0 4px; }
+.sha-intro{ font-size:13px; color:var(--ink-soft); line-height:1.45; margin:0 0 8px; }
+.sha-privacy{ font-size:12px; color:var(--muted); line-height:1.45; margin:0 0 10px; }
+.sha-how{ margin:0 0 12px; font-size:12.5px; color:var(--ink-soft); }
+.sha-how > summary{ cursor:pointer; font-weight:700; min-height:32px; display:flex; align-items:center; border-radius:6px; }
+.sha-how > summary:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+.sha-how p{ margin:6px 0 0; line-height:1.5; overflow-wrap:anywhere; }
+.sha-file{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:12px; }
+.sha-file-input{ position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0 0 0 0); }
+.sha-file-btn{
+  display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 14px;
+  background:#fff; color:var(--ink); border:1px solid var(--line-strong); border-radius:var(--radius-sm);
+  font-size:14px; font-weight:700; cursor:pointer;
+}
+.sha-file-btn:hover{ border-color:var(--muted); }
+.sha-file-input:focus-visible + .sha-file-btn{ outline:2px solid var(--primary); outline-offset:2px; }
+.sha-file-name{ font-size:13px; color:var(--ink-soft); min-width:0; overflow-wrap:anywhere; flex:1 1 140px; }
+.sha-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.sha-run{ width:auto; min-height:46px; padding:12px 20px; font-size:15px; }
+.sha-clear{ min-height:44px; padding:10px 12px; background:none; border:0; border-radius:6px; font-size:13px; font-weight:700; color:var(--ink-soft); text-decoration:underline; text-underline-offset:3px; }
+.sha-clear:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+.sha-status{ margin-top:10px; font-size:13px; font-weight:600; color:var(--ink-soft); line-height:1.45; overflow-wrap:anywhere; }
+.sha-status:empty{ display:none; }
+.sha-status.is-error{ color:var(--danger); }
+.sha-summary{ display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:8px; margin:14px 0 8px; }
+.sha-stat{ background:#fff; border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 11px; }
+.sha-stat b{ display:block; font-size:20px; font-weight:800; color:var(--ink); line-height:1.2; }
+.sha-stat span{ font-size:11.5px; font-weight:600; color:var(--muted); line-height:1.3; display:block; }
+.sha-note{ font-size:12px; color:var(--muted); line-height:1.45; margin:6px 0 0; overflow-wrap:anywhere; }
+.sha-section-title{ font-size:13px; font-weight:800; color:var(--ink-soft); margin:18px 0 2px; }
+.sha-item{ margin-top:10px; padding:12px 14px; background:#fff; border:1px solid var(--border); border-radius:var(--radius-sm); }
+.sha-item h4{ font-size:13.5px; font-weight:800; color:var(--ink); margin:0 0 2px; overflow-wrap:anywhere; line-height:1.35; }
+.sha-meta{ font-size:11.5px; color:var(--muted); margin:0 0 6px; overflow-wrap:anywhere; }
+.sha-finding{ margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+.sha-finding:first-of-type{ border-top:0; padding-top:0; }
+.sha-finding-head{ font-size:13px; font-weight:700; color:var(--ink); margin:0 0 3px; overflow-wrap:anywhere; }
+.sha-badge{ display:inline-block; margin-right:6px; padding:1px 7px; border-radius:99px; font-size:10.5px; font-weight:800; letter-spacing:.2px; vertical-align:1px; }
+.sha-badge.is-issue{ background:var(--danger-tint); color:var(--danger); }
+.sha-badge.is-review{ background:var(--primary-tint); color:var(--primary-dark); }
+.sha-evidence{ margin:0 0 4px; padding-left:18px; font-size:12.5px; color:var(--ink-soft); line-height:1.45; }
+.sha-evidence li{ overflow-wrap:anywhere; margin-bottom:2px; }
+.sha-action{ font-size:12.5px; color:var(--ink); line-height:1.45; margin:0; overflow-wrap:anywhere; }
+.sha-more{ margin-top:12px; min-height:44px; padding:10px 14px; background:#fff; color:var(--ink); border:1px solid var(--line-strong); border-radius:var(--radius-sm); font-size:13px; font-weight:700; }
+.sha-more:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+.sha-empty{ margin-top:14px; padding:12px 14px; background:var(--success-tint); border-radius:var(--radius-sm); font-size:13px; color:var(--ink); line-height:1.45; }
+.sha-empty b{ display:block; margin-bottom:3px; }
+@media (max-width:560px){ .sha-panel{ padding:14px 12px; } .sha-run{ width:100%; } .sha-actions{ flex-direction:column; align-items:stretch; } .sha-clear{ text-align:center; } }
+
 /* ============================================================
    TOAST
    ============================================================ */
@@ -1803,6 +1863,30 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     <div class="field-error" id="analyzeError">Paste at least a title, tags, or a description to analyze.</div>
     <button type="button" class="btn btn-primary generate-btn" id="analyzeBtn">Analyze Listing</button>
     <p class="field-help">Runs in your browser. No credit is used.</p>
+
+    <div class="sha" id="shaRoot">
+      <button type="button" class="sha-link" id="shaToggle" aria-expanded="false" aria-controls="shaPanel">Have multiple listings? Audit your shop</button>
+      <div class="sha-panel hidden" id="shaPanel" role="region" aria-labelledby="shaTitle">
+        <h3 id="shaTitle">Shop Health Audit</h3>
+        <p class="sha-intro">Check your active Etsy listings for concrete title/tag issues and unusually similar listings.</p>
+        <p class="sha-privacy">Runs locally in your browser. Your CSV file is not sent to TagPulse, no AI (Groq) call is made, and no generation credits are used. Nothing from the file is saved.</p>
+        <details class="sha-how">
+          <summary>How to export your CSV from Etsy</summary>
+          <p>Shop Manager &rarr; Settings &rarr; Options &rarr; Download Data &rarr; Download CSV</p>
+        </details>
+        <div class="sha-file">
+          <input type="file" id="shaFile" class="sha-file-input" accept=".csv,text/csv,application/vnd.ms-excel">
+          <label for="shaFile" class="sha-file-btn">Choose CSV file</label>
+          <span class="sha-file-name" id="shaFileName">No file selected</span>
+        </div>
+        <div class="sha-actions">
+          <button type="button" class="btn btn-primary sha-run" id="shaRun">Audit shop</button>
+          <button type="button" class="sha-clear hidden" id="shaClear">Clear results and choose another file</button>
+        </div>
+        <div class="sha-status" id="shaStatus" role="status" aria-live="polite"></div>
+        <div id="shaResults"></div>
+      </div>
+    </div>
   </div>
 
   <section id="analysisSection" class="hidden">
@@ -2106,6 +2190,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://app.lemonsqueezy.com/js/lemon.js"></script>
+<script src="shop-health-audit.js"></script>
 <script>
 (function(){
   'use strict';
@@ -7289,6 +7374,229 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       runDemoLoop();
     }
   }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
+  /* ============================================================
+     SHOP HEALTH AUDIT (optional, local-only, inside #analyzeCard)
+     ------------------------------------------------------------
+     Reads the chosen CSV in the browser with FileReader and hands the
+     text to window.TagPulseShopHealthAudit (public/shop-health-audit.js).
+     The file is never uploaded: no fetch / XMLHttpRequest / FormData is
+     used here, and neither the CSV nor the results are written to any
+     storage, history or log. Everything CSV-derived is rendered with
+     textContent only. Results live in #shaResults, separate from
+     #analysisSection, so the single-listing analyzer cannot touch them.
+     ============================================================ */
+  (function initShopHealthAudit(){
+    const $ = function(id){ return document.getElementById(id); };
+    const shaToggle = $("shaToggle"), shaPanel = $("shaPanel"), shaFile = $("shaFile");
+    const shaFileName = $("shaFileName"), shaRun = $("shaRun"), shaClear = $("shaClear");
+    const shaStatus = $("shaStatus"), shaResults = $("shaResults");
+    if (!shaToggle || !shaPanel || !shaFile || !shaRun || !shaClear || !shaStatus || !shaResults) return;
+
+    const PAGE = 10;
+    let busy = false;
+
+    function setStatus(msg, isError){
+      shaStatus.textContent = msg || "";
+      shaStatus.classList.toggle("is-error", !!isError);
+    }
+    function clearResults(){
+      shaResults.textContent = "";
+      setStatus("");
+    }
+    function syncClearButton(hasResults){
+      shaClear.classList.toggle("hidden", !(hasResults || shaFile.files.length));
+    }
+    function el(tag, className, text){
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text != null) node.textContent = String(text);
+      return node;
+    }
+
+    shaToggle.addEventListener("click", function(){
+      const open = shaToggle.getAttribute("aria-expanded") === "true";
+      shaToggle.setAttribute("aria-expanded", String(!open));
+      shaPanel.classList.toggle("hidden", open);
+    });
+
+    shaFile.addEventListener("change", function(){
+      clearResults();
+      const f = shaFile.files && shaFile.files[0];
+      shaFileName.textContent = f ? f.name : "No file selected";
+      syncClearButton(false);
+    });
+
+    shaClear.addEventListener("click", function(){
+      shaFile.value = "";
+      shaFileName.textContent = "No file selected";
+      clearResults();
+      syncClearButton(false);
+      shaFile.focus();
+    });
+
+    // ---- rendering (textContent / createElement only) ----
+    function renderFinding(f){
+      const box = el("div", "sha-finding");
+      const head = el("p", "sha-finding-head");
+      head.appendChild(el("span", "sha-badge " + (f.severity === "issue" ? "is-issue" : "is-review"), f.severity === "issue" ? "Issue" : "Worth a look"));
+      head.appendChild(document.createTextNode(f.heading));
+      box.appendChild(head);
+      const ul = el("ul", "sha-evidence");
+      f.evidence.forEach(function(line){ ul.appendChild(el("li", "", line)); });
+      box.appendChild(ul);
+      const action = el("p", "sha-action");
+      action.appendChild(el("strong", "", "Next step: "));
+      action.appendChild(document.createTextNode(f.action));
+      box.appendChild(action);
+      return box;
+    }
+    function renderListingGroup(g){
+      const card = el("article", "sha-item");
+      card.appendChild(el("h4", "", g.label));
+      card.appendChild(el("p", "sha-meta", "CSV row " + g.row + (g.sku ? " \u00b7 SKU " + g.sku : "")));
+      g.findings.forEach(function(f){ card.appendChild(renderFinding(f)); });
+      return card;
+    }
+    function renderPair(p){
+      const card = el("article", "sha-item");
+      card.appendChild(el("h4", "", p.listings[0].label));
+      card.appendChild(el("h4", "", "and " + p.listings[1].label));
+      card.appendChild(el("p", "sha-meta", "CSV rows " + p.listings[0].row + " and " + p.listings[1].row));
+      p.signals.forEach(function(sig){
+        const box = el("div", "sha-finding");
+        const head = el("p", "sha-finding-head");
+        head.appendChild(el("span", "sha-badge is-review", "Worth a look"));
+        head.appendChild(document.createTextNode(sig.heading));
+        box.appendChild(head);
+        const ul = el("ul", "sha-evidence");
+        sig.evidence.forEach(function(line){ ul.appendChild(el("li", "", line)); });
+        box.appendChild(ul);
+        card.appendChild(box);
+      });
+      card.appendChild(el("p", "sha-note", p.explanation));
+      const action = el("p", "sha-action");
+      action.appendChild(el("strong", "", "Next step: "));
+      action.appendChild(document.createTextNode(p.action));
+      card.appendChild(action);
+      return card;
+    }
+    function renderGroup(g){
+      const card = el("article", "sha-item");
+      card.appendChild(el("h4", "", g.count + " listings share one title"));
+      g.evidence.forEach(function(line){ card.appendChild(el("p", "sha-meta", line)); });
+      const ul = el("ul", "sha-evidence");
+      g.listings.forEach(function(l){ ul.appendChild(el("li", "", l.label)); });
+      if (g.moreCount) ul.appendChild(el("li", "", "\u2026and " + g.moreCount + " more"));
+      card.appendChild(ul);
+      const action = el("p", "sha-action");
+      action.appendChild(el("strong", "", "Next step: "));
+      action.appendChild(document.createTextNode(g.action));
+      card.appendChild(action);
+      return card;
+    }
+    // Renders the first PAGE items, then a button that reveals the rest.
+    function renderPaged(container, items, renderOne, noun){
+      const holder = el("div", "");
+      container.appendChild(holder);
+      let shown = 0;
+      const more = el("button", "sha-more");
+      more.type = "button";
+      function showNext(){
+        const next = items.slice(shown, shown + PAGE);
+        next.forEach(function(it){ holder.appendChild(renderOne(it)); });
+        shown += next.length;
+        const left = items.length - shown;
+        if (left > 0) {
+          more.textContent = "Show " + Math.min(PAGE, left) + " more (" + left + " not shown yet)";
+          more.setAttribute("aria-label", "Show more " + noun + ": " + left + " not shown yet");
+          container.appendChild(more);
+        } else if (more.parentNode) {
+          more.parentNode.removeChild(more);
+        }
+      }
+      more.addEventListener("click", showNext);
+      showNext();
+    }
+    function stat(value, label){
+      const box = el("div", "sha-stat");
+      box.appendChild(el("b", "", value));
+      box.appendChild(el("span", "", label));
+      return box;
+    }
+
+    function renderAudit(res){
+      shaResults.textContent = "";
+      const s = res.summary;
+      const summary = el("div", "sha-summary");
+      summary.appendChild(stat(s.listingsAnalyzed, s.listingsAnalyzed === 1 ? "listing analyzed" : "listings analyzed"));
+      summary.appendChild(stat(s.listingsWithFindings, s.listingsWithFindings === 1 ? "listing with direct findings" : "listings with direct findings"));
+      summary.appendChild(stat(s.pairsToReview, s.pairsToReview === 1 ? "listing pair worth reviewing" : "listing pairs worth reviewing"));
+      shaResults.appendChild(summary);
+      shaResults.appendChild(el("p", "sha-note", "These are counts from this audit\u2019s checks on your CSV, not Etsy ranking or performance metrics. " +
+        s.listingsWithStructuralIssues + " of the listings with findings have a hard issue (a missing or over-long title, an over-long or repeated tag, or a blank description); the rest only have open tag slots."));
+      res.notes.forEach(function(n){ shaResults.appendChild(el("p", "sha-note", n)); });
+
+      if (res.noIssues) {
+        const empty = el("div", "sha-empty");
+        empty.appendChild(el("b", "", res.emptyStateMessage));
+        empty.appendChild(document.createTextNode(res.emptyStateCaveat));
+        shaResults.appendChild(empty);
+        return;
+      }
+      if (res.listingFindings.length) {
+        shaResults.appendChild(el("p", "sha-section-title", "Findings by listing (" + res.listingFindings.length + ")"));
+        renderPaged(shaResults, res.listingFindings, renderListingGroup, "listings");
+      }
+      if (res.groupFindings.length) {
+        shaResults.appendChild(el("p", "sha-section-title", "Large groups of identical titles (" + res.groupFindings.length + ")"));
+        renderPaged(shaResults, res.groupFindings, renderGroup, "groups");
+      }
+      if (res.pairFindings.length) {
+        shaResults.appendChild(el("p", "sha-section-title", "Listing pairs worth reviewing (" + s.pairsToReview + ")"));
+        renderPaged(shaResults, res.pairFindings, renderPair, "pairs");
+      }
+    }
+
+    function runAudit(){
+      if (busy) return;
+      const audit = window.TagPulseShopHealthAudit;
+      const f = shaFile.files && shaFile.files[0];
+      shaResults.textContent = "";
+      if (!audit) { setStatus("The audit tool didn\u2019t load. Please reload the page and try again.", true); return; }
+      if (!f) { setStatus("Choose the CSV file you downloaded from Etsy first.", true); syncClearButton(false); return; }
+      if (f.size > audit.MAX_FILE_BYTES) {
+        setStatus("This file is larger than " + Math.round(audit.MAX_FILE_BYTES / (1024 * 1024)) + " MB, which is more than this audit can safely process in your browser. Export a smaller CSV and try again.", true);
+        syncClearButton(false);
+        return;
+      }
+      busy = true; shaRun.disabled = true;
+      setStatus("Reading your file locally\u2026");
+      const reader = new FileReader();
+      reader.onerror = function(){
+        busy = false; shaRun.disabled = false;
+        setStatus("The file couldn\u2019t be read. Please choose it again.", true);
+      };
+      reader.onload = function(){
+        busy = false; shaRun.disabled = false;
+        let res;
+        try {
+          res = audit.auditShopCsv(String(reader.result || ""), { sizeBytes: f.size });
+        } catch (err) {
+          console.error("[TagPulse][ShopAudit] unexpected audit error", err && err.message);
+          setStatus("Something went wrong while checking this file. Please make sure it is the CSV downloaded from Etsy.", true);
+          return;
+        }
+        if (!res.ok) { setStatus(res.error.message, true); syncClearButton(false); return; }
+        renderAudit(res);
+        setStatus("Audit complete: " + res.summary.listingsAnalyzed + " listing" + (res.summary.listingsAnalyzed === 1 ? "" : "s") + " analyzed, " +
+          res.summary.listingsWithFindings + " with direct findings, " + res.summary.pairsToReview + " pair" + (res.summary.pairsToReview === 1 ? "" : "s") + " worth reviewing.");
+        syncClearButton(true);
+      };
+      reader.readAsText(f);
+    }
+    shaRun.addEventListener("click", runAudit);
+  })();
 })();
 
 </script>
