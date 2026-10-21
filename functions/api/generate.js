@@ -2212,6 +2212,7 @@ async function callGroq(
 
   const callStart = Date.now();
   let primaryErr;
+  let primaryElapsedMs = null; // diagnostics only
 
   try {
 
@@ -2226,11 +2227,31 @@ async function callGroq(
   } catch (err) {
 
     primaryErr = err;
+    primaryElapsedMs = Date.now() - callStart;
 
     if (
       primaryErr &&
       primaryErr.category === "timeout"
     ) {
+
+      logGroqDiagnostic(function () {
+        return Object.assign(
+          {
+            event: "primary_failed",
+            requestId: requestId,
+            primaryModel: GROQ_MODEL_PRIMARY,
+            elapsedMs: primaryElapsedMs
+          },
+          describeFailureFieldsForLog("primary", primaryErr),
+          describeResponseFormatForLog(prompt, responseShape),
+          {
+            fallbackEnabled: GROQ_FALLBACK_ENABLED,
+            fallbackEligible: false,
+            fallbackAttempted: false,
+            reason: "primary_timeout_never_falls_back"
+          }
+        );
+      });
 
       // Unchanged behavior: a primary timeout does not attempt
       // the fallback model.
@@ -2240,6 +2261,27 @@ async function callGroq(
 
     const eligible =
       isEligibleForGroqFallback(primaryErr);
+
+
+    // Logged BEFORE the fallback decision is acted on, so it exists
+    // whether or not a fallback call follows.
+    logGroqDiagnostic(function () {
+      return Object.assign(
+        {
+          event: "primary_failed",
+          requestId: requestId,
+          primaryModel: GROQ_MODEL_PRIMARY,
+          elapsedMs: primaryElapsedMs
+        },
+        describeFailureFieldsForLog("primary", primaryErr),
+        describeResponseFormatForLog(prompt, responseShape),
+        {
+          fallbackEnabled: GROQ_FALLBACK_ENABLED,
+          fallbackEligible: !!eligible,
+          fallbackAttempted: !!(GROQ_FALLBACK_ENABLED && eligible)
+        }
+      );
+    });
 
 
     if (!GROQ_FALLBACK_ENABLED || !eligible) {
@@ -2315,9 +2357,45 @@ async function callGroq(
       }
     );
 
+    logGroqDiagnostic(function () {
+      return Object.assign(
+        {
+          event: "fallback_recovered",
+          requestId: requestId,
+          primaryModel: GROQ_MODEL_PRIMARY
+        },
+        describeFailureFieldsForLog("primary", primaryErr),
+        {
+          fallbackModel: GROQ_MODEL_FALLBACK,
+          fallbackSucceeded: true,
+          primaryElapsedMs: primaryElapsedMs,
+          totalElapsedMs: Date.now() - callStart
+        }
+      );
+    });
+
     return text;
 
   } catch (fallbackErr) {
+
+    logGroqDiagnostic(function () {
+      return Object.assign(
+        {
+          event: "fallback_failed",
+          requestId: requestId,
+          primaryModel: GROQ_MODEL_PRIMARY,
+          fallbackModel: GROQ_MODEL_FALLBACK,
+          fallbackSucceeded: false,
+          bothRateLimited:
+            isRateLimitError(primaryErr) && isRateLimitError(fallbackErr),
+          primaryElapsedMs: primaryElapsedMs,
+          totalElapsedMs: Date.now() - callStart
+        },
+        describeFailureFieldsForLog("primary", primaryErr),
+        describeFailureFieldsForLog("fallback", fallbackErr),
+        describeResponseFormatForLog(prompt, responseShape)
+      );
+    });
 
     // Both models answered 429 (and only that case): wait out a SHORT
     // provider-supplied hint once and try once more; otherwise fail
@@ -2818,7 +2896,7 @@ async function callGroqModel(
 
     let errType = null;
     let errCode = null;
-    let failedGeneration = null;
+    let failedGenerationChars = null; // diagnostics only: true length, text never kept
     let rateLimitHeaders = null;
     let retryAfterMs = null;
 
@@ -2859,16 +2937,16 @@ async function callGroqModel(
       }
 
       if (errBody?.error?.failed_generation) {
-        // Bounded generously (not the standard 300-char log cap) —
-        // this is the single most diagnostic field for a strict-
-        // mode schema failure (it's the model's actual raw output
-        // that failed validation), so we want enough of it to see
-        // whether/where it was truncated or malformed.
-        failedGeneration =
-          truncateForLog(
-            errBody.error.failed_generation,
-            4000
-          );
+        // Diagnostics only: the untruncated length, so a log can tell
+        // "cut off at the ceiling" from "complete but invalid".
+        failedGenerationChars =
+          String(errBody.error.failed_generation).length;
+
+        // The raw failed_generation text is deliberately NOT kept
+        // anywhere: it is the model's own output (which can echo
+        // user-supplied product text) and would otherwise travel on
+        // the error object into server logs and the browser's
+        // error_detail. Only its length is retained.
       }
 
     } catch (_) {}
@@ -2893,7 +2971,7 @@ async function callGroqModel(
       {
         type: errType,
         code: errCode,
-        failedGeneration: failedGeneration,
+        failedGenerationChars: failedGenerationChars,
         rateLimitHeaders: rateLimitHeaders,
         retryAfterMs: retryAfterMs
       }
@@ -2991,7 +3069,7 @@ async function callGroqModel(
  *
  * `extra` is optional and only ever passed by the !res.ok branch
  * above, which is the only place Groq's own error body (with a
- * possible type/code/failed_generation) is available. Every other
+ * possible type/code, and the length of failed_generation) is available. Every other
  * call site (timeout, network, malformed, content_filter, empty)
  * omits it, so those errors are completely unaffected by this
  * addition.
@@ -3137,7 +3215,12 @@ function makeGroqError(
   err.groqMessage = message || null;
   err.groqType = (extra && extra.type) || null;
   err.groqCode = (extra && extra.code) || null;
-  err.groqFailedGeneration = (extra && extra.failedGeneration) || null;
+  // Diagnostics only (server log). Deliberately NOT added to
+  // describeGroqError(), so it never reaches the browser's error_detail.
+  err.groqFailedGenerationChars =
+    (extra && Number.isFinite(extra.failedGenerationChars))
+      ? extra.failedGenerationChars
+      : null;
   err.groqRateLimitHeaders = (extra && extra.rateLimitHeaders) || null;
   err.retryAfterMs =
     (extra && Number.isFinite(extra.retryAfterMs))
@@ -3359,9 +3442,9 @@ function truncateForLog(
 /**
  * Reduces a Groq error (structured or not) to a small, safe-to-log
  * object: model, category, status, message, and — when Groq's own
- * error body included them — type, code, and failed_generation
- * (the model's raw output that failed strict-mode validation).
- * Never includes the API key, an Authorization header, the user's
+ * error body included them — type, code and rate-limit headers.
+ * The model's raw failed_generation text is never included (see
+ * callGroqModel()). Never includes the API key, an Authorization header, the user's
  * prompt/Product Details, or any user/credit data — none of those
  * are ever attached to these error objects in the first place.
  */
@@ -3380,9 +3463,93 @@ function describeGroqError(err) {
     ),
     type: err.groqType || null,
     code: err.groqCode || null,
-    failed_generation: err.groqFailedGeneration || null,
     rate_limit_headers: err.groqRateLimitHeaders || null
   };
+}
+
+/**
+ * PROVIDER-FAILURE DIAGNOSTIC LOGGING (log only).
+ * -------------------------------------------------------------
+ * One structured server-side log line per stage of a primary /
+ * fallback attempt, all sharing the message prefix
+ * "[TagPulse][generate] groq diagnostic" and the same requestId, so
+ * a recovered primary failure can be found and read afterwards:
+ *
+ *   event "primary_failed"     primary model failed (logged before any
+ *                              fallback call, whether or not one follows)
+ *   event "fallback_recovered" fallback model produced the answer
+ *   event "fallback_failed"    fallback model also failed
+ *
+ * Safety: the fields are built inside a try/catch (callers pass a
+ * function), so building or printing a diagnostic can never throw into
+ * the request. It only reads fields already on the error objects and
+ * the pure selectResponseFormat(); it makes no call, retry, DB write
+ * or response change. It never logs the prompt, product details, API
+ * key / headers or the failed_generation text (only its character
+ * count). Provider text is whitespace-collapsed, key-shaped strings
+ * are redacted, and it is length-capped. None of this reaches the
+ * browser.
+ */
+function sanitizeProviderTextForLog(value, max) {
+
+  let s = String(value === null || value === undefined ? "" : value)
+    .replace(/\s+/g, " ")
+    .replace(/gsk_[A-Za-z0-9_-]+/g, "[redacted]")
+    .replace(/Bearer\s+[A-Za-z0-9._~+\/=-]+/gi, "Bearer [redacted]");
+
+  return s.length > max
+    ? s.slice(0, max) + "…"
+    : s;
+}
+
+function describeFailureFieldsForLog(prefix, err) {
+
+  const out = {};
+
+  out[prefix + "Status"] = (err && err.groqStatus) || null;
+  out[prefix + "Category"] = (err && err.category) || "unknown";
+  out[prefix + "Code"] =
+    (err && err.groqCode)
+      ? sanitizeProviderTextForLog(err.groqCode, 80)
+      : null;
+  out[prefix + "Type"] =
+    (err && err.groqType)
+      ? sanitizeProviderTextForLog(err.groqType, 80)
+      : null;
+  out[prefix + "Message"] =
+    sanitizeProviderTextForLog(
+      (err && (err.groqMessage || err.message)) || "",
+      200
+    );
+  out[prefix + "FailedGenerationChars"] =
+    (err && Number.isFinite(err.groqFailedGenerationChars))
+      ? err.groqFailedGenerationChars
+      : null;
+
+  return out;
+}
+
+function describeResponseFormatForLog(prompt, responseShape) {
+
+  const rf = selectResponseFormat(prompt, responseShape);
+  const js = rf && rf.json_schema;
+
+  return {
+    responseFormat: (js && js.name) || (rf && rf.type) || null,
+    strictMode: !!(js && js.strict === true)
+  };
+}
+
+function logGroqDiagnostic(buildFields) {
+
+  try {
+
+    console.error(
+      "[TagPulse][generate] groq diagnostic",
+      buildFields()
+    );
+
+  } catch (_) {}
 }
 
 /**
