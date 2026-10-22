@@ -1432,6 +1432,90 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 /* ---- error toast: wraps like a message, not a one-line pill ---- */
 #toast.error{ border-radius:16px; line-height:1.45; max-width:min(92vw, 460px); padding:12px 16px; }
 
+/* ============================================================
+   FRIENDLY ERRORS, OPTIONAL LABELS, SHOP AUDIT CARD, FEEDBACK,
+   UPGRADE + SIGN-OUT POLISH (additive, scoped)
+   ============================================================ */
+/* Soft amber toast for temporary, non-critical generation / rate-limit messages.
+   Red (.error) stays for sign-in, validation and other genuine errors. */
+#toast.warn{
+  background:#fff6df; color:#3d2e00; border:1px solid #f0cf85;
+  border-radius:16px; line-height:1.45; width:min(92vw, 460px); max-width:min(92vw, 460px); padding:12px 16px;
+  align-items:flex-start;
+}
+#toast.warn .dot{ background:#d99a00; width:8px; height:8px; margin-top:6px; opacity:1; }
+#toast .toast-title{ display:block; font-weight:800; margin-bottom:2px; }
+#toast.warn #toastMsg{ font-weight:500; }
+#toast.warn .toast-title{ font-weight:800; }
+
+/* Product Details: section heading + OPTIONAL badge + per-field Optional labels */
+.pd-heading{ margin:0 0 12px; }
+.pd-heading-row{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.pd-heading-title{ font-size:15px; font-weight:800; color:var(--ink); margin:0; }
+.pd-badge{ font-size:10.5px; font-weight:800; letter-spacing:.05em; color:#4b5563; background:#efebe3; border-radius:999px; padding:3px 8px; }
+.pd-heading-sub{ font-size:12.5px; color:var(--ink-soft); margin:4px 0 0; line-height:1.4; }
+#pdBody .field > label::after{ content:"Optional"; font-size:11px; font-weight:600; color:#6b7280; margin-left:6px; white-space:nowrap; }
+
+/* Shop Audit: highlighted card (the audit itself is unchanged) */
+.sha-card{ border:1px solid #f3d3bd; background:linear-gradient(180deg,#fff7f1 0%,#fffdfb 100%); border-radius:var(--radius-md); padding:16px; }
+.sha-card-head{ display:flex; gap:12px; align-items:flex-start; }
+.sha-card-icon{ flex:0 0 auto; width:40px; height:40px; border-radius:10px; background:var(--primary-tint); color:var(--primary-dark); border:1px solid #f8cba9; display:flex; align-items:center; justify-content:center; }
+.sha-card-title{ font-size:16px; font-weight:800; color:var(--ink); margin:0 0 4px; letter-spacing:-.01em; }
+.sha-card-copy{ font-size:13px; line-height:1.5; color:var(--ink-soft); margin:0; }
+.sha-card-points{ list-style:none; display:flex; flex-wrap:wrap; gap:6px 14px; margin:12px 0 14px; padding:0; }
+.sha-card-points li{ font-size:12px; font-weight:600; color:var(--ink); position:relative; padding-left:16px; }
+.sha-card-points li::before{ content:"\2713"; position:absolute; left:0; color:var(--primary); font-weight:800; }
+.sha-start{ min-height:46px; font-size:14px; }
+.sha-start[aria-expanded="true"]{ background:var(--ink); box-shadow:none; }
+.sha-card .sha-panel{ margin-top:14px; background:#fff; }
+@media (max-width:560px){ .sha-start{ width:100%; } .sha-card{ padding:14px 12px; } }
+
+/* Feedback */
+#feedbackModal .paywall-field input, #feedbackModal .paywall-field select, #feedbackModal .paywall-field textarea{
+  width:100%; padding:12px 13px; border:1.5px solid var(--border); border-radius:var(--radius-sm);
+  background:var(--bg); font:inherit; font-size:14px; color:var(--ink); letter-spacing:0;
+}
+#feedbackModal .paywall-field textarea{ resize:vertical; min-height:110px; line-height:1.45; }
+#feedbackModal .paywall-field input:focus, #feedbackModal .paywall-field select:focus, #feedbackModal .paywall-field textarea:focus{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(241,100,30,.15); outline:none; background:#fff; }
+.fb-count, .fb-help{ font-size:11.5px; color:#6b7280; margin:5px 0 0 !important; }
+.fb-count{ text-align:right; }
+.fb-hp{ position:absolute !important; left:-10000px; width:1px; height:1px; overflow:hidden; }
+.fb-note{ font-size:12px; color:#6b7280; }
+.fb-status{ display:none; font-size:13px; font-weight:600; line-height:1.45; border-radius:8px; padding:10px 12px; margin:0 0 12px; }
+.fb-status.show{ display:block; }
+.fb-status.is-error{ background:var(--danger-tint); color:var(--danger); }
+.fb-status.is-success{ background:var(--success-tint); color:#14634a; }
+#feedbackSend:disabled{ opacity:.7; cursor:not-allowed; }
+#feedbackLink{ background:none; border:0; }
+
+/* Upgrade (paywall) modal: presentation only; plans, prices and actions are unchanged */
+#paywallModal .modal-panel{ max-width:600px; padding:0; }
+#paywallModal .modal-head{ padding:22px 24px 0; margin-bottom:6px; }
+#paywallModal .modal-head h3{ font-size:20px; letter-spacing:-.02em; }
+#paywallModal .modal-body{ padding:0 24px 24px; }
+.up-hero{ background:linear-gradient(180deg,var(--primary-tint) 0%,#fff 100%); border:1px solid #f8d9c4; border-radius:var(--radius-md); padding:16px; margin:0 0 16px; }
+.up-eyebrow{ font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--primary-dark); margin:0 0 4px !important; }
+.up-headline{ font-size:18px; line-height:1.3; font-weight:800; color:var(--ink); letter-spacing:-.015em; margin:0 0 12px !important; }
+.up-preview{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px; box-shadow:var(--shadow-sm); }
+.up-prev-row{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+.up-prev-label{ flex:0 0 auto; font-size:10.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#6b7280; min-width:76px; }
+.up-bar{ height:8px; border-radius:4px; background:#ece7e0; flex:1 1 auto; }
+.up-bar.w70{ max-width:70%; } .up-bar.w45{ max-width:45%; }
+.up-chips{ display:flex; flex-wrap:wrap; gap:5px; }
+.up-chip{ font-size:11px; font-weight:700; color:var(--primary-dark); background:var(--primary-tint); border:1px solid #f8cba9; border-radius:999px; padding:2px 9px; }
+#paywallModal .pricing-tier{ box-shadow:var(--shadow-sm); padding:20px 16px 16px; }
+#paywallModal .pricing-tier.is-featured{ box-shadow:0 8px 22px -10px rgba(241,100,30,.45); }
+#paywallModal .pricing-tier .btn{ width:100%; min-height:46px; border-radius:var(--r-ctl); }
+#paywallModal .btn:focus-visible, #paywallModal .modal-close:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+@media (max-width:480px){ #paywallModal .modal-head{ padding:18px 16px 0; } #paywallModal .modal-body{ padding:0 16px 20px; } .up-headline{ font-size:16.5px; } }
+
+/* Sign out confirmation (inside the existing account modal) */
+#signedOutStep{ text-align:center; }
+.so-icon{ width:52px; height:52px; border-radius:50%; margin:2px auto 14px; display:flex; align-items:center; justify-content:center; background:var(--success-tint); color:var(--success); }
+#signedOutStep .btn{ margin-bottom:10px; }
+.so-home{ background:none; border:0; color:var(--ink-soft); font-weight:700; font-size:14px; text-decoration:underline; text-underline-offset:3px; min-height:44px; padding:8px 12px; border-radius:8px; }
+.so-home:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+
 /* ---- sign-in modal ---- */
 #authModal .modal-panel{ padding:28px 24px 24px; border-radius:var(--r-card) var(--r-card) 0 0; }
 @media (min-width:640px){ #authModal .modal-panel{ max-width:440px; border-radius:var(--r-card); } }
@@ -1746,6 +1830,10 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
             <span class="pd-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5.5h10M6 10h10M6 14.5h6"/><circle cx="3" cy="5.5" r=".6" fill="currentColor"/><circle cx="3" cy="10" r=".6" fill="currentColor"/><circle cx="3" cy="14.5" r=".6" fill="currentColor"/></svg></span>
             <span class="pd-text"><span class="pd-title">Product details</span><span class="pd-sub">Optional details improve accuracy</span></span>
           </summary>
+          <div class="pd-heading">
+            <div class="pd-heading-row"><p class="pd-heading-title">Product Details</p><span class="pd-badge">OPTIONAL</span></div>
+            <p class="pd-heading-sub">Add any details you know. Leave the rest blank.</p>
+          </div>
           <p class="product-details-hint">Used as real product facts. Anything left blank is treated as unknown and never guessed.</p>
           <p class="product-details-hint hidden" id="pdInactiveNote">Some details you entered don't apply to this product type, so they won't be used.</p>
           <div class="product-details-body" id="pdBody">
@@ -1865,7 +1953,18 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     <p class="field-help">Runs in your browser. No credit is used.</p>
 
     <div class="sha" id="shaRoot">
-      <button type="button" class="sha-link" id="shaToggle" aria-expanded="false" aria-controls="shaPanel">Have multiple listings? Audit your shop</button>
+     <div class="sha-card">
+      <div class="sha-card-head">
+        <span class="sha-card-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5l1.4 1.4L12 7.3M8 14.5l1.4 1.4L12 13.3M14.5 9h2.5M14.5 15h2.5"/></svg></span>
+        <div>
+          <h3 class="sha-card-title" id="shaCardTitle">Audit Your Entire Etsy Shop</h3>
+          <p class="sha-card-copy">Upload your Etsy listings CSV to check every listing for title and tag issues and to spot listings that look unusually similar to each other.</p>
+        </div>
+      </div>
+      <ul class="sha-card-points" aria-label="What the shop audit checks">
+        <li>Title length</li><li>Tag length, repeats and unused slots</li><li>Similar titles and tags</li>
+      </ul>
+      <button type="button" class="btn btn-primary sha-start" id="shaToggle" aria-expanded="false" aria-controls="shaPanel">Start Shop Audit</button>
       <div class="sha-panel hidden" id="shaPanel" role="region" aria-labelledby="shaTitle">
         <h3 id="shaTitle">Shop Health Audit</h3>
         <p class="sha-intro">Check your active Etsy listings for concrete title/tag issues and unusually similar listings.</p>
@@ -1886,6 +1985,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         <div class="sha-status" id="shaStatus" role="status" aria-live="polite"></div>
         <div id="shaResults"></div>
       </div>
+     </div>
     </div>
   </div>
 
@@ -1977,6 +2077,8 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     <button type="button" id="privacyLink">Privacy Policy</button>
     <span class="footer-dot">·</span>
     <button type="button" id="affiliateInfoBtn">Affiliate</button>
+    <span class="footer-dot">·</span>
+    <button type="button" id="feedbackLink">Feedback</button>
   </div>
   <p class="fine">TagPulse AI · Contact: <a href="mailto:tagpulse.ai@gmail.com">tagpulse.ai@gmail.com</a></p>
 </footer>
@@ -1994,6 +2096,43 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       <p>TagPulse AI is a focused tool for sellers on Etsy, Pinterest, and print-on-demand and digital-product platforms who want keyword-focused titles, tags, and descriptions without hours of manual keyword research.</p>
       <p>Describe your product once, and the tool returns a keyword-rich title under 140 characters, 13 exact-match SEO tags, and a ready-to-edit description — in one pass.</p>
       <p>Questions or feedback? Reach us at <a href="mailto:tagpulse.ai@gmail.com">tagpulse.ai@gmail.com</a>.</p>
+    </div>
+  </div>
+</div>
+
+<div id="feedbackModal" class="modal-overlay hidden" data-modal>
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3>Send Feedback</h3>
+      <button type="button" class="modal-close" data-close>✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Tell us what is working, what is not, or what you would like to see next.</p>
+      <form id="feedbackForm" novalidate>
+        <div class="paywall-field">
+          <label for="feedbackType">Feedback type</label>
+          <select id="feedbackType">
+            <option value="general">General Feedback</option>
+            <option value="problem">Report a Problem</option>
+            <option value="question">Ask a Question</option>
+            <option value="improvement">Suggest an Improvement</option>
+          </select>
+        </div>
+        <div class="paywall-field">
+          <label for="feedbackMessage">Message</label>
+          <textarea id="feedbackMessage" rows="5" maxlength="2000" required aria-describedby="feedbackCount" placeholder="Write your message here"></textarea>
+          <p class="fb-count" id="feedbackCount">0 / 2000</p>
+        </div>
+        <div class="paywall-field">
+          <label for="feedbackEmail">Email address <span class="opt-tag">Optional</span></label>
+          <input type="email" id="feedbackEmail" maxlength="254" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="you@example.com" aria-describedby="feedbackEmailHelp">
+          <p class="fb-help" id="feedbackEmailHelp">Only add this if you would like a reply.</p>
+        </div>
+        <div class="fb-hp" aria-hidden="true"><label for="feedbackWebsite">Website</label><input type="text" id="feedbackWebsite" tabindex="-1" autocomplete="off"></div>
+        <p class="fb-note">Please do not include passwords or payment details.</p>
+        <div class="fb-status" id="feedbackStatus" role="status" aria-live="polite"></div>
+        <button type="submit" class="btn btn-primary" id="feedbackSend">Send Feedback</button>
+      </form>
     </div>
   </div>
 </div>
@@ -2052,6 +2191,15 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       <button type="button" class="modal-close" data-close>✕</button>
     </div>
     <div class="modal-body">
+      <div class="up-hero">
+        <p class="up-eyebrow">TagPulse Pro</p>
+        <p class="up-headline">Keep creating complete SEO listings for your shop.</p>
+        <div class="up-preview" aria-hidden="true">
+          <div class="up-prev-row"><span class="up-prev-label">Title</span><span class="up-bar"></span></div>
+          <div class="up-prev-row"><span class="up-prev-label">Tags</span><span class="up-chips"><span class="up-chip">13</span><span class="up-chip">SEO</span><span class="up-chip">tags</span></span></div>
+          <div class="up-prev-row" style="margin-bottom:0"><span class="up-prev-label">Description</span><span class="up-bar w70"></span></div>
+        </div>
+      </div>
       <p>Pick the plan that fits how much you sell. Both are one-time payments — no subscription.</p>
 
       <div class="first50-note" id="first50Note">
@@ -2178,6 +2326,12 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       <div id="accountStep" class="hidden">
         <p id="accountEmail" class="auth-account-email"></p>
         <button type="button" class="btn auth-secondary-btn" id="signOutBtn">Sign out</button>
+      </div>
+
+      <div id="signedOutStep" class="hidden">
+        <div class="so-icon" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+        <button type="button" class="btn btn-primary" id="signInAgainBtn">Sign In Again</button>
+        <button type="button" class="so-home" id="returnHomeBtn">Return to Homepage</button>
       </div>
     </div>
   </div>
@@ -2746,6 +2900,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   const emailStep = $("emailStep");
   const emailSentStep = $("emailSentStep");
   const accountStep = $("accountStep");
+  const signedOutStep = $("signedOutStep");
+  const signInAgainBtn = $("signInAgainBtn");
+  const returnHomeBtn = $("returnHomeBtn");
   const authEmail = $("authEmail");
   const sendOtpBtn = $("sendOtpBtn");
   const sendOtpLabel = $("sendOtpLabel");
@@ -2943,8 +3100,32 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     localStorage.removeItem(LS_PRO);
     updateAuthUI();
     renderCredits();
+    // Session is already cleared above (unchanged). Show a calm confirmation
+    // in the same modal instead of closing it straight away.
+    authTitle.textContent = "You've Signed Out";
+    authMessage.textContent = "You're safely signed out of TagPulse AI.";
+    emailStep.classList.add("hidden");
+    emailSentStep.classList.add("hidden");
+    accountStep.classList.add("hidden");
+    signedOutStep.classList.remove("hidden");
+    hideAuthError();
+    signInAgainBtn.focus();
+  });
+
+  function resetSignedOutStep(){ signedOutStep.classList.add("hidden"); }
+  // Any way of closing the modal (X, backdrop, Escape, button) leaves it clean
+  // for the next opener, which sets its own title/steps as before.
+  new MutationObserver(function(){
+    if (authModal.classList.contains("hidden")) resetSignedOutStep();
+  }).observe(authModal, { attributes: true, attributeFilter: ["class"] });
+
+  signInAgainBtn.addEventListener("click", function(){
+    resetSignedOutStep();
+    openSignInModal();
+  });
+  returnHomeBtn.addEventListener("click", function(){
     closeModal(authModal);
-    showToast("Signed out.", "success");
+    window.scrollTo(0, 0);
   });
 
   /* ============================================================
@@ -3745,7 +3926,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
           validation = validatePinterestOutput(parsed, wordsToAvoid, audience, productContextText);
 
           if (!validation.valid) {
-            throw new Error("The AI couldn't produce a valid Pinterest SEO package after a retry. Please try again or adjust your inputs.");
+            throw generationFailure("The AI couldn't produce a valid Pinterest SEO package after a retry. Please try again or adjust your inputs.");
           }
         }
 
@@ -3788,7 +3969,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
           validation = validateDigitalPrintableOutput(parsed, wordsToAvoid, audience, productContextText);
 
           if (!validation.valid) {
-            throw new Error("The AI couldn't produce a valid Digital / Printable listing after a retry. Please try again or adjust your inputs.");
+            throw generationFailure("The AI couldn't produce a valid Digital / Printable listing after a retry. Please try again or adjust your inputs.");
           }
         }
 
@@ -3837,9 +4018,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
       // Technical detail (request ID, timings, raw message, retry state) is
       // logged above; the user sees a calm, accurate message instead.
-      const resumeSuffix = err.resumeHint ? " " + err.resumeHint : "";
-
-      showToast(friendlyGenerationError(err) + resumeSuffix, "error", ERROR_TOAST_MS);
+      showGenerationError(err);
     } finally {
       setGenerating(false);
     }
@@ -4296,7 +4475,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     try {
       data = await res.json();
     } catch (_) {
-      const err = new Error("The server returned an invalid response.");
+      const err = generationFailure("The server returned an invalid response.");
       err.requestId = requestId;
       err.elapsedMs = elapsedMs;
       throw err;
@@ -4337,7 +4516,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     }
 
     if (!data.text || typeof data.text !== "string") {
-      const err = new Error("The AI didn't return a usable result. Please try again.");
+      const err = generationFailure("The AI didn't return a usable result. Please try again.");
       err.requestId = requestId;
       err.elapsedMs = elapsedMs;
       throw err;
@@ -4445,7 +4624,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   }
 
   function rateLimitMessage(sec){
-    const base = "We're handling a lot of requests right now.";
+    const base = "We're receiving too many requests right now.";
     if (typeof sec !== "number") return base + " Please try again in a moment.";
     if (sec <= 3) return base + " Please try again in a few seconds.";
     if (sec < 60) return base + " Please try again in about " + sec + " seconds.";
@@ -4454,29 +4633,65 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     return base + " Please try again a little later.";
   }
 
-  function friendlyGenerationError(err){
-    const generic = "We couldn't complete your request. Please try again in a moment.";
+  // An error that means "the generation itself did not produce a usable
+  // listing" (as opposed to sign-in / validation messages written for users).
+  function generationFailure(message){
+    const e = new Error(message);
+    e.isGenerationFailure = true;
+    return e;
+  }
+
+  const GEN_FAIL_TITLE = "Couldn't Generate Your Listing";
+  const GEN_FAIL_MESSAGE = "Something interrupted the generation. Please try again in a moment.";
+
+  /**
+   * Maps a failed generation to what the user sees: { type, title, message }.
+   *  type "warn"  = soft amber, temporary / non-critical (generation failures,
+   *                 timeouts, rate limits).
+   *  type "error" = red, for messages that must stay prominent and specific
+   *                 (sign-in, validation, account/credit text written by the
+   *                 server for users). Insufficient credits (402) never reach
+   *                 here - they are handled by the callers' paywall path.
+   * Uses structured signals first (HTTP status, error flags). Raw provider
+   * text, model names and diagnostics are never shown; the real error is
+   * logged to the console by the callers. A network-level fetch rejection is
+   * NOT blamed on the user's connection (it can equally be server-side).
+   * This only chooses wording: it never retries, resubmits or touches credits.
+   */
+  function describeGenerationError(err){
+    const warn = function (message, title) { return { type: "warn", title: title || GEN_FAIL_TITLE, message: message }; };
+    const generic = warn(GEN_FAIL_MESSAGE);
     if (!err) return generic;
-    if (err.networkLevelFailure) {
-      return "We couldn't complete your request. Please check your connection and try again.";
-    }
-    if (err.inProgressTimedOut) {
-      return err.message; // already calm: "This generation is taking longer than usual…"
-    }
+    if (err.networkLevelFailure) return generic;
+    if (err.inProgressTimedOut) return warn(err.message, "Taking Longer Than Usual");
     const status = err.httpStatus;
     const msg = typeof err.message === "string" ? err.message.trim() : "";
     if (typeof status === "number") {
-      if (status === 429) return rateLimitMessage(err.retryAfterSec);
-      if (status === 504 || status === 408) return "We couldn't complete your request because it took too long. Please try again.";
+      if (status === 429) return warn(rateLimitMessage(err.retryAfterSec), "Too Many Requests");
+      if (status === 504 || status === 408) return warn("It took longer than expected. Please try again in a moment.");
       const serverAuthored400 = [400, 401, 402, 403, 404, 409, 413].indexOf(status) !== -1;
       const looksInternal = err.hasServerDetail || /\bAI model\b|groq|\(model:|HTTP \d{3}|api key|not configured|\bD1\b|database/i.test(msg);
-      if (serverAuthored400 && msg && msg.length <= 220 && !looksInternal) return msg;
+      if (serverAuthored400 && msg && msg.length <= 220 && !looksInternal) return { type: "error", title: null, message: msg };
       return generic;
     }
-    // No HTTP status: an error authored by this page (validation failure,
-    // "please sign in", etc.), already written for users.
-    if (msg && msg.length <= 220 && !/failed to fetch|load failed|networkerror|typeerror/i.test(msg)) return msg;
+    if (err.isGenerationFailure) return generic;
+    // No HTTP status: an error authored by this page (sign-in prompt etc.),
+    // already written for users.
+    if (msg && msg.length <= 220 && !/failed to fetch|load failed|networkerror|typeerror/i.test(msg)) return { type: "error", title: null, message: msg };
     return generic;
+  }
+
+  // Kept for compatibility: the user-facing message only.
+  function friendlyGenerationError(err){
+    return describeGenerationError(err).message;
+  }
+
+  // Shows the mapped message. err.resumeHint (only set when the credit is
+  // already counted) is appended exactly as before.
+  function showGenerationError(err){
+    const view = describeGenerationError(err);
+    const suffix = err && err.resumeHint ? " " + err.resumeHint : "";
+    showToast(view.message + suffix, view.type, ERROR_TOAST_MS, view.title);
   }
 
   async function callGenerateWithNetworkRetry(prompt, requestId, hasProductDetails, retryOf, responseShape){
@@ -4775,7 +4990,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
     serverState = second.data;
     const secondEval = evaluateEtsyResponseText(second.data.text, o);
     console.log("[TagPulse][Etsy] retry validation " + (secondEval.errors ? "failed" : "passed"), secondEval.errors || undefined);
-    if (secondEval.errors) throw new Error(o.finalFailureMessage);
+    if (secondEval.errors) throw generationFailure(o.finalFailureMessage);
     return { parsed: secondEval.parsed, serverState: serverState };
   }
 
@@ -4790,7 +5005,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       if (start !== -1 && end !== -1 && end > start) {
         return JSON.parse(cleaned.slice(start, end + 1));
       }
-      throw new Error("Couldn't parse the AI's response. Please try again.");
+      throw generationFailure("Couldn't parse the AI's response. Please try again.");
     }
   }
 
@@ -5855,8 +6070,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       improvedBanner.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
       console.error("[TagPulse][Etsy] improve failed", { requestId: err.requestId, elapsedMs: err.elapsedMs, networkLevelFailure: !!err.networkLevelFailure, networkRetryExhausted: !!err.networkRetryExhausted, httpStatus: err.httpStatus, message: err.message });
-      const resumeSuffix = err.resumeHint ? " " + err.resumeHint : "";
-      showToast(friendlyGenerationError(err) + resumeSuffix, "error", ERROR_TOAST_MS);
+      showGenerationError(err);
     } finally {
       improveInFlight = false;
       improveBtn.disabled = false;
@@ -6445,6 +6659,74 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   $("privacyLink").addEventListener("click", () => openModal($("privacyModal")));
   $("affiliateInfoBtn").addEventListener("click", () => openModal($("affiliateModal")));
 
+  /* ============================================================
+     FEEDBACK (footer link -> POST /api/feedback)
+     ------------------------------------------------------------
+     Success is shown ONLY after the server answers { ok: true },
+     which it does only once the email provider accepted the message.
+     A failure keeps everything the user typed. No retries.
+     ============================================================ */
+  (function initFeedback(){
+    const link = $("feedbackLink"), modal = $("feedbackModal"), form = $("feedbackForm");
+    const typeSel = $("feedbackType"), msg = $("feedbackMessage"), email = $("feedbackEmail");
+    const hp = $("feedbackWebsite"), send = $("feedbackSend"), status = $("feedbackStatus"), count = $("feedbackCount");
+    if (!link || !modal || !form || !typeSel || !msg || !email || !hp || !send || !status || !count) return;
+    const MAX = 2000;
+    let sending = false;
+
+    function setStatus(text, kind){
+      status.textContent = text || "";
+      status.className = "fb-status" + (text ? " show" : "") + (kind ? " is-" + kind : "");
+    }
+    function updateCount(){ count.textContent = msg.value.length + " / " + MAX; }
+
+    link.addEventListener("click", function(){
+      if (!sending) setStatus("");
+      openModal(modal);
+      setTimeout(function(){ msg.focus(); }, 100);
+    });
+    msg.addEventListener("input", updateCount);
+
+    form.addEventListener("submit", async function(e){
+      e.preventDefault();
+      if (sending) return;
+      const text = msg.value.trim();
+      const addr = email.value.trim();
+      if (!text) { setStatus("Please write a message before sending.", "error"); msg.focus(); return; }
+      if (text.length > MAX) { setStatus("Your message is too long. Please keep it under " + MAX + " characters.", "error"); msg.focus(); return; }
+      if (addr && !/^[^\s@<>,;:"]+@[^\s@<>,;:"]+\.[^\s@<>,;:"]{2,}$/.test(addr)) { setStatus("That email address doesn't look right. Fix it or leave it blank.", "error"); email.focus(); return; }
+
+      sending = true;
+      send.disabled = true;
+      send.textContent = "Sending\u2026";
+      setStatus("");
+      let outcome = "failed";
+      try {
+        const res = await fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: typeSel.value, message: text, email: addr, website: hp.value })
+        });
+        let data = null;
+        try { data = await res.json(); } catch (_) {}
+        if (res.ok && data && data.ok === true) outcome = "sent";
+        else if (res.status === 429) outcome = "limited";
+      } catch (_) {}
+
+      if (outcome === "sent") {
+        msg.value = ""; email.value = ""; updateCount();
+        setStatus("Thanks for your feedback! Your message has been submitted.", "success");
+      } else if (outcome === "limited") {
+        setStatus("You've sent several messages recently. Please try again a little later. Your message is still here.", "error");
+      } else {
+        setStatus("We couldn't send your message right now. Please try again in a moment. Your message is still here.", "error");
+      }
+      sending = false;
+      send.disabled = false;
+      send.textContent = "Send Feedback";
+    });
+  })();
+
   document.querySelectorAll("[data-modal]").forEach(overlay => {
     const panel = overlay.querySelector(".modal-panel");
     const heading = overlay.querySelector(".modal-head h3");
@@ -6470,9 +6752,16 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   /* ============================================================
      TOAST
      ============================================================ */
-  function showToast(message, type, durationMs){
+  function showToast(message, type, durationMs, title){
     clearTimeout(toastTimer);
-    toastMsg.textContent = message;
+    toastMsg.textContent = "";
+    if (title) {
+      const t = document.createElement("strong");
+      t.className = "toast-title";
+      t.textContent = title;
+      toastMsg.appendChild(t);
+    }
+    toastMsg.appendChild(document.createTextNode(message));
     toast.className = "show" + (type ? " " + type : "");
     toastTimer = setTimeout(() => { toast.classList.remove("show"); }, durationMs || 3800);
   }
