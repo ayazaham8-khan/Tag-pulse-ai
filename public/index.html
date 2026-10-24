@@ -1503,6 +1503,25 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 .up-bar.w70{ max-width:70%; } .up-bar.w45{ max-width:45%; }
 .up-chips{ display:flex; flex-wrap:wrap; gap:5px; }
 .up-chip{ font-size:11px; font-weight:700; color:var(--primary-dark); background:var(--primary-tint); border:1px solid #f8cba9; border-radius:999px; padding:2px 9px; }
+/* Upgrade preview motion. Pure CSS: the modal is display:none while closed, so these
+   animations start over every time it opens (no JS needed). Declared ONLY when the user has
+   not asked for reduced motion; otherwise the preview is simply shown, static and fully visible. */
+@keyframes up-rise{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+@keyframes up-chip-in{ from{ opacity:0; transform:translateY(5px) scale(.9); } to{ opacity:1; transform:none; } }
+@keyframes up-shimmer{ from{ background-position:100% 0; } to{ background-position:-100% 0; } }
+@media (prefers-reduced-motion:no-preference){
+  .up-preview{ animation:up-rise .5s cubic-bezier(.22,1,.36,1) .12s both; }
+  .up-chip{ animation:up-chip-in .38s cubic-bezier(.22,1,.36,1) both; }
+  .up-chip:nth-child(1){ animation-delay:.42s; }
+  .up-chip:nth-child(2){ animation-delay:.54s; }
+  .up-chip:nth-child(3){ animation-delay:.66s; }
+  .up-bar{
+    background-image:linear-gradient(90deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.85) 50%, rgba(255,255,255,0) 70%);
+    background-size:200% 100%; background-repeat:no-repeat;
+    animation:up-shimmer 1.9s ease-in-out .7s 4;
+  }
+  .up-prev-row:last-child .up-bar{ animation-delay:1s; }
+}
 #paywallModal .pricing-tier{ box-shadow:var(--shadow-sm); padding:20px 16px 16px; }
 #paywallModal .pricing-tier.is-featured{ box-shadow:0 8px 22px -10px rgba(241,100,30,.45); }
 #paywallModal .pricing-tier .btn{ width:100%; min-height:46px; border-radius:var(--r-ctl); }
