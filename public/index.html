@@ -1576,6 +1576,9 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   box-shadow:0 1px 2px rgba(170,66,10,.28), 0 8px 18px -9px rgba(241,100,30,.6);
 }
 #landingScreen .get-started-btn:focus-visible{ outline:2px solid var(--ink); outline-offset:3px; }
+.view-pricing-link{ color:var(--primary-dark); font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+.visitor-pricing-note{ display:none; font-size:13px; color:var(--ink-soft); background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:9px 12px; margin:0 0 12px; }
+body:not(.authenticated) .visitor-pricing-note{ display:block; }
 .landing-cc-badge{ margin:14px auto 0 !important; font-size:13px !important; font-weight:600; color:#6b7280 !important; }
 #landingScreen .landing-demo-card{
   border-color:var(--line); border-radius:var(--r-card); padding:20px;
@@ -1710,7 +1713,7 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
       <h2>Generate Etsy &amp; Pinterest Listings in 1 Click.</h2>
       <p>Get a keyword-rich title, 13 targeted SEO tags and a ready-to-use description for Etsy, Pinterest, print-on-demand and digital products &mdash; or analyze a listing you already have.</p>
       <button type="button" class="btn btn-primary get-started-btn" id="getStartedBtn">Get Started</button>
-      <p class="landing-cc-badge">Start free &mdash; no credit card required</p>
+      <p class="landing-cc-badge">Start free &mdash; no credit card required &middot; <a href="#pricing" id="viewPricingLink" class="view-pricing-link">View pricing</a></p>
     </div>
 
     <section class="landing-demo" aria-label="Example listing preview">
@@ -2093,6 +2096,8 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
   <div class="footer-links">
     <button type="button" id="aboutLink">About Us</button>
     <span class="footer-dot">·</span>
+    <a href="#pricing" id="footerPricingLink">Pricing</a>
+    <span class="footer-dot">·</span>
     <a href="/privacy">Privacy Policy</a>
     <span class="footer-dot">·</span>
     <a href="/terms">Terms &amp; Conditions</a>
@@ -2231,6 +2236,8 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
         <strong>First 50 users</strong>
         <span>Credits purchased by our first 50 users never expire.</span>
       </div>
+
+      <p class="visitor-pricing-note">You can browse the plans without an account. You will be asked to sign in when you buy, so your credits are linked to your account.</p>
 
       <div class="pricing-tiers">
         <div class="pricing-tier">
@@ -3524,6 +3531,16 @@ footer{ flex:0 0 auto; border-top-color:var(--line); padding:24px 20px 32px; }
 
   upgradeBtn.addEventListener("click", () => openModal(paywallModal));
   creditsBannerBtn.addEventListener("click", () => openModal(paywallModal));
+
+  // Public pricing: visitors (signed out) can open the same plans popup from the
+  // landing page, the footer, or the shareable link /#pricing. Buying and license
+  // activation still require sign-in (see startProCheckout and the license form).
+  ["viewPricingLink", "footerPricingLink"].forEach(function(id){
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("click", function(e){ e.preventDefault(); openModal(paywallModal); });
+  });
+  if (location.hash === "#pricing") openModal(paywallModal);
 
   /* ============================================================
      LEMON SQUEEZY — AUTOMATIC PRO PURCHASE
